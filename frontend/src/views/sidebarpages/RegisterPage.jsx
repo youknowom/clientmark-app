@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import axiosClient from '../../api/axiosClient'
-import logo from '../../assets/brand/logo.png'
+import logo from '../../assets/images/bh_login_logo.jpg'
 
 const RegisterPage = () => {
   const navigate = useNavigate()
@@ -61,7 +61,12 @@ const RegisterPage = () => {
         toast.error(response.data?.message || 'Registration failed.')
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed. Please try again.')
+      toast.error(
+        error?.data?.message ||
+        error?.response?.data?.message ||
+        error?.message ||
+        'Registration failed. Please try again.'
+      )
     } finally {
       setLoading(false)
     }

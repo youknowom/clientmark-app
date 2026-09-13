@@ -79,6 +79,16 @@ const DEFAULT_PLANS = [
 // ============================================================
 const seedDatabase = async () => {
   try {
+    // Drop legacy single-tenant indexes on roles collection if they exist
+    try {
+      const RoleModel = (await import("../models/roleModel.js")).default;
+      await RoleModel.collection.dropIndex("roleName_1").catch(() => {});
+      await RoleModel.collection.dropIndex("priority_1").catch(() => {});
+      await RoleModel.syncIndexes().catch(() => {});
+    } catch (e) {
+      // index already dropped or missing
+    }
+
     // Seed plans if they don't exist
     const planCount = await PlanModel.countDocuments();
     if (planCount === 0) {

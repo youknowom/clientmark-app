@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import '../sidebarCSS/landing.css'
-import logo from '../../assets/brand/logo.png'
+import logo from '../../assets/images/bh_login_logo.jpg'
 
 const LandingPage = () => {
   return (
