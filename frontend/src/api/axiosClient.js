@@ -1,9 +1,8 @@
 import axios from 'axios'
 import Cookies from 'js-cookie'
 
-// Base URL
-export const BASE_URL = 'http://localhost:8081'
-// export const BASE_URL = 'https://crm.bighostindia.in'
+// Base URL (supports production environment variable on Vercel)
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081'
 
 // Create Axios instance
 const apiClient = axios.create({
