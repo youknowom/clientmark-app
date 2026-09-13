@@ -1,232 +1,543 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { resetToDefaultFavicon } from '../../helpers/dynamicFavicon'
 import '../sidebarCSS/landing.css'
-import logo from '../../assets/images/bh_login_logo.jpg'
 
-const LandingPage = () => {
+// ─── SVG Icons ─────────────────────────────────────────────────────────────────
+const LogoMark = ({ size = 16, color = 'white' }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+    <rect width="32" height="32" rx="8" fill={color === 'white' ? '#E05E3A' : '#1A1F36'} />
+    <path d="M8 10h16M8 16h10M8 22h13" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+    <circle cx="23" cy="22" r="3" fill="#E05E3A" stroke="white" strokeWidth="1.5" />
+  </svg>
+)
+
+const IconArrowRight = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 12h14M12 5l7 7-7 7" />
+  </svg>
+)
+
+// ─── Mock Dashboard UI (hero illustration) ─────────────────────────────────────
+const MockDashboard = () => (
+  <div className="lp-mock">
+    {/* Header bar */}
+    <div className="lp-mock-header">
+      <div className="lp-mock-logo">
+        <div style={{ width: 18, height: 18, background: '#E05E3A', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 8, height: 1.5, background: 'white', borderRadius: 2, boxShadow: '0 3px 0 white, 0 6px 0 white' }} />
+        </div>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#0F0F0F' }}>Clientmark</span>
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ width: 60, height: 20, background: '#F5F5F3', borderRadius: 4 }} />
+        <div style={{ width: 24, height: 24, background: '#1A1F36', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: 9, color: 'white', fontWeight: 700 }}>A</span>
+        </div>
+      </div>
+    </div>
+
+    {/* Body */}
+    <div className="lp-mock-body">
+      {/* Sidebar */}
+      <div className="lp-mock-sidebar">
+        {['Dashboard', 'Leads', 'Projects', 'Users', 'Reports'].map((item, i) => (
+          <div key={item} className={`lp-mock-nav-item ${i === 0 ? 'active' : ''}`}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: i === 0 ? 'white' : '#D1D5DB', flexShrink: 0 }} />
+            <span>{item}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="lp-mock-content">
+        {/* Stat cards */}
+        <div className="lp-mock-cards">
+          {[
+            { label: 'Total Leads', val: '2,847', trend: '+12%', color: '#3B82F6' },
+            { label: 'Converted', val: '384', trend: '+8%', color: '#10B981' },
+            { label: 'Projects', val: '91', trend: '+5%', color: '#8B5CF6' },
+            { label: 'Active Users', val: '24', trend: '+2', color: '#F59E0B' },
+          ].map((card) => (
+            <div key={card.label} className="lp-mock-card">
+              <div style={{ fontSize: 8, color: '#9CA3AF', marginBottom: 3 }}>{card.label}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#0F0F0F', lineHeight: 1 }}>{card.val}</div>
+              <div style={{ fontSize: 8, color: card.color, marginTop: 2, fontWeight: 600 }}>{card.trend}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Lead table */}
+        <div className="lp-mock-table">
+          <div style={{ fontSize: 8, fontWeight: 700, color: '#374151', marginBottom: 6 }}>Recent Leads</div>
+          {[
+            { name: 'Arjun Mehta', status: 'SALES', stage: 'TELECALLING' },
+            { name: 'Priya Sharma', status: 'NEW', stage: 'NEW' },
+            { name: 'Rohan Patel', status: 'WON', stage: 'CLOSED' },
+            { name: 'Sanjay Kumar', status: 'NEW', stage: 'TELECALLING' },
+          ].map((row, i) => (
+            <div key={i} className="lp-mock-row">
+              <div style={{ width: 14, height: 14, borderRadius: '50%', background: `hsl(${i * 60 + 200}, 60%, 55%)`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: 6, color: 'white', fontWeight: 700 }}>{row.name[0]}</span>
+              </div>
+              <span style={{ flex: 1, fontSize: 8, color: '#374151', fontWeight: 500 }}>{row.name}</span>
+              <span className={`lp-mock-badge lp-badge-${row.status.toLowerCase()}`}>{row.status}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+)
+
+// ─── Feature card data ─────────────────────────────────────────────────────────
+const features = [
+  {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" />
+      </svg>
+    ),
+    title: 'Lead Pipeline',
+    desc: 'Record incoming inquiries, assign leads to telecallers, log calls, and monitor pipeline stages from new to won.',
+    color: '#3B82F6',
+  },
+  {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" />
+      </svg>
+    ),
+    title: 'Project Delivery',
+    desc: 'Convert won leads into active projects with milestone tracking, deadline dates, and task assignments.',
+    color: '#10B981',
+  },
+  {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+      </svg>
+    ),
+    title: 'WhatsApp Messaging',
+    desc: 'Send templated WhatsApp messages, status updates, and follow-up reminders directly from the lead record.',
+    color: '#25D366',
+  },
+  {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+      </svg>
+    ),
+    title: 'Real-time Dashboards',
+    desc: 'Monitor team conversion rates, calling activities, and project status across your entire workspace.',
+    color: '#8B5CF6',
+  },
+  {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      </svg>
+    ),
+    title: 'Role Permissions',
+    desc: 'Configure access controls per role. Admin, BDE, Telecaller, and Developer see only relevant records.',
+    color: '#F59E0B',
+  },
+  {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+      </svg>
+    ),
+    title: 'Multi-Branch Management',
+    desc: 'Organize office locations and track regional sales teams under a single company account.',
+    color: '#E05E3A',
+  },
+]
+
+const pricing = [
+  {
+    plan: 'Starter',
+    price: '₹0',
+    period: 'Free',
+    desc: 'For testing and small teams',
+    features: ['3 team members', '100 leads per month', '1 branch', 'Lead and task tracking', 'Email support'],
+    cta: 'Create free account',
+    solid: false,
+  },
+  {
+    plan: 'Growth',
+    price: '₹1,499',
+    period: '/month',
+    desc: 'For growing sales teams',
+    features: ['15 team members', '5,000 leads per month', '3 branches', 'WhatsApp messaging', 'Project tracking', 'Performance reports'],
+    cta: 'Start 14-day trial',
+    solid: false,
+  },
+  {
+    plan: 'Professional',
+    price: '₹2,999',
+    period: '/month',
+    desc: 'For established sales and delivery teams',
+    features: ['40 team members', '25,000 leads per month', '10 branches', 'Automated follow-ups', 'Role permissions', 'Priority support'],
+    cta: 'Start 14-day trial',
+    solid: true,
+    popular: true,
+  },
+  {
+    plan: 'Enterprise',
+    price: 'Custom',
+    period: '',
+    desc: 'For multi-branch organizations',
+    features: ['Custom team seats', 'High-volume lead capacity', 'Unlimited branches', 'Custom workflows', 'Dedicated onboarding', 'Service level agreement'],
+    cta: 'Contact sales',
+    solid: false,
+  },
+]
+
+// ─── Main Component ────────────────────────────────────────────────────────────
+export default function LandingPage() {
+  const navRef = useRef(null)
+  const [scrolled, setScrolled] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  useEffect(() => {
+    // Landing page ALWAYS enforces the OG Clientmark favicon and title
+    resetToDefaultFavicon()
+    document.title = 'Clientmark — Lead and Project CRM'
+
+    const onScroll = () => setScrolled(window.scrollY > 10)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const navLinks = ['Features', 'How it works', 'Pricing']
+
   return (
-    <div className="landing-wrapper">
-      {/* Navigation */}
-      <nav className="navbar navbar-expand-lg navbar-dark nav-glass fixed-top py-3">
-        <div className="container">
-          <Link className="navbar-brand d-flex align-items-center gap-2" to="/">
-            <img src={logo} alt="Logo" height="36" className="bg-white rounded p-1" />
-            <span className="fw-bold fs-4 text-white">CRM SaaS</span>
+    <div className="lp2-root">
+      {/* ─── Navbar ──────────────────────────────────────────────────────── */}
+      <header ref={navRef} className={`lp2-nav ${scrolled ? 'scrolled' : ''}`}>
+        <div className="lp2-nav-inner">
+          <Link to="/" className="lp2-brand">
+            <LogoMark size={28} />
+            <span className="lp2-brand-name">Clientmark</span>
           </Link>
-          <button
-            className="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#landingNav"
-          >
-            <span className="navbar-toggler-icon"></span>
+
+          <nav className="lp2-nav-links">
+            {navLinks.map((l) => (
+              <a key={l} href={`#${l.toLowerCase().replace(' ', '-')}`} className="lp2-nav-link">{l}</a>
+            ))}
+          </nav>
+
+          <div className="lp2-nav-actions">
+            <Link to="/login" className="lp2-btn-ghost">Sign in</Link>
+            <Link to="/register" className="lp2-btn-cta">Start free</Link>
+          </div>
+
+          <button className="lp2-hamburger" aria-label="Open menu" onClick={() => setMobileOpen(!mobileOpen)}>
+            <span /><span /><span />
           </button>
-          <div className="collapse navbar-collapse" id="landingNav">
-            <ul className="navbar-nav ms-auto mb-2 mb-lg-0 me-4">
-              <li className="nav-item">
-                <a className="nav-link text-light fs-6" href="#features">Features</a>
-              </li>
-              <li className="nav-item">
-                <a className="nav-link text-light fs-6" href="#how-it-works">How It Works</a>
-              </li>
-              <li className="nav-item">
-                <a className="nav-link text-light fs-6" href="#pricing">Pricing</a>
-              </li>
-            </ul>
-            <div className="d-flex gap-2">
-              <Link to="/login" className="btn btn-outline-light px-4 py-2 fw-semibold">
-                Sign In
-              </Link>
-              <Link to="/register" className="btn btn-primary px-4 py-2 fw-semibold">
-                Start Free Trial
-              </Link>
+        </div>
+
+        {mobileOpen && (
+          <div className="lp2-mobile-menu">
+            {navLinks.map((l) => (
+              <a key={l} href={`#${l.toLowerCase().replace(' ', '-')}`} onClick={() => setMobileOpen(false)} className="lp2-mobile-link">{l}</a>
+            ))}
+            <div className="lp2-mobile-actions">
+              <Link to="/login" onClick={() => setMobileOpen(false)} className="lp2-btn-ghost" style={{ textAlign: 'center' }}>Sign in</Link>
+              <Link to="/register" onClick={() => setMobileOpen(false)} className="lp2-btn-cta" style={{ textAlign: 'center' }}>Start free</Link>
             </div>
           </div>
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <header className="landing-hero text-center" style={{ paddingTop: '140px' }}>
-        <div className="container">
-          <div className="badge bg-primary bg-opacity-25 text-primary-light px-3 py-2 rounded-pill mb-4 fs-6 border border-primary border-opacity-25">
-            🚀 All-in-One Multi-Tenant CRM Platform
-          </div>
-          <h1 className="hero-title mb-4">
-            Grow Your Business Faster with <br />
-            <span className="hero-gradient-text">Smart Lead & Project Management</span>
-          </h1>
-          <p className="hero-subtitle mb-5">
-            Empower your team with real-time lead tracking, project timelines, automated WhatsApp messaging, and detailed performance analytics — built for modern growth teams.
-          </p>
-          <div className="d-flex justify-content-center gap-3 mb-5">
-            <Link to="/register" className="btn btn-primary btn-lg px-5 py-3 fw-bold rounded-pill shadow-lg fs-5">
-              Get Started Free (14-Day Trial)
-            </Link>
-            <a href="#features" className="btn btn-outline-light btn-lg px-5 py-3 fw-bold rounded-pill fs-5">
-              Explore Features
-            </a>
-          </div>
-        </div>
+        )}
       </header>
 
-      {/* Features Section */}
-      <section id="features" className="py-5 bg-light">
-        <div className="container py-5">
-          <div className="text-center mb-5">
-            <h2 className="fw-bold fs-1 text-dark mb-3">Everything You Need to Scale</h2>
-            <p className="text-muted fs-5">Designed to streamline your entire sales and delivery lifecycle</p>
-          </div>
+      {/* ─── Hero ────────────────────────────────────────────────────────── */}
+      <section className="lp2-hero">
+        <div className="lp2-hero-bg-grid" aria-hidden="true" />
 
-          <div className="row g-4">
-            <div className="col-md-4">
-              <div className="feature-card h-100">
-                <div className="feature-icon-box">🎯</div>
-                <h4 className="fw-bold text-dark mb-3">Lead Management</h4>
-                <p className="text-muted">
-                  Capture, assign, and track leads through dynamic stages. Never miss a follow-up with real-time notifications.
-                </p>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="feature-card h-100">
-                <div className="feature-icon-box">📁</div>
-                <h4 className="fw-bold text-dark mb-3">Project Deliverables</h4>
-                <p className="text-muted">
-                  Track project statuses, client feedback, milestones, and client-facing preview links effortlessly.
-                </p>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="feature-card h-100">
-                <div className="feature-icon-box">💬</div>
-                <h4 className="fw-bold text-dark mb-3">WhatsApp Automation</h4>
-                <p className="text-muted">
-                  Integrated WhatsApp messaging and automated OTP follow-ups to connect with leads instantly.
-                </p>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="feature-card h-100">
-                <div className="feature-icon-box">🔐</div>
-                <h4 className="fw-bold text-dark mb-3">Role-Based Access (RBAC)</h4>
-                <p className="text-muted">
-                  Granular permission management for Admins, BDEs, Telecallers, and Developers per company.
-                </p>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="feature-card h-100">
-                <div className="feature-icon-box">📊</div>
-                <h4 className="fw-bold text-dark mb-3">Analytics & Reports</h4>
-                <p className="text-muted">
-                  Comprehensive reports on lead conversions, team performance, telecaller call logs, and revenue.
-                </p>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="feature-card h-100">
-                <div className="feature-icon-box">🏢</div>
-                <h4 className="fw-bold text-dark mb-3">Multi-Branch Support</h4>
-                <p className="text-muted">
-                  Manage multiple office branches under one organization with branch-level filtering and access controls.
-                </p>
-              </div>
-            </div>
+        <div className="lp2-hero-content">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="lp2-hero-badge"
+          >
+            <span className="lp2-badge-dot" />
+            Lead & Project CRM
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 28 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.65, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="lp2-hero-h1"
+          >
+            Manage sales leads and track<br />
+            <span className="lp2-hero-accent">project delivery in one system.</span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="lp2-hero-sub"
+          >
+            Clientmark organizes incoming leads, team follow-ups, WhatsApp communication,
+            and project handovers in one workspace.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.34, ease: [0.16, 1, 0.3, 1] }}
+            className="lp2-hero-actions"
+          >
+            <Link to="/register" className="lp2-btn-hero-primary">
+              Create an account <IconArrowRight />
+            </Link>
+            <Link to="/login" className="lp2-btn-hero-ghost">
+              Sign in
+            </Link>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.48 }}
+            className="lp2-hero-trust"
+          >
+            {['14-day trial', 'No credit card required'].map((t) => (
+              <span key={t} className="lp2-trust-item">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M13.5 4L6.5 11l-4-4" />
+                </svg>
+                {t}
+              </span>
+            ))}
+          </motion.div>
+        </div>
+
+        {/* Mock Dashboard */}
+        <motion.div
+          initial={{ opacity: 0, y: 48, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.85, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="lp2-hero-visual"
+        >
+          <div className="lp2-mock-wrap">
+            <MockDashboard />
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ─── Features ────────────────────────────────────────────────────── */}
+      <section id="features" className="lp2-section lp2-features-section">
+        <div className="lp2-container">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            className="lp2-section-head"
+          >
+            <span className="lp2-eyebrow">Core Capabilities</span>
+            <h2 className="lp2-section-title">Built around your sales and delivery pipeline</h2>
+            <p className="lp2-section-desc">Track prospects through every stage from initial inquiry to final handover.</p>
+          </motion.div>
+
+          <div className="lp2-features-grid">
+            {features.map((f, i) => (
+              <motion.div
+                key={f.title}
+                initial={{ opacity: 0, y: 28 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.5, delay: i * 0.07, ease: [0.16, 1, 0.3, 1] }}
+                className="lp2-feature-card"
+              >
+                <div className="lp2-feature-icon" style={{ background: `${f.color}15`, color: f.color }}>
+                  {f.icon}
+                </div>
+                <h3 className="lp2-feature-title">{f.title}</h3>
+                <p className="lp2-feature-desc">{f.desc}</p>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-5">
-        <div className="container py-5">
-          <div className="text-center mb-5">
-            <h2 className="fw-bold fs-1 text-dark mb-3">Simple, Transparent Pricing</h2>
-            <p className="text-muted fs-5">Choose the plan that fits your business needs</p>
-          </div>
+      {/* ─── How It Works (Workflow) ─────────────────────────────────────── */}
+      <section id="how-it-works" className="lp2-section lp2-hiw-section">
+        <div className="lp2-container">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            className="lp2-section-head"
+          >
+            <span className="lp2-eyebrow">Workflow</span>
+            <h2 className="lp2-section-title">From lead inquiry to project delivery</h2>
+          </motion.div>
 
-          <div className="row g-4 justify-content-center">
-            {/* Free */}
-            <div className="col-lg-3 col-md-6">
-              <div className="pricing-card text-center h-100">
-                <h3 className="fw-bold text-dark mb-2">Free</h3>
-                <p className="text-muted mb-4">For individuals & tiny teams</p>
-                <div className="pricing-price mb-4">₹0 <span>/ mo</span></div>
-                <ul className="list-unstyled text-start mb-4 fs-6">
-                  <li className="mb-2">✓ Up to 3 Users</li>
-                  <li className="mb-2">✓ Up to 100 Leads</li>
-                  <li className="mb-2">✓ 1 Branch</li>
-                  <li className="mb-2">✓ Basic Lead Tracking</li>
-                </ul>
-                <Link to="/register" className="btn btn-outline-primary w-100 fw-bold py-2">Get Started</Link>
-              </div>
-            </div>
-
-            {/* Starter */}
-            <div className="col-lg-3 col-md-6">
-              <div className="pricing-card text-center h-100">
-                <h3 className="fw-bold text-dark mb-2">Starter</h3>
-                <p className="text-muted mb-4">For growing small businesses</p>
-                <div className="pricing-price mb-4">₹999 <span>/ mo</span></div>
-                <ul className="list-unstyled text-start mb-4 fs-6">
-                  <li className="mb-2">✓ Up to 10 Users</li>
-                  <li className="mb-2">✓ Up to 1,000 Leads</li>
-                  <li className="mb-2">✓ 2 Branches</li>
-                  <li className="mb-2">✓ WhatsApp Integration</li>
-                </ul>
-                <Link to="/register" className="btn btn-outline-primary w-100 fw-bold py-2">Start Free Trial</Link>
-              </div>
-            </div>
-
-            {/* Professional */}
-            <div className="col-lg-3 col-md-6">
-              <div className="pricing-card popular text-center h-100">
-                <div className="pricing-badge">Most Popular</div>
-                <h3 className="fw-bold text-dark mb-2">Professional</h3>
-                <p className="text-muted mb-4">For fast-growing companies</p>
-                <div className="pricing-price mb-4">₹2,499 <span>/ mo</span></div>
-                <ul className="list-unstyled text-start mb-4 fs-6">
-                  <li className="mb-2">✓ Up to 25 Users</li>
-                  <li className="mb-2">✓ Up to 10,000 Leads</li>
-                  <li className="mb-2">✓ 5 Branches</li>
-                  <li className="mb-2">✓ Full Reports & WhatsApp</li>
-                </ul>
-                <Link to="/register" className="btn btn-primary w-100 fw-bold py-2">Start Free Trial</Link>
-              </div>
-            </div>
-
-            {/* Enterprise */}
-            <div className="col-lg-3 col-md-6">
-              <div className="pricing-card text-center h-100">
-                <h3 className="fw-bold text-dark mb-2">Enterprise</h3>
-                <p className="text-muted mb-4">For large-scale operations</p>
-                <div className="pricing-price mb-4">₹4,999 <span>/ mo</span></div>
-                <ul className="list-unstyled text-start mb-4 fs-6">
-                  <li className="mb-2">✓ Unlimited Users</li>
-                  <li className="mb-2">✓ Unlimited Leads</li>
-                  <li className="mb-2">✓ Unlimited Branches</li>
-                  <li className="mb-2">✓ Priority 24/7 Support</li>
-                </ul>
-                <Link to="/register" className="btn btn-outline-primary w-100 fw-bold py-2">Contact Us</Link>
-              </div>
-            </div>
+          <div className="lp2-steps">
+            {[
+              {
+                n: '01',
+                title: 'Set up your workspace',
+                desc: 'Create your company account, add team members, and configure branch locations.',
+              },
+              {
+                n: '02',
+                title: 'Track incoming leads',
+                desc: 'Log lead details, assign telecallers or BDEs, schedule follow-ups, and record call notes.',
+              },
+              {
+                n: '03',
+                title: 'Deliver the project',
+                desc: 'Convert won leads into active projects, track stage milestones, and share status previews.',
+              },
+            ].map((step, i) => (
+              <motion.div
+                key={step.n}
+                initial={{ opacity: 0, x: -24 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.5, delay: i * 0.12, ease: [0.16, 1, 0.3, 1] }}
+                className="lp2-step"
+              >
+                <div className="lp2-step-num">{step.n}</div>
+                <div>
+                  <h3 className="lp2-step-title">{step.title}</h3>
+                  <p className="lp2-step-desc">{step.desc}</p>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-dark text-light py-5">
-        <div className="container text-center">
-          <p className="mb-2 text-muted">© {new Date().getFullYear()} CRM SaaS. All rights reserved.</p>
-          <div className="d-flex justify-content-center gap-4 text-muted">
-            <a href="#features" className="text-muted text-decoration-none">Features</a>
-            <a href="#pricing" className="text-muted text-decoration-none">Pricing</a>
-            <Link to="/login" className="text-muted text-decoration-none">Sign In</Link>
-            <Link to="/register" className="text-muted text-decoration-none">Register</Link>
+      {/* ─── Pricing ─────────────────────────────────────────────────────── */}
+      <section id="pricing" className="lp2-section lp2-pricing-section">
+        <div className="lp2-container">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            className="lp2-section-head"
+          >
+            <span className="lp2-eyebrow">Pricing</span>
+            <h2 className="lp2-section-title">Plans for teams of any size</h2>
+            <p className="lp2-section-desc">Choose a plan based on your team size and monthly lead volume.</p>
+          </motion.div>
+
+          <div className="lp2-pricing-grid">
+            {pricing.map((plan, i) => (
+              <motion.div
+                key={plan.plan}
+                initial={{ opacity: 0, y: 28 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.5, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                className={`lp2-price-card ${plan.popular ? 'popular' : ''}`}
+              >
+                {plan.popular && <div className="lp2-popular-badge">Most popular</div>}
+                <div className="lp2-plan-name">{plan.plan}</div>
+                <div className="lp2-plan-price">
+                  {plan.price}
+                  {plan.period && <span className="lp2-plan-period">{plan.period}</span>}
+                </div>
+                <div className="lp2-plan-desc">{plan.desc}</div>
+                <hr className="lp2-divider" />
+                <ul className="lp2-plan-features">
+                  {plan.features.map((f) => (
+                    <li key={f}>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke={plan.popular ? '#E05E3A' : '#16A34A'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M13.5 4L6.5 11l-4-4" />
+                      </svg>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  to="/register"
+                  className={`lp2-plan-cta ${plan.solid ? 'solid' : 'outline'}`}
+                >
+                  {plan.cta}
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── CTA Banner ──────────────────────────────────────────────────── */}
+      <section className="lp2-cta-section">
+        <div className="lp2-container">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="lp2-cta-inner"
+          >
+            <div className="lp2-cta-grid-bg" aria-hidden="true" />
+            <span className="lp2-eyebrow" style={{ color: '#E05E3A' }}>Get started</span>
+            <h2 className="lp2-cta-title">
+              Start organizing your<br />leads and projects.
+            </h2>
+            <p className="lp2-cta-sub">
+              Set up your workspace in minutes with a 14-day trial. No credit card required.
+            </p>
+            <div className="lp2-cta-actions">
+              <Link to="/register" className="lp2-btn-cta-white">
+                Create an account <IconArrowRight />
+              </Link>
+              <Link to="/login" className="lp2-btn-cta-outline">
+                Sign in
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ─── Footer ──────────────────────────────────────────────────────── */}
+      <footer className="lp2-footer">
+        <div className="lp2-container">
+          <div className="lp2-footer-top">
+            <div className="lp2-footer-brand">
+              <Link to="/" className="lp2-brand">
+                <LogoMark size={26} />
+                <span className="lp2-brand-name" style={{ color: '#0F0F0F' }}>Clientmark</span>
+              </Link>
+              <p className="lp2-footer-tagline">
+                Lead tracking and project delivery CRM.<br />clientmark.app
+              </p>
+            </div>
+
+            <div className="lp2-footer-links-grid">
+              <div>
+                <div className="lp2-footer-col-title">Product</div>
+                <a href="#features" className="lp2-footer-link">Features</a>
+                <a href="#pricing" className="lp2-footer-link">Pricing</a>
+                <a href="#how-it-works" className="lp2-footer-link">How it works</a>
+              </div>
+              <div>
+                <div className="lp2-footer-col-title">Account</div>
+                <Link to="/login" className="lp2-footer-link">Sign in</Link>
+                <Link to="/register" className="lp2-footer-link">Register</Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="lp2-footer-bottom">
+            <span>© {new Date().getFullYear()} Clientmark. All rights reserved.</span>
+            <span>clientmark.app</span>
           </div>
         </div>
       </footer>
     </div>
   )
 }
-
-export default LandingPage

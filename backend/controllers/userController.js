@@ -937,8 +937,8 @@ const sendMailOtp = async (req, res) => {
       softwareSetting?.projectName || process.env.PROJECT_NAME;
     const otp = crypto.randomInt(1000, 9999).toString();
     const expiry = Date.now() + 10 * 60 * 1000;
-    let message = `${otp} is your OTP for reset passwrod on ${PROJECT_NAME}.\nOTP valid for 10 Minute. Please do not share`;
-    let subject = "Your OTP Code for Reset Password.";
+    let message = `${otp} is your verification code to reset your password on ${PROJECT_NAME}.\nThis code is valid for 10 minutes. Do not share it with anyone.`;
+    let subject = `Password reset verification code - ${PROJECT_NAME}`;
 
     //send mail subject, toEmails, textMessage, ccEmails = []
     const isSendMail = await sendTextMail(subject, email, message);

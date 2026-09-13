@@ -9,23 +9,41 @@ import BDEDashboard from './BDEDashboard'
 // Lazy imports
 const AdminDashboard = React.lazy(() => import('./AdminDashboard'))
 
-// Lightweight fallback
+// Loading fallback
 const SuspenseFallback = memo(() => (
-  <div className="text-center p-5">
-    <div className="spinner-border text-danger" role="status"></div>
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '80px 20px',
+      flexDirection: 'column',
+      gap: '14px',
+    }}
+  >
+    <div
+      style={{
+        width: '28px',
+        height: '28px',
+        border: '2.5px solid #E8E8E5',
+        borderTopColor: 'var(--primary-color, #1A1F36)',
+        borderRadius: '50%',
+        animation: 'cm-spin 0.7s linear infinite',
+      }}
+    />
+    <style>{`@keyframes cm-spin { to { transform: rotate(360deg); } }`}</style>
   </div>
 ))
+SuspenseFallback.displayName = 'SuspenseFallback'
 
 const HomePage = () => {
   const { userData } = useContext(AuthContext)
-
   const [DashboardComponent, setDashboardComponent] = useState(null)
   const [checked, setChecked] = useState(false)
   const [notAllowed, setNotAllowed] = useState(false)
 
   useEffect(() => {
     if (!userData) return
-
     if (userData.roleId.roleName === 'Admin') {
       setDashboardComponent(() => AdminDashboard)
     } else if (userData.roleId.roleName === 'TeleCaller') {
@@ -37,11 +55,9 @@ const HomePage = () => {
     } else {
       setNotAllowed(true)
     }
-
     setChecked(true)
   }, [userData])
 
-  // 🔐 Permission denied → redirect
   if (checked && notAllowed) {
     return <Navigate to="/pagenotfound" replace />
   }
@@ -49,7 +65,7 @@ const HomePage = () => {
   return (
     <>
       <Helmet>
-        <title>BH - Home</title>
+        <title>Dashboard — Clientmark</title>
       </Helmet>
 
       <Suspense fallback={<SuspenseFallback />}>

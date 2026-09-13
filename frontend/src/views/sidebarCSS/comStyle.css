@@ -139,21 +139,22 @@
 }
 
 .button {
-  background-color: var(--primary-color);
+  background-color: var(--primary-color, #1A1F36);
   color: #ffffff;
   font-weight: 600;
   font-size: 14px;
-  padding: 4px 8px;
+  padding: 6px 14px;
   border: none;
+  border-radius: 7px;
   outline: none;
   cursor: pointer;
-  transition: all ease 0.6s;
+  transition: background 0.15s ease, transform 0.1s ease;
 }
 
 .button:hover {
-  color: #383b3d;
-  outline: 0.5px solid #000000 !important;
-  background: #ffffff;
+  background-color: var(--secondary-color, #2D3561);
+  color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .modal-header .btn-close {
@@ -211,7 +212,7 @@
 
 ::placeholder {
   font-size: 13px;
-  color: #ffffff;
+  color: #9CA3AF;
 }
 
 textarea.form-control {

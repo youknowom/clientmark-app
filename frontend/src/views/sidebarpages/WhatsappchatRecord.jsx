@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+﻿import React, { useState, useEffect, useCallback } from 'react'
 import {
   Container,
   Card,
@@ -115,7 +115,7 @@ function WhatsappchatRecord() {
   return (
     <Container className="mt-4 container-lg p-0">
       <Helmet>
-        <title>BH – WhatsApp Chat Logs</title>
+        <title>WhatsApp Chat Logs — Clientmark</title>
       </Helmet>
 
       <Card>

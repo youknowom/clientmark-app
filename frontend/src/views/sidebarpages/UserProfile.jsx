@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+﻿import React, { useContext, useEffect, useState } from 'react'
 import { Container, Card, Form, Button, Row, Col, Spinner } from 'react-bootstrap'
 
 import { FaEye, FaEyeSlash } from 'react-icons/fa'
@@ -69,7 +69,7 @@ const UserProfile = () => {
   return (
     <Container className="mt-4 container-lg p-0">
       <Helmet>
-        <title>BH - User</title>
+        <title>User Profile — Clientmark</title>
       </Helmet>
       <Col lg={12}>
         <Card>

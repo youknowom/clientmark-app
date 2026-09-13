@@ -862,7 +862,7 @@ const AdminDashboard = () => {
   return (
     <div>
       <Helmet>
-        <title>BH - Home</title>
+        <title>Admin Dashboard — Clientmark</title>
       </Helmet>
 
       <Container className="mt-4 container-lg p-0">

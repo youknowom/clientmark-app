@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react'
+﻿import React, { useState, useEffect, useContext } from 'react'
 import { Container, Card, Form, Row, Col, Button, Table, Spinner } from 'react-bootstrap'
 import { Helmet } from 'react-helmet'
 import { FaPencilAlt, FaTrashAlt } from 'react-icons/fa'
@@ -137,7 +137,7 @@ const AllBranch = () => {
   return (
     <Container className="mt-4 container-lg gap-2 d-md-flex p-0">
       <Helmet>
-        <title>BH - Branch</title>
+        <title>Branches — Clientmark</title>
       </Helmet>
       {/* left side section */}
       <Col md={6}>

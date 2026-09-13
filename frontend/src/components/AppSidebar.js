@@ -1,19 +1,38 @@
 import React, { useContext, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-
 import { CCloseButton, CSidebar, CSidebarBrand, CSidebarHeader } from '@coreui/react'
-
 import { AppSidebarNav } from './AppSidebarNav'
-
-import logoOne from '../assets/images/bh_login_logo.jpg'
-
-// sidebar nav config
-import navigation from '../_nav'
-import useNavItems from '../_nav'
-import { right } from '@popperjs/core'
 import apiClient, { BASE_URL } from '../api/axiosClient'
 import { AuthContext } from '../AuthContext'
 import { socket } from '../socket/socket'
+import useNavItems from '../_nav'
+import { syncFaviconFromSettings } from '../helpers/dynamicFavicon'
+
+// ─── Fallback brand mark when no custom logo is set ───────────────────────────
+const ClientmarkBrand = () => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 16px' }}>
+    <div style={{
+      width: '28px', height: '28px',
+      background: '#E05E3A',
+      borderRadius: '7px',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0,
+    }}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+        <path d="M12 2L2 7l10 5 10-5-10-5zm0 7L2 14l10 5 10-5-10-5z" />
+      </svg>
+    </div>
+    <span style={{
+      fontSize: '15px',
+      fontWeight: '700',
+      color: '#0F0F0F',
+      letterSpacing: '-0.02em',
+      fontFamily: 'Inter, sans-serif',
+    }}>
+      Clientmark
+    </span>
+  </div>
+)
 
 const AppSidebar = () => {
   const { siteSetting, setSiteSetting } = useContext(AuthContext)
@@ -22,14 +41,12 @@ const AppSidebar = () => {
   const sidebarShow = useSelector((state) => state.sidebarShow)
   const filteredNavItems = useNavItems()
 
-  let mainLogo = siteSetting?.mainLogo ? `${BASE_URL}${siteSetting?.mainLogo}` : logoOne
+  const mainLogoUrl = siteSetting?.mainLogo ? `${BASE_URL}${siteSetting.mainLogo}` : null
 
-  //get site setting
   const getSiteSetting = async () => {
     try {
       const response = await apiClient.get('/software-setting/get-site-setting')
       const respData = response?.data?.data
-
       setSiteSetting({
         logoWidth: respData?.logoWidth,
         logoHeight: respData?.logoHeight,
@@ -37,22 +54,10 @@ const AppSidebar = () => {
         mainLogo: respData?.mainLogo,
         favicon: respData?.favicon,
       })
-
-      // Update browser tab favicon dynamically
-      if (respData?.favicon) {
-        const faviconUrl = `${BASE_URL}${respData.favicon}`
-        let link = document.querySelector("link[rel='shortcut icon']")
-        if (!link) {
-          link = document.createElement('link')
-          link.rel = 'shortcut icon'
-          document.head.appendChild(link)
-        }
-        link.href = faviconUrl
-        localStorage.setItem('bh_favicon_url', faviconUrl)
-      }
+      // Dynamically sync browser tab favicon with buyer/tenant's favicon or logo
+      syncFaviconFromSettings(respData)
     } catch (error) {
-      console.error('Failed to load site setting in sidebar:', error)
-    } finally {
+      console.error('Failed to load site setting:', error)
     }
   }
 
@@ -62,11 +67,8 @@ const AppSidebar = () => {
 
   useEffect(() => {
     if (!socket) return
-
     const events = ['updateSiteSetting']
-
     events.forEach((event) => socket.on(event, getSiteSetting))
-
     return () => events.forEach((event) => socket.off(event, getSiteSetting))
   }, [socket])
 
@@ -77,46 +79,46 @@ const AppSidebar = () => {
       position="fixed"
       unfoldable={unfoldable}
       visible={sidebarShow}
-      onVisibleChange={(visible) => {
-        dispatch({ type: 'set', sidebarShow: visible })
-      }}
+      onVisibleChange={(visible) => dispatch({ type: 'set', sidebarShow: visible })}
       style={{
-        borderRight: '1px solid #ccc',
+        borderRight: '1px solid #E8E8E5',
+        backgroundColor: '#FFFFFF',
       }}
     >
       <CSidebarHeader
         className="p-0 d-flex align-items-center justify-content-between"
         style={{
-          boxShadow: 'rgba(0, 0, 0, 0.1) 0px 2px 2px',
-          overflow: 'hidden',
-          backgroundColor: '#ffffffff', // matches sidebar background
+          borderBottom: '1px solid #F0F0ED',
+          height: '57px',
+          backgroundColor: '#FFFFFF',
         }}
       >
-        <CSidebarBrand to="/" className="m-0 p-0 d-flex align-items-center">
-          <img
-            src={mainLogo}
-            alt="MyNGO"
-            className="sidebar-brand-full"
-            style={{
-              objectFit: 'contain',
-              width: '100%',
-              height: '60px',
-              display: 'block',
-              backgroundColor: '#ffffffff', // optional, to blend with sidebar
-              padding: '4px', // optional, adds breathing space
-              marginLeft: '20px',
-            }}
-          />
+        <CSidebarBrand to="/" className="m-0 p-0 d-flex align-items-center" style={{ flex: 1 }}>
+          {mainLogoUrl ? (
+            <img
+              src={mainLogoUrl}
+              alt="Clientmark"
+              style={{
+                objectFit: 'contain',
+                height: '40px',
+                maxWidth: '160px',
+                display: 'block',
+                marginLeft: '16px',
+              }}
+            />
+          ) : (
+            <ClientmarkBrand />
+          )}
         </CSidebarBrand>
 
         <CCloseButton
-          className="d-lg-none text-light me-2"
+          className="d-lg-none me-2"
           dark
           onClick={() => dispatch({ type: 'set', sidebarShow: false })}
+          aria-label="Close sidebar"
         />
       </CSidebarHeader>
 
-      {/* <AppSidebarNav items={navigation} /> */}
       <AppSidebarNav items={filteredNavItems} />
     </CSidebar>
   )

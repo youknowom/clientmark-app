@@ -64,7 +64,7 @@ const OtpModal = ({ mobile, slug, onVerified }) => {
     setSending(true)
     try {
       await apiClient.post(`/project/send-whatsapp-otp`, { slug, mobileNo: MobileNumber })
-      toast.success('OTP sent to your WhatsApp!')
+      toast.success('Verification code sent to your WhatsApp.')
       setOtpSent(true)
       startTimer()
       setTimeout(() => inputRefs.current[0]?.focus(), 100)
@@ -93,7 +93,7 @@ const OtpModal = ({ mobile, slug, onVerified }) => {
       // Save to localStorage with expiry
       const expiry = Date.now() + OTP_EXPIRY_HOURS * 60 * 60 * 1000
       localStorage.setItem(OTP_SESSION_KEY(slug), JSON.stringify({ verified: true, expiry }))
-      toast.success('Verified! Enjoy the preview.')
+      toast.success('Access verified.')
       onVerified()
     } catch (err) {
       setOtpError(err?.response?.data?.message || 'Invalid OTP. Please try again.')
@@ -169,9 +169,9 @@ const OtpModal = ({ mobile, slug, onVerified }) => {
             zIndex: 1,
           }}
         >
-          <h5 className="text-center fw-bold mb-1">Secure Access</h5>
+          <h5 className="text-center fw-bold mb-1">Access Verification</h5>
           <p className="text-center text-muted" style={{ fontSize: '14px' }}>
-            This project preview is password protected.
+            This project preview requires verification to access.
           </p>
 
           <hr />
@@ -193,7 +193,7 @@ const OtpModal = ({ mobile, slug, onVerified }) => {
               </div>
 
               <p className="text-muted text-center" style={{ fontSize: '13px' }}>
-                We'll send a 4-digit OTP to this WhatsApp number.
+                A 4-digit verification code will be sent to this WhatsApp number.
               </p>
 
               <button

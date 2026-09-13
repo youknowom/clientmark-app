@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { Container, Card, Form, Row, Col, Button, Spinner } from 'react-bootstrap'
 import { Helmet } from 'react-helmet'
 import toast from 'react-hot-toast'
@@ -61,7 +61,7 @@ const WhatsappSetting = () => {
   return (
     <Container className="mt-4 container-lg gap-2 d-md-flex p-0">
       <Helmet>
-        <title>BH - WhatsApp Setting</title>
+        <title>WhatsApp Settings — Clientmark</title>
       </Helmet>
 
       <Col xs={12} sm={12} md={12} lg={12} xl={8}>

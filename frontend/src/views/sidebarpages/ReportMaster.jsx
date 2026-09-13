@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react'
+﻿import React, { useContext, useEffect } from 'react'
 import { Col, Container, Row } from 'react-bootstrap'
 import { Helmet } from 'react-helmet'
 import { MdOutlineLeaderboard } from 'react-icons/md'
@@ -73,7 +73,7 @@ function ReportMaster() {
   return (
     <Container className="p-0 pb-4 container-lg mt-2">
       <Helmet>
-        <title>BH - Reports</title>
+        <title>Reports — Clientmark</title>
       </Helmet>
       <Row>
         <Col>

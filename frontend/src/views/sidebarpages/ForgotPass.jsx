@@ -1,12 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Container, Form, Button, InputGroup, Spinner } from 'react-bootstrap'
-
-import logo from '../../assets/images/bh_login_logo.jpg'
+import { Link } from 'react-router-dom'
 import apiClient, { BASE_URL } from '../../api/axiosClient'
 import toast from 'react-hot-toast'
-import { Link } from 'react-router-dom'
 import Cookies from 'js-cookie'
 import '../sidebarCSS/login.css'
+
+// ─── SVG Icons ────────────────────────────────────────────────────────────────
+const LogoMark = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+    <path d="M12 2L2 7l10 5 10-5-10-5zm0 7L2 14l10 5 10-5-10-5z" />
+  </svg>
+)
+
+const CheckIcon = () => (
+  <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M13.5 4L6.5 11l-4-4" />
+  </svg>
+)
 
 const RESEND_TIMER = 30
 
@@ -28,27 +38,11 @@ const ForgotPass = () => {
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-  const [siteSetting, setSiteSetting] = useState(null)
-
-  const getSiteSetting = async () => {
-    try {
-      const response = await apiClient.get('/software-setting/get-site-setting')
-      setSiteSetting(response?.data?.data)
-    } catch (error) { }
-  }
-
-  useEffect(() => {
-    getSiteSetting()
-  }, [])
-
-  let mainLogo = siteSetting?.mainLogo ? `${BASE_URL}${siteSetting?.mainLogo}` : logo
-
-  // ================= TIMER =================
+  // ─── Timer ──────────────────────────────────────────────────────────────────
   const startTimer = () => {
     setTimer(RESEND_TIMER)
     setCanResend(false)
     clearInterval(timerRef.current)
-
     timerRef.current = setInterval(() => {
       setTimer((prev) => {
         if (prev <= 1) {
@@ -61,32 +55,22 @@ const ForgotPass = () => {
     }, 1000)
   }
 
-  // ================= SEND OTP =================
+  useEffect(() => () => clearInterval(timerRef.current), [])
+
+  // ─── Send OTP ────────────────────────────────────────────────────────────────
   const handleSendOtp = async (e) => {
     e.preventDefault()
+    const trimmed = email.trim()
+    if (!trimmed) return setError('Please enter your email')
+    if (!emailRegex.test(trimmed)) return setError('Please enter a valid email')
 
-    const trimmedEmail = email.trim()
-
-    if (!trimmedEmail) {
-      return setError('Please enter email')
-    }
-
-    if (!emailRegex.test(trimmedEmail)) {
-      return setError('Please enter valid email')
-    }
-
+    setLoading(true)
+    setError('')
     try {
-      setLoading(true)
-      setError('')
-
-      const res = await apiClient.post('/user/send-mail-otp', {
-        email: trimmedEmail,
-      })
-
+      const res = await apiClient.post('/user/send-mail-otp', { email: trimmed })
       toast.success(res.data.message || 'OTP sent successfully')
       setStep('otp')
       startTimer()
-
       setTimeout(() => inputRefs.current[0]?.focus(), 100)
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Something went wrong')
@@ -95,23 +79,15 @@ const ForgotPass = () => {
     }
   }
 
-  // ================= OTP INPUT =================
+  // ─── OTP Input ───────────────────────────────────────────────────────────────
   const handleOtpChange = (index, value) => {
     if (!/^\d*$/.test(value)) return
-
-    const updatedOtp = [...otp]
-    updatedOtp[index] = value.slice(-1)
-    setOtp(updatedOtp)
+    const updated = [...otp]
+    updated[index] = value.slice(-1)
+    setOtp(updated)
     setOtpError('')
-
-    if (value && index < 3) {
-      inputRefs.current[index + 1]?.focus()
-    }
-
-    // Optional Auto Verify
-    if (updatedOtp.join('').length === 4) {
-      handleVerifyOtp(updatedOtp.join(''))
-    }
+    if (value && index < 3) inputRefs.current[index + 1]?.focus()
+    if (updated.join('').length === 4) handleVerifyOtp(updated.join(''))
   }
 
   const handleOtpKeyDown = (index, e) => {
@@ -123,61 +99,45 @@ const ForgotPass = () => {
   const handlePaste = (e) => {
     const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4)
     if (pasted.length === 4) {
-      const splitOtp = pasted.split('')
-      setOtp(splitOtp)
+      const split = pasted.split('')
+      setOtp(split)
       inputRefs.current[3]?.focus()
       handleVerifyOtp(pasted)
     }
     e.preventDefault()
   }
 
-  // ================= VERIFY OTP =================
+  // ─── Verify OTP ──────────────────────────────────────────────────────────────
   const handleVerifyOtp = async (otpValueParam) => {
     const otpValue = otpValueParam || otp.join('')
+    if (otpValue.length < 4) return setOtpError('Please enter all 4 digits')
 
-    if (otpValue.length < 4) {
-      return setOtpError('Please enter all 4 digits')
-    }
-
+    setVerifyLoading(true)
     try {
-      setVerifyLoading(true)
-
       const res = await apiClient.post('/user/verity-email-otp', {
         email: email.trim(),
         otp: otpValue,
       })
-
-      toast.success(res.data.message || 'OTP verified successfully')
+      toast.success(res.data.message || 'OTP verified')
       Cookies.set('token', res.data.token, { expires: 365 * 20 })
-
-      setTimeout(() => {
-        window.location.href = '/dashboard'
-      }, 1000)
-      // Navigate to reset password page here
+      setTimeout(() => { window.location.href = '/dashboard' }, 900)
     } catch (err) {
-
       setOtpError(err?.response?.data?.message || 'Invalid OTP')
     } finally {
       setVerifyLoading(false)
     }
   }
 
-  // ================= RESEND =================
+  // ─── Resend ──────────────────────────────────────────────────────────────────
   const handleResend = async () => {
     if (!canResend) return
-
+    setLoading(true)
     try {
-      setLoading(true)
-
-      const res = await apiClient.post('/user/send-mail-otp', {
-        email: email.trim(),
-      })
-
-      toast.success(res.data.message || 'OTP resent successfully')
+      const res = await apiClient.post('/user/send-mail-otp', { email: email.trim() })
+      toast.success(res.data.message || 'OTP resent')
       setOtp(['', '', '', ''])
       setOtpError('')
       startTimer()
-
       setTimeout(() => inputRefs.current[0]?.focus(), 100)
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Something went wrong')
@@ -186,7 +146,6 @@ const ForgotPass = () => {
     }
   }
 
-  // ================= CHANGE EMAIL =================
   const handleChangeEmail = () => {
     clearInterval(timerRef.current)
     setStep('email')
@@ -195,57 +154,100 @@ const ForgotPass = () => {
     setTimer(RESEND_TIMER)
   }
 
-  useEffect(() => {
-    return () => clearInterval(timerRef.current)
-  }, [])
-
   return (
-    <div className="min-vh-100 d-flex flex-column flex-md-row">
-      <div className="leftDiv d-none d-md-flex justify-content-center align-items-center w-50 p-4">
-        <img className="login-img" src={mainLogo} alt="Logo" />
+    <div className="auth-root">
+      {/* ── Left Brand Panel ───────────────────────────────────────────────── */}
+      <div className="auth-left" aria-hidden="true">
+        <div className="auth-left-top">
+          <div className="auth-brand">
+            <div className="auth-brand-mark">
+              <LogoMark />
+            </div>
+            <span className="auth-brand-name">Clientmark</span>
+          </div>
+
+          <h2 className="auth-left-headline">
+            Reset your account password
+          </h2>
+          <p className="auth-left-sub">
+            A verification code will be sent to your registered email address.
+          </p>
+
+          <ul className="auth-features-list">
+            {[
+              'Verification code sent to your email',
+              'Valid for password recovery',
+              'Account access restored immediately',
+            ].map((feat) => (
+              <li key={feat} className="auth-feature-item">
+                <span className="auth-feature-dot"><CheckIcon /></span>
+                <span className="auth-feature-text">{feat}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="auth-left-bottom">
+          <p className="auth-quote">
+            If you no longer have access to your email, contact your organization admin.
+          </p>
+        </div>
       </div>
 
-      <Container className="d-flex align-items-center justify-content-center w-100 bg-light">
-        <div
-          className="rightInnerDiv p-4 p-md-5 shadow bg-white rounded w-100"
-          style={{ maxWidth: '500px' }}
-        >
+      {/* ── Right Form Panel ──────────────────────────────────────────────── */}
+      <div className="auth-right">
+        <div className="auth-form-box">
+          {/* Mobile brand */}
+          <div className="auth-mobile-brand">
+            <div className="auth-mobile-brand-mark">
+              <LogoMark />
+            </div>
+            <span className="auth-mobile-brand-name">Clientmark</span>
+          </div>
+
           {step === 'email' ? (
             <>
-              <h4 className="fw-bold">Forgot Password</h4>
-              <p className="text-muted">Enter your registered email.</p>
+              <div className="auth-form-header">
+                <h1 className="auth-form-title">Reset password</h1>
+                <p className="auth-form-sub">Enter your registered email to receive a verification code</p>
+              </div>
 
-              <Form onSubmit={handleSendOtp}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Email</Form.Label>
-                  <InputGroup>
-                    <Form.Control
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter email"
-                    />
-                  </InputGroup>
-                  {error && <small className="text-danger">{error}</small>}
-                </Form.Group>
-
-                <Button className="button w-100" type="submit" disabled={loading}>
-                  {loading ? <Spinner size="sm" animation="border" /> : 'Send OTP'}
-                </Button>
-
-                <div className="text-center mt-3">
-                  <Link to="/login">Back to Login</Link>
+              <form onSubmit={handleSendOtp} noValidate>
+                <div className="auth-field">
+                  <label className="auth-label" htmlFor="fp-email">Email address</label>
+                  <input
+                    id="fp-email"
+                    type="email"
+                    className={`auth-input ${error ? 'error' : ''}`}
+                    placeholder="Enter your email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError('') }}
+                  />
+                  {error && <p className="auth-error-msg">{error}</p>}
                 </div>
-              </Form>
+
+                <button type="submit" className="auth-submit" disabled={loading} aria-busy={loading}>
+                  {loading ? (
+                    <><span className="auth-spinner" aria-hidden="true" /> Sending code...</>
+                  ) : 'Send verification code'}
+                </button>
+              </form>
+
+              <div className="auth-links" style={{ marginTop: '20px' }}>
+                <Link to="/login">← Back to sign in</Link>
+              </div>
             </>
           ) : (
             <>
-              <h4 className="fw-bold">Verify OTP</h4>
-              <p className="text-muted">
-                OTP sent to <strong>{email}</strong>
-              </p>
+              <div className="auth-form-header">
+                <h1 className="auth-form-title">Enter verification code</h1>
+                <p className="auth-form-sub">
+                  We sent a 4-digit code to <strong>{email}</strong>
+                </p>
+              </div>
 
-              <div className="d-flex justify-content-center gap-3 mb-3">
+              <div className="auth-otp-row" role="group" aria-label="OTP input">
                 {otp.map((digit, index) => (
                   <input
                     key={index}
@@ -257,47 +259,60 @@ const ForgotPass = () => {
                     onChange={(e) => handleOtpChange(index, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(index, e)}
                     onPaste={index === 0 ? handlePaste : undefined}
-                    className="text-center fw-bold"
-                    style={{
-                      width: '56px',
-                      height: '56px',
-                      fontSize: '22px',
-                      border: otpError ? '2px solid red' : '2px solid #dee2e6',
-                      borderRadius: '10px',
-                    }}
+                    className={`auth-otp-input ${otpError ? 'otp-error' : ''}`}
+                    aria-label={`OTP digit ${index + 1}`}
                   />
                 ))}
               </div>
 
-              {otpError && <p className="text-danger text-center">{otpError}</p>}
+              {otpError && (
+                <p className="auth-error-msg" style={{ textAlign: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                  {otpError}
+                </p>
+              )}
 
-              <div className="text-center mb-3">
+              <div style={{ textAlign: 'center', fontSize: '13.5px', marginBottom: '20px' }}>
                 {canResend ? (
-                  <span onClick={handleResend} style={{ cursor: 'pointer', color: '#0d6efd' }}>
-                    Resend OTP
-                  </span>
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={loading}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1A1F36', fontWeight: '600', fontSize: '13.5px', fontFamily: 'inherit' }}
+                  >
+                    Resend code
+                  </button>
                 ) : (
-                  <span className="text-muted">Resend in 00:{String(timer).padStart(2, '0')}</span>
+                  <span style={{ color: '#9CA3AF' }}>
+                    Resend in 00:{String(timer).padStart(2, '0')}
+                  </span>
                 )}
               </div>
 
-              <Button
-                className="button w-100"
+              <button
+                type="button"
+                className="auth-submit"
                 disabled={verifyLoading}
                 onClick={() => handleVerifyOtp()}
+                aria-busy={verifyLoading}
               >
-                {verifyLoading ? <Spinner size="sm" animation="border" /> : 'Verify OTP'}
-              </Button>
+                {verifyLoading ? (
+                  <><span className="auth-spinner" aria-hidden="true" /> Verifying...</>
+                ) : 'Verify code'}
+              </button>
 
-              <div className="text-center mt-3">
-                <span onClick={handleChangeEmail} style={{ cursor: 'pointer', color: '#0d6efd' }}>
-                  ← Change Email
-                </span>
+              <div className="auth-links" style={{ marginTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={handleChangeEmail}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1A1F36', fontWeight: '600', fontSize: '13.5px', fontFamily: 'inherit' }}
+                >
+                  ← Use a different email
+                </button>
               </div>
             </>
           )}
         </div>
-      </Container>
+      </div>
     </div>
   )
 }

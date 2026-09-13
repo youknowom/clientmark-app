@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react'
+﻿import React, { useContext, useEffect } from 'react'
 import { Col, Container, Row } from 'react-bootstrap'
 import { FiFilePlus } from 'react-icons/fi'
 import { Helmet } from 'react-helmet'
@@ -47,7 +47,7 @@ function ProjectMaster() {
   return (
     <Container className="p-0 pb-4 container-lg mt-2">
       <Helmet>
-        <title>BH - Project Management</title>
+        <title>Project Management — Clientmark</title>
       </Helmet>
       <Row>
         <Col>

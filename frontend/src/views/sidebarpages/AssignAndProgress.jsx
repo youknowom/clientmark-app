@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react'
+﻿import React, { useState, useEffect, useContext } from 'react'
 import { Container, Card, Form, Row, Col, Button, Table, Spinner } from 'react-bootstrap'
 import { Helmet } from 'react-helmet'
 import { AuthContext } from '../../AuthContext'
@@ -133,7 +133,7 @@ const AssignAndProgress = ({ leadId }) => {
   return (
     <Container className="mt-4 container-lg gap-2 d-md-flex p-0">
       <Helmet>
-        <title>BH - Progress</title>
+        <title>Progress — Clientmark</title>
       </Helmet>
       {/* left side section -- details and assignment */}
       <Col md={6}>

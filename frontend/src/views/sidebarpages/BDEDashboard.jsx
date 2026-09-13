@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react'
+﻿import React, { useContext, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Doughnut, Bar } from 'react-chartjs-2'
 import apiClient from '../../api/axiosClient'
@@ -282,7 +282,7 @@ const BDEDashboard = () => {
   return (
     <div>
       <Helmet>
-        <title>BH - BDE Dashboard</title>
+        <title>BDE Dashboard — Clientmark</title>
       </Helmet>
 
       <Container className="mt-4 container-lg p-0">

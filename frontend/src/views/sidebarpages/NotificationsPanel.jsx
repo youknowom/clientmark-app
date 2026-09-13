@@ -129,7 +129,7 @@ const NotificationPanel = () => {
     fetchNotifications()
   }, [fetchNotifications])
 
-  const isBighost = (item) =>
+  const isSystemNotification = (item) =>
     item.notificationType === 'motivational' || item.notificationType === 'reminder'
 
   return (
@@ -330,7 +330,7 @@ const NotificationPanel = () => {
                     className={`np-item ${!item.isRead ? 'unread' : ''}`}
                     onClick={() => handleNotificationClick(item)}
                   >
-                    {isBighost(item) ? (
+                    {isSystemNotification(item) ? (
                       <>
                         {/* Bighost verified sender */}
                         <div className="np-bighost-row">
@@ -338,7 +338,7 @@ const NotificationPanel = () => {
                             <div className="np-bighost-avatar">
                               <span>B</span>
                             </div>
-                            <span className="np-bighost-name">Bighost</span>
+                          <span className="np-bighost-name">Clientmark</span>
                             <MdVerified
                               size={15}
                               color="#1d4ed8"

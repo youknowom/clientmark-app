@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react'
+﻿import React, { useState, useEffect, useContext } from 'react'
 import { Container, Card, Form, Row, Col, Button, Table, Spinner } from 'react-bootstrap'
 import { AuthContext } from '../../AuthContext'
 import { Helmet } from 'react-helmet'
@@ -185,7 +185,7 @@ const RolePermission = () => {
   return (
     <Container className="mt-4 container-lg gap-2 d-md-flex p-0">
       <Helmet>
-        <title>BH - Role & Permission</title>
+        <title>Roles & Permissions — Clientmark</title>
       </Helmet>
       {/* left side section */}
       <Col md={8}>

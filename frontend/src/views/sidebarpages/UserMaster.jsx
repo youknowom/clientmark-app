@@ -1,4 +1,4 @@
-import React, { useContext } from 'react'
+﻿import React, { useContext } from 'react'
 import { Col, Container, Row } from 'react-bootstrap'
 import { PiUsersThree } from 'react-icons/pi'
 import { PiGitBranchBold } from 'react-icons/pi'
@@ -52,7 +52,7 @@ function UserMaster() {
   return (
     <Container className="p-0 pb-4 container-lg mt-2">
       <Helmet>
-        <title>BH - Users</title>
+        <title>Users — Clientmark</title>
       </Helmet>
       <Row>
         <Col>

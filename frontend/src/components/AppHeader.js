@@ -3,18 +3,20 @@ import { useSelector, useDispatch } from 'react-redux'
 import { CContainer, CHeader, CHeaderToggler } from '@coreui/react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import Cookies from 'js-cookie'
-import { Button } from 'react-bootstrap'
 import { HiArrowUturnLeft } from 'react-icons/hi2'
-import { IoIosArrowDown } from 'react-icons/io'
-import { FiLogOut } from 'react-icons/fi'
-import { CgProfile } from 'react-icons/cg'
-import { GiHamburgerMenu } from 'react-icons/gi'
-import Dropdown from 'react-bootstrap/Dropdown'
-import 'bootstrap/dist/css/bootstrap.min.css'
-import 'bootstrap/dist/js/bootstrap.bundle.min'
+import { FiLogOut, FiUser, FiChevronDown } from 'react-icons/fi'
 import { AuthContext } from '../AuthContext'
 import NotificationPanel from '../views/sidebarpages/NotificationsPanel'
 import { useSocket } from '../SocketContext'
+
+// ─── Sidebar toggle icon ───────────────────────────────────────────────────────
+const MenuIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+)
 
 const AppHeader = () => {
   const navigate = useNavigate()
@@ -25,6 +27,8 @@ const AppHeader = () => {
   const dispatch = useDispatch()
   const sidebarShow = useSelector((state) => state.sidebarShow)
   const [isMobile, setIsMobile] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef()
 
   const handleLogout = () => {
     Cookies.remove('token')
@@ -32,95 +36,230 @@ const AppHeader = () => {
     navigate('/login')
   }
 
-  React.useEffect(() => {
-    const onScroll = () => {
-      headerRef.current &&
-        headerRef.current.classList.toggle('shadow-sm', document.documentElement.scrollTop > 0)
-    }
-
+  useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 767)
-
     handleResize()
     window.addEventListener('resize', handleResize)
-    document.addEventListener('scroll', onScroll)
-
-    return () => {
-      window.removeEventListener('resize', handleResize)
-      document.removeEventListener('scroll', onScroll)
-    }
+    return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const onClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
+
+  // Close dropdown on route change
+  useEffect(() => {
+    setDropdownOpen(false)
+  }, [location.pathname])
 
   return (
     <CHeader
       position="sticky"
       className="mb-0 p-0"
       ref={headerRef}
-      style={{ boxShadow: 'rgba(0,0,0,0.1) 0px 2px 2px' }}
+      style={{
+        backgroundColor: '#FFFFFF',
+        borderBottom: '1px solid #E8E8E5',
+        boxShadow: 'none',
+        zIndex: 1030,
+      }}
     >
-      <CContainer className="px-4 d-flex justify-content-between align-items-center" fluid>
-        {/* Left Side */}
-        <div className="d-flex align-items-center">
-          <CHeaderToggler
+      <CContainer className="px-3 d-flex justify-content-between align-items-center" fluid style={{ height: '56px' }}>
+        {/* ── Left side ───────────────────────────────────────────────────── */}
+        <div className="d-flex align-items-center gap-2">
+          {/* Sidebar toggle */}
+          <button
             onClick={() => dispatch({ type: 'set', sidebarShow: !sidebarShow })}
+            aria-label="Toggle sidebar"
             style={{
-              marginInlineStart: '-14px',
-              borderRadius: '50%',
-              background: '#f1f6f9',
+              background: 'none',
+              border: '1px solid #E8E8E5',
+              borderRadius: '7px',
+              width: '34px',
+              height: '34px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#6B7280',
+              transition: 'border-color 0.15s, color 0.15s',
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#1A1F36'
+              e.currentTarget.style.color = '#1A1F36'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#E8E8E5'
+              e.currentTarget.style.color = '#6B7280'
             }}
           >
-            <GiHamburgerMenu />
-          </CHeaderToggler>
+            <MenuIcon />
+          </button>
 
+          {/* Back button — shown on non-dashboard pages */}
           {location.pathname !== '/dashboard' && (
-            <Button
+            <button
               onClick={() => navigate(-1)}
-              className="d-md-flex align-items-center ms-2 p-1"
-              style={{ backgroundColor: '#fff', border: 'none', color: '#000' }}
+              aria-label="Go back"
+              style={{
+                background: 'none',
+                border: '1px solid #E8E8E5',
+                borderRadius: '7px',
+                width: '34px',
+                height: '34px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#6B7280',
+                transition: 'border-color 0.15s, color 0.15s',
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#1A1F36'
+                e.currentTarget.style.color = '#1A1F36'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#E8E8E5'
+                e.currentTarget.style.color = '#6B7280'
+              }}
             >
-              <HiArrowUturnLeft size={20} />
-            </Button>
+              <HiArrowUturnLeft size={15} />
+            </button>
           )}
         </div>
 
-        {/* Right Side */}
-        <div className="d-flex align-items-center gap-3">
-          {/* 👇 All notification logic now lives here */}
+        {/* ── Right side ──────────────────────────────────────────────────── */}
+        <div className="d-flex align-items-center gap-2">
+          {/* Notifications */}
           <NotificationPanel />
 
-          {/* Profile Dropdown */}
-          <Dropdown align="end">
-            <Dropdown.Toggle
-              as="div"
+          {/* Profile dropdown */}
+          <div ref={dropdownRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              aria-expanded={dropdownOpen}
+              aria-haspopup="true"
+              aria-label="User menu"
               style={{
-                background: 'transparent',
-                border: 'none',
-                fontWeight: '500',
                 display: 'flex',
                 alignItems: 'center',
+                gap: '8px',
+                background: dropdownOpen ? '#F5F5F3' : 'none',
+                border: '1px solid',
+                borderColor: dropdownOpen ? '#D0D0CC' : '#E8E8E5',
+                borderRadius: '8px',
+                padding: '5px 10px 5px 8px',
                 cursor: 'pointer',
+                transition: 'background 0.15s, border-color 0.15s',
+                height: '34px',
+              }}
+              onMouseEnter={(e) => {
+                if (!dropdownOpen) e.currentTarget.style.background = '#F8F8F6'
+              }}
+              onMouseLeave={(e) => {
+                if (!dropdownOpen) e.currentTarget.style.background = 'none'
               }}
             >
-              {!isMobile && (
-                <>
-                  <span className="me-1">{userData?.fullName}</span>
-                  <span className="text-muted" style={{ fontSize: '12px' }}>
-                    ({userData?.roleId?.roleName})
-                  </span>
-                </>
-              )}
-              <IoIosArrowDown className="ms-1" />
-            </Dropdown.Toggle>
+              {/* Avatar */}
+              <div style={{
+                width: '22px', height: '22px',
+                borderRadius: '50%',
+                background: 'var(--primary-color, #1A1F36)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#FFFFFF', fontSize: '10px', fontWeight: '700',
+                flexShrink: 0,
+              }}>
+                {userData?.fullName?.charAt(0)?.toUpperCase() || '?'}
+              </div>
 
-            <Dropdown.Menu className="shadow">
-              <Dropdown.Item onClick={() => navigate('/user-profile')}>
-                <CgProfile className="me-2" /> Update Profile
-              </Dropdown.Item>
-              <Dropdown.Divider />
-              <Dropdown.Item onClick={handleLogout}>
-                <FiLogOut className="me-2" /> Logout
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
+              {!isMobile && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#0F0F0F', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                    {userData?.fullName || 'User'}
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#9CA3AF', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                    {userData?.roleId?.roleName || ''}
+                  </span>
+                </div>
+              )}
+
+              <FiChevronDown
+                size={12}
+                style={{
+                  color: '#9CA3AF',
+                  transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s ease',
+                  flexShrink: 0,
+                }}
+              />
+            </button>
+
+            {/* Dropdown menu */}
+            {dropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  right: 0,
+                  minWidth: '180px',
+                  background: '#FFFFFF',
+                  border: '1px solid #E8E8E5',
+                  borderRadius: '10px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
+                  padding: '4px',
+                  zIndex: 9999,
+                }}
+                role="menu"
+              >
+                <button
+                  role="menuitem"
+                  onClick={() => { navigate('/user-profile'); setDropdownOpen(false) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '9px',
+                    width: '100%', padding: '8px 10px',
+                    background: 'none', border: 'none', borderRadius: '7px',
+                    cursor: 'pointer', fontSize: '13.5px', color: '#374151',
+                    fontFamily: 'inherit', fontWeight: '500',
+                    transition: 'background 0.12s',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#F5F5F3'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                >
+                  <FiUser size={14} style={{ color: '#9CA3AF' }} />
+                  Update Profile
+                </button>
+
+                <div style={{ height: '1px', background: '#F0F0ED', margin: '4px 0' }} />
+
+                <button
+                  role="menuitem"
+                  onClick={handleLogout}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '9px',
+                    width: '100%', padding: '8px 10px',
+                    background: 'none', border: 'none', borderRadius: '7px',
+                    cursor: 'pointer', fontSize: '13.5px', color: '#DC2626',
+                    fontFamily: 'inherit', fontWeight: '500',
+                    transition: 'background 0.12s',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#FEF2F2'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                >
+                  <FiLogOut size={14} />
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </CContainer>
     </CHeader>

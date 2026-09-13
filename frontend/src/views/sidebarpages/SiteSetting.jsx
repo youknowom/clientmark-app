@@ -9,8 +9,7 @@ import { AuthContext } from '../../AuthContext'
 import toast from 'react-hot-toast'
 
 import apiClient, { BASE_URL } from '../../api/axiosClient'
-
-const ConfirmationModal = React.lazy(() => import('../../components/mycomponent/ConfirmationModal'))
+import { syncFaviconFromSettings } from '../../helpers/dynamicFavicon'
 
 import '../sidebarCSS/comStyle.css'
 import '../sidebarCSS/table.css'
@@ -42,12 +41,6 @@ const SiteSetting = () => {
   const [error, setError] = useState({})
   const [isLoading, setIsLoading] = useState('')
 
-  const [confirmState, setConfirmState] = useState({
-    show: false,
-    message: '',
-    onConfirm: () => {},
-  })
-
   //get site setting
   const getSiteSetting = async () => {
     try {
@@ -69,92 +62,156 @@ const SiteSetting = () => {
       if (respData?.favicon) {
         setExistingFavicon(`${BASE_URL}${respData.favicon}`)
       }
+      try {
+        localStorage.setItem('cm_site_setting', JSON.stringify(respData))
+      } catch (e) {}
+      syncFaviconFromSettings(respData)
     } catch (error) {
     } finally {
       setIsLoading('')
     }
   }
 
+  // Handle Logo file selection with format and size validation
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const validExtensions = ['.png', '.jpg', '.jpeg', '.webp', '.svg']
+    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
+    const isValidType = file.type.startsWith('image/') || validExtensions.includes(ext)
+
+    if (!isValidType) {
+      toast.error('Invalid logo format. Please upload a PNG, JPG, JPEG, WebP, or SVG file.')
+      e.target.value = ''
+      return
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Logo file size exceeds 10MB limit. Please choose a smaller image.')
+      e.target.value = ''
+      return
+    }
+
+    setSiteSetting((prev) => ({ ...prev, mainLogo: file }))
+    setLogoPreview(URL.createObjectURL(file))
+    setError((prev) => ({ ...prev, mainLogo: '' }))
+    toast.success(`Logo "${file.name}" selected. Click "Save Settings" to apply.`)
+  }
+
+  // Handle Favicon file selection with format and size validation
+  const handleFaviconChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const validExtensions = ['.png', '.ico', '.svg', '.jpg', '.jpeg', '.webp']
+    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
+    const isValidType =
+      file.type.startsWith('image/') ||
+      file.type.includes('icon') ||
+      validExtensions.includes(ext)
+
+    if (!isValidType) {
+      toast.error('Invalid favicon format. Please upload a PNG, ICO, SVG, or JPG file.')
+      e.target.value = ''
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Favicon file size exceeds 5MB limit. Please choose a smaller image.')
+      e.target.value = ''
+      return
+    }
+
+    setSiteSetting((prev) => ({ ...prev, favicon: file }))
+    setFaviconPreview(URL.createObjectURL(file))
+    setError((prev) => ({ ...prev, favicon: '' }))
+    toast.success(`Favicon "${file.name}" selected. Click "Save Settings" to apply.`)
+  }
+
   //save data in backend
   const saveSiteSetting = async () => {
     const err = {}
+
+    // Only Company Name is required
     if (!siteSetting.projectName || siteSetting.projectName.trim() === '') {
-      err.projectName = 'Project name is required.'
+      err.projectName = 'Company / Project name is required.'
     }
 
-    if (!siteSetting.host || siteSetting.host.trim() === '') {
-      err.host = 'SMTP Host is required.'
+    // Optional email validation
+    if (siteSetting.email && siteSetting.email.trim() !== '') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(siteSetting.email.trim())) {
+        err.email = 'Please enter a valid email address.'
+      }
     }
 
-    if (!siteSetting.logoHeight) {
-      err.logoHeight = 'Logo height is required.'
-    }
-
-    if (!siteSetting.logoWidth) {
-      err.logoWidth = 'Logo widht color is required.'
-    }
-
-    if (!siteSetting.email || siteSetting.email.trim() === '') {
-      err.email = 'Email is required.'
-    }
-
-    // Phone validation — exact digit count per country (optional fields)
+    // Phone validation — only if user entered real phone digits (ignoring standalone country code)
     const validatePhone = (value, countryMeta, label) => {
       if (!value) return null
-      const actualDigits = value.replace(/\D/g, '').length
-      const expectedDigits = countryMeta?.format?.replace(/[^.]/g, '').length || 0
-      if (expectedDigits > 0 && actualDigits !== expectedDigits) {
-        return `Enter a valid ${countryMeta?.name || label} number`
+      const digits = value.replace(/\D/g, '')
+      const dialCodeDigits = countryMeta?.dialCode ? countryMeta.dialCode.replace(/\D/g, '') : ''
+      if (digits.length === 0 || digits === dialCodeDigits) {
+        return null
       }
-      if (actualDigits < 7 || actualDigits > 15) return `Enter a valid ${label}`
+      if (digits.length < 7 || digits > 15) {
+        return `Please enter a valid ${label} (7-15 digits)`
+      }
       return null
     }
+
     const phoneErr = validatePhone(siteSetting.phone, phoneCountryMeta, 'phone number')
     if (phoneErr) err.phone = phoneErr
+
     const waErr = validatePhone(siteSetting.companyWhatsapp, waCountryMeta, 'WhatsApp number')
     if (waErr) err.companyWhatsapp = waErr
 
     setError(err)
+
     if (Object.keys(err).length > 0) {
-      toast.error('Please fill in all required fields and correct the validation errors.')
+      const firstError = Object.values(err)[0]
+      toast.error(firstError)
       return
     }
 
     let payload = new FormData()
-    payload.append('logoHeight', siteSetting.logoHeight)
-    payload.append('logoWidth', siteSetting.logoWidth)
-    payload.append('projectName', siteSetting.projectName)
-    payload.append('mainLogo', siteSetting.mainLogo)
-    if (siteSetting.favicon) payload.append('favicon', siteSetting.favicon)
-    payload.append('email', siteSetting.email)
-    payload.append('host', siteSetting.host)
-    if (siteSetting.phone) payload.append('phone', siteSetting.phone)
-    if (siteSetting.companyWhatsapp) payload.append('companyWhatsapp', siteSetting.companyWhatsapp)
-    if (siteSetting.password) {
-      payload.append('password', siteSetting.password)
+    payload.append('logoHeight', siteSetting.logoHeight || 50)
+    payload.append('logoWidth', siteSetting.logoWidth || 150)
+    payload.append('projectName', (siteSetting.projectName || '').trim())
+
+    if (siteSetting.mainLogo instanceof File) {
+      payload.append('mainLogo', siteSetting.mainLogo)
+    }
+    if (siteSetting.favicon instanceof File) {
+      payload.append('favicon', siteSetting.favicon)
     }
 
-    setConfirmState({
-      show: true,
-      message: `Do you want to save setting?`,
-      onConfirm: async () => {
-        setIsLoading('submit')
-        try {
-          let response = await apiClient.post('/software-setting/update-site-setting', payload, {
-            isFileUpload: true,
-          })
+    if (siteSetting.email) payload.append('email', siteSetting.email.trim())
+    if (siteSetting.host) payload.append('host', siteSetting.host.trim())
+    if (siteSetting.phone) payload.append('phone', siteSetting.phone)
+    if (siteSetting.companyWhatsapp) payload.append('companyWhatsapp', siteSetting.companyWhatsapp)
+    if (siteSetting.password && siteSetting.password.trim() !== '') {
+      payload.append('password', siteSetting.password.trim())
+    }
 
-          toast.success(response.data.message)
+    setIsLoading('submit')
+    try {
+      let response = await apiClient.post('/software-setting/update-site-setting', payload, {
+        isFileUpload: true,
+      })
 
-          getSiteSetting()
-        } catch (error) {
-          toast.error(error?.data?.message || 'Internal server error. Try after sometime.')
-        } finally {
-          setIsLoading('')
-          setConfirmState({ show: false, message: '', onConfirm: null })
-        }
-      },
-    })
+      toast.success(response?.data?.message || 'Settings saved successfully.')
+      await getSiteSetting()
+    } catch (error) {
+      const errMsg =
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        error?.message ||
+        'Failed to save settings. Please try again.'
+      toast.error(errMsg)
+    } finally {
+      setIsLoading('')
+    }
   }
 
   useEffect(() => {
@@ -164,7 +221,7 @@ const SiteSetting = () => {
   return (
     <Container className="mt-4 containe No.er-lg gap-2 d-md-flex p-0">
       <Helmet>
-        <title>{siteSetting?.projectName} - Site</title>
+        <title>Site Settings — Clientmark</title>
       </Helmet>
       {/* left side section */}
       <Col xs={12} sm={12} md={12} lg={12} xl={12}>
@@ -201,7 +258,7 @@ const SiteSetting = () => {
                       <Col md={4}>
                         <Form.Group className="mb-3">
                           <Form.Label>
-                            SMTP Host <span className="text-danger">*</span>
+                            SMTP Host <span className="text-muted small fw-normal">(Optional)</span>
                           </Form.Label>
                           <Form.Control
                             type="text"
@@ -211,7 +268,7 @@ const SiteSetting = () => {
                               setError({ ...error, host: '' })
                             }}
                             className="underline-input"
-                            placeholder="Enter host"
+                            placeholder="e.g. smtp.gmail.com"
                           />
                           {error.host && <div className="text-danger small">{error.host}</div>}
                         </Form.Group>
@@ -219,7 +276,7 @@ const SiteSetting = () => {
                       <Col md={4}>
                         <Form.Group className="mb-3">
                           <Form.Label>
-                            SMTP User <span className="text-danger">*</span>
+                            SMTP User <span className="text-muted small fw-normal">(Optional)</span>
                           </Form.Label>
                           <Form.Control
                             type="text"
@@ -229,7 +286,7 @@ const SiteSetting = () => {
                               setError({ ...error, email: '' })
                             }}
                             className="underline-input"
-                            placeholder="Enter email"
+                            placeholder="e.g. notify@yourcompany.com"
                           />
                           {error.email && <div className="text-danger small">{error.email}</div>}
                         </Form.Group>
@@ -237,9 +294,11 @@ const SiteSetting = () => {
 
                       <Col md={4}>
                         <Form.Group className="mb-3">
-                          <Form.Label>SMTP Password</Form.Label>
+                          <Form.Label>
+                            SMTP Password <span className="text-muted small fw-normal">(Optional)</span>
+                          </Form.Label>
                           <Form.Control
-                            type="text"
+                            type="password"
                             value={siteSetting.password}
                             onChange={(e) => {
                               setSiteSetting({
@@ -249,7 +308,7 @@ const SiteSetting = () => {
                               setError({ ...error, password: '' })
                             }}
                             className="underline-input"
-                            placeholder="Enter password"
+                            placeholder="Enter SMTP password"
                           />
                           {error.password && (
                             <div className="text-danger small">{error.password}</div>
@@ -325,42 +384,30 @@ const SiteSetting = () => {
 
                     <hr className="my-4" />
 
-                    <h5 className="fw-semibold mb-3">Logo Settings</h5>
+                    <h5 className="fw-semibold mb-3">Logo & Branding Settings</h5>
 
                     <Form.Group className="mb-3">
-                      <Form.Label>Main Logo</Form.Label>
+                      <Form.Label className="d-flex justify-content-between">
+                        <span>Main Logo</span>
+                        <span className="text-muted small">PNG, JPG, WebP, SVG (Max 10MB)</span>
+                      </Form.Label>
                       <Form.Control
                         type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files[0]
-                          if (file) {
-                            setSiteSetting({ ...siteSetting, mainLogo: file })
-                            setLogoPreview(URL.createObjectURL(file))
-                            setError({ ...error, mainLogo: '' })
-                          }
-                        }}
+                        accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                        onChange={handleLogoChange}
                         className="underline-input"
                       />
                     </Form.Group>
 
                     <Form.Group className="mb-3">
-                      <Form.Label>
-                        Favicon{' '}
-                        <span className="text-muted small">
-                          (shown in browser tab, 32×32 or 64×64 recommended)
-                        </span>
+                      <Form.Label className="d-flex justify-content-between">
+                        <span>Favicon (Browser Tab Icon)</span>
+                        <span className="text-muted small">PNG, ICO, SVG, JPG (32×32 or 64×64, Max 5MB)</span>
                       </Form.Label>
                       <Form.Control
                         type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files[0]
-                          if (file) {
-                            setSiteSetting({ ...siteSetting, favicon: file })
-                            setFaviconPreview(URL.createObjectURL(file))
-                          }
-                        }}
+                        accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml,image/jpeg,image/jpg"
+                        onChange={handleFaviconChange}
                         className="underline-input"
                       />
                     </Form.Group>
@@ -448,42 +495,103 @@ const SiteSetting = () => {
 
                     <hr className="my-3" />
 
-                    <h6 className="mb-3 fw-semibold">Favicon Preview</h6>
-                    {faviconPreview || existingFavicon ? (
-                      <div
-                        className="p-3 bg-light rounded d-flex align-items-center justify-content-center"
-                        style={{ gap: '12px' }}
+                    <div className="d-flex align-items-center justify-content-between mb-2">
+                      <h6 className="mb-0 fw-semibold">Browser Tab Favicon</h6>
+                      <span
+                        className="badge"
+                        style={{
+                          background: faviconPreview || existingFavicon ? '#DEF7EC' : (logoPreview || existingLogo ? '#E1EFFE' : '#F3F4F6'),
+                          color: faviconPreview || existingFavicon ? '#03543F' : (logoPreview || existingLogo ? '#1E429F' : '#374151'),
+                          fontSize: '11px',
+                          fontWeight: 500,
+                        }}
                       >
-                        <div className="text-center">
-                          <img
-                            src={faviconPreview || existingFavicon}
-                            alt="Favicon Preview"
-                            style={{ width: '32px', height: '32px', objectFit: 'contain' }}
-                          />
-                          <div
-                            className="text-muted"
-                            style={{ fontSize: '10px', marginTop: '4px' }}
-                          >
-                            32×32
-                          </div>
-                        </div>
-                        <div className="text-center">
-                          <img
-                            src={faviconPreview || existingFavicon}
-                            alt="Favicon Preview"
-                            style={{ width: '64px', height: '64px', objectFit: 'contain' }}
-                          />
-                          <div
-                            className="text-muted"
-                            style={{ fontSize: '10px', marginTop: '4px' }}
-                          >
-                            64×64
-                          </div>
+                        {faviconPreview || existingFavicon
+                          ? 'Custom Favicon Active'
+                          : logoPreview || existingLogo
+                          ? 'Using Company Logo'
+                          : 'Default Clientmark'}
+                      </span>
+                    </div>
+
+                    {/* Simulated Browser Tab */}
+                    <div
+                      className="p-2 mb-3 rounded"
+                      style={{
+                        background: '#EAECEF',
+                        border: '1px solid #D5D8DC',
+                      }}
+                    >
+                      <div
+                        className="d-inline-flex align-items-center px-3 py-1 bg-white rounded-top shadow-sm"
+                        style={{
+                          maxWidth: '240px',
+                          borderTop: '2px solid #E05E3A',
+                          gap: '8px',
+                        }}
+                      >
+                        <img
+                          src={
+                            faviconPreview ||
+                            existingFavicon ||
+                            logoPreview ||
+                            existingLogo ||
+                            '/favicon.svg'
+                          }
+                          alt="Tab icon"
+                          style={{ width: '16px', height: '16px', objectFit: 'contain', borderRadius: '3px' }}
+                        />
+                        <span
+                          className="text-truncate fw-medium"
+                          style={{ fontSize: '12px', color: '#1A1F36', maxWidth: '140px' }}
+                        >
+                          {siteSetting.projectName || 'Clientmark'} — CRM
+                        </span>
+                        <span style={{ fontSize: '10px', color: '#9CA3AF', marginLeft: 'auto' }}>✕</span>
+                      </div>
+                    </div>
+
+                    {/* Icon sizes preview */}
+                    <div
+                      className="p-3 bg-light rounded d-flex align-items-center justify-content-center"
+                      style={{ gap: '20px' }}
+                    >
+                      <div className="text-center">
+                        <img
+                          src={
+                            faviconPreview ||
+                            existingFavicon ||
+                            logoPreview ||
+                            existingLogo ||
+                            '/favicon.svg'
+                          }
+                          alt="Favicon 32x32"
+                          style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+                        />
+                        <div className="text-muted" style={{ fontSize: '10px', marginTop: '4px' }}>
+                          32×32 (Tab)
                         </div>
                       </div>
-                    ) : (
-                      <div className="text-muted small">Upload favicon to preview</div>
-                    )}
+                      <div className="text-center">
+                        <img
+                          src={
+                            faviconPreview ||
+                            existingFavicon ||
+                            logoPreview ||
+                            existingLogo ||
+                            '/favicon.svg'
+                          }
+                          alt="Favicon 64x64"
+                          style={{ width: '64px', height: '64px', objectFit: 'contain' }}
+                        />
+                        <div className="text-muted" style={{ fontSize: '10px', marginTop: '4px' }}>
+                          64×64 (HiDPI)
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-muted small mt-2 mb-0" style={{ fontSize: '11px' }}>
+                      On the public landing page, Clientmark branding is preserved. When clients log into your workspace, your custom favicon and logo are displayed.
+                    </p>
                   </Card.Body>
                 </Card>
               </Col>
@@ -491,13 +599,6 @@ const SiteSetting = () => {
           </Card.Body>
         </Card>
       </Col>
-
-      <ConfirmationModal
-        show={confirmState.show}
-        message={confirmState.message}
-        onConfirm={confirmState.onConfirm}
-        onCancel={() => setConfirmState((prev) => ({ ...prev, show: false }))}
-      />
     </Container>
   )
 }

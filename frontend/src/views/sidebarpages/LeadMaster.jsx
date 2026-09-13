@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react'
+﻿import React, { useContext, useEffect } from 'react'
 import { Col, Container, Row } from 'react-bootstrap'
 import { FiFilePlus } from 'react-icons/fi'
 import { Helmet } from 'react-helmet'
@@ -46,7 +46,7 @@ function LeadMaster() {
   return (
     <Container className="p-0 pb-4 container-lg mt-2">
       <Helmet>
-        <title>BH - Lead Generation</title>
+        <title>Lead Management — Clientmark</title>
       </Helmet>
       <Row>
         <Col>

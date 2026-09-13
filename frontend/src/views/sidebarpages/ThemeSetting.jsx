@@ -8,8 +8,6 @@ import toast from 'react-hot-toast'
 
 import apiClient from '../../api/axiosClient'
 
-const ConfirmationModal = React.lazy(() => import('../../components/mycomponent/ConfirmationModal'))
-
 import '../sidebarCSS/comStyle.css'
 import '../sidebarCSS/table.css'
 
@@ -24,12 +22,6 @@ const ThemeSetting = () => {
 
   const [error, setError] = useState({})
   const [isLoading, setIsLoading] = useState('')
-
-  const [confirmState, setConfirmState] = useState({
-    show: false,
-    message: '',
-    onConfirm: () => {},
-  })
 
   //get theme
   const getTheme = async () => {
@@ -75,25 +67,18 @@ const ThemeSetting = () => {
 
     
 
-    setConfirmState({
-      show: true,
-      message: `Do you want to save theme?`,
-      onConfirm: async () => {
-        setIsLoading('submit')
-        try {
-          let response = await apiClient.put('/software-setting/update-main-theme', mainThemeFormData)
+    setIsLoading('submit')
+    try {
+      let response = await apiClient.put('/software-setting/update-main-theme', mainThemeFormData)
 
-          toast.success(response.data.message)
-          resetForm()
-          getTheme()
-        } catch (error) {
-          toast.error(error?.data?.message || 'Internal server error. Try after sometime.')
-        } finally {
-          setIsLoading('')
-          setConfirmState({ show: false, message: '', onConfirm: null })
-        }
-      },
-    })
+      toast.success(response?.data?.message || 'Theme saved successfully.')
+      resetForm()
+      getTheme()
+    } catch (error) {
+      toast.error(error?.data?.message || 'Internal server error. Try after sometime.')
+    } finally {
+      setIsLoading('')
+    }
   }
 
   const resetForm = () => {
@@ -112,7 +97,7 @@ const ThemeSetting = () => {
   return (
     <Container className="mt-4 container-lg gap-2 d-md-flex p-0">
       <Helmet>
-        <title>BH - Theme Setting</title>
+        <title>Theme Settings — Clientmark</title>
       </Helmet>
       {/* left side section */}
       <Col xs={12} sm={12} md={12} lg={12} xl={8}>
@@ -217,13 +202,6 @@ const ThemeSetting = () => {
           </Card.Body>
         </Card>
       </Col>
-
-      <ConfirmationModal
-        show={confirmState.show}
-        message={confirmState.message}
-        onConfirm={confirmState.onConfirm}
-        onCancel={() => setConfirmState((prev) => ({ ...prev, show: false }))}
-      />
     </Container>
   )
 }

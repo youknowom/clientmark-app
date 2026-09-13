@@ -7,7 +7,7 @@
 }
 
 .loader {
-  --w: 12ch; /*BIGHOST CRM = 12 characters */
+  --w: 10ch; /* CLIENTMARK = 10 characters */
   font-weight: bold;
   font-family: monospace;
   font-size: 30px;
@@ -34,7 +34,7 @@
 }
 
 .loader:before {
-  content: "BIGHOST CRM";
+  content: "CLIENTMARK";
 }
 
 @keyframes l16 {

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react'
+﻿import React, { useContext, useEffect, useMemo, useState } from 'react'
 import { Container, Row, Col, Card, Form, Button, Spinner, Table, Badge } from 'react-bootstrap'
 import { Chart, registerables } from 'chart.js'
 import { Bar } from 'react-chartjs-2'
@@ -257,7 +257,7 @@ function ProjectStatusReport() {
   return (
     <Container className="mt-4 container-lg p-0">
       <Helmet>
-        <title>BH - Project Status Report</title>
+        <title>Project Status Report — Clientmark</title>
       </Helmet>
 
       <Card style={{ border: 'none', borderRadius: 14, overflow: 'hidden' }}>

@@ -1,4 +1,4 @@
-import React, { useContext } from 'react'
+﻿import React, { useContext } from 'react'
 import { Col, Container, Row } from 'react-bootstrap'
 import { CgWebsite } from 'react-icons/cg'
 import { IoColorPaletteOutline } from 'react-icons/io5'
@@ -58,7 +58,7 @@ function SettingMaster() {
   return (
     <Container className="p-0 pb-4 container-lg mt-2">
       <Helmet>
-        <title>BH - Site Setting</title>
+        <title>Settings — Clientmark</title>
       </Helmet>
       <Row>
         <Col>

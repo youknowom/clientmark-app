@@ -5,47 +5,65 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <meta name="description" content="BigHost CRM" />
-    <meta name="author" content="Sterling Motors" />
-    <meta name="keywords" content="BigHost CRM" />
-    <title>BigHost CRM</title>
+    <meta name="description" content="Clientmark organizes sales leads, team follow-ups, WhatsApp communication, and project handovers in one workspace." />
+    <meta name="keywords" content="Clientmark, CRM, Lead Management, Project Management, WhatsApp, Sales Pipeline, Role Permissions" />
+    <meta name="author" content="Clientmark" />
+    <meta property="og:title" content="Clientmark — Lead and Project CRM" />
+    <meta property="og:description" content="Lead tracking and project delivery software for sales and delivery teams." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://clientmark.app" />
+    <title>Clientmark</title>
     <link rel="manifest" href="/manifest.json" />
-    <link rel="shortcut icon" href="favicon.ico" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' width='64' height='64'%3E%3Crect width='64' height='64' rx='16' fill='%23E05E3A'/%3E%3Cpath d='M16 20h32M16 32h22M16 44h26' stroke='%23FFFFFF' stroke-width='5.5' stroke-linecap='round'/%3E%3Ccircle cx='48' cy='44' r='5' fill='%23FFFFFF'/%3E%3C/svg%3E"
+    />
+    <link rel="alternate icon" href="/favicon.svg" />
     <script>
       ;(() => {
         try {
-          const savedFavicon = localStorage.getItem('bh_favicon_url')
-          if (!savedFavicon) return
+          const path = window.location.pathname.replace(/\/+$/, '') || '/'
+          // Public landing page ALWAYS stays on the OG Clientmark brand favicon
+          if (path === '/') return
 
-          let link = document.querySelector("link[rel='shortcut icon']")
-          if (!link) {
-            link = document.createElement('link')
-            link.rel = 'shortcut icon'
-            document.head.appendChild(link)
+          // Inside dashboards / workspace: load buyer's custom logo/favicon
+          const savedFavicon =
+            localStorage.getItem('cm_custom_favicon') ||
+            localStorage.getItem('bh_favicon_url')
+          if (savedFavicon) {
+            const links = document.querySelectorAll("link[rel*='icon']")
+            links.forEach((l) => (l.href = savedFavicon))
           }
-          link.href = savedFavicon
         } catch (e) {}
       })()
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
       rel="stylesheet"
     />
 
     <style>
+      :root {
+        --cm-font: 'Inter', 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
       * {
-        font-family: 'Noto Sans', sans-serif;
+        font-family: var(--cm-font);
         font-style: normal;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      html {
+        scroll-behavior: smooth;
       }
     </style>
   </head>
 
   <body>
-    <noscript> You need to enable JavaScript to run this app </noscript>
+    <noscript>You need to enable JavaScript to run this app</noscript>
     <div id="root"></div>
     <script type="module" src="/src/index.js"></script>
-    <!-- built files will be auto injected -->
   </body>
 </html>

@@ -3,6 +3,7 @@ import cors from "cors";
 import path from "path";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import multer from "multer";
 import { getDirname } from "../utils/pathUtil.js";
 
 //import route
@@ -81,6 +82,28 @@ app.use("/project", projectRouter);
 app.use("/notification", notificationRouter);
 app.use("/tenant", tenantRouter);
 app.use("/subscription", subscriptionRouter);
+
+// Centralized error handling (Multer errors, payload limits, file validation)
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({
+        success: false,
+        message: "File size exceeds 10MB limit. Please upload a smaller file.",
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: err.message || "File upload failed.",
+    });
+  } else if (err) {
+    return res.status(400).json({
+      success: false,
+      message: err.message || "An unexpected error occurred during upload.",
+    });
+  }
+  next();
+});
 
 //server frontend pages
 const buildPath = path.join(__dirname, "../../public_html");
