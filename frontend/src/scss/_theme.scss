@@ -1,0 +1,141 @@
+body {
+  // background-color: var(--cui-tertiary-bg);
+  background-color: #ffffff !important;
+  color: var(--text-color);
+}
+
+.wrapper {
+  width: 100%;
+  @include ltr-rtl("padding-left", var(--cui-sidebar-occupy-start, 0));
+  @include ltr-rtl("padding-right", var(--cui-sidebar-occupy-end, 0));
+  will-change: auto;
+  @include transition(padding .15s);
+}
+
+.header>.container-fluid,
+.sidebar-header {
+  min-height: calc(4rem + 1px); // stylelint-disable-line function-disallowed-list
+}
+
+.sidebar-brand-full {
+  margin-left: 3px;
+}
+
+.sidebar-header {
+  .nav-underline-border {
+    --cui-nav-underline-border-link-padding-x: 1rem;
+    --cui-nav-underline-border-gap: 0;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    min-height: calc(4rem + 1px); // stylelint-disable-line function-disallowed-list
+  }
+}
+
+.sidebar-toggler {
+  @include ltr-rtl("margin-left", auto);
+}
+
+.sidebar-narrow,
+.sidebar-narrow-unfoldable:not(:hover) {
+  .sidebar-toggler {
+    @include ltr-rtl("margin-right", auto);
+  }
+}
+
+.header>.container-fluid+.container-fluid {
+  min-height: 3rem;
+}
+
+.footer {
+  min-height: calc(3rem + 1px); // stylelint-disable-line function-disallowed-list
+}
+
+
+
+.sidebar-nav .nav-link {
+  color: #282c3f;
+}
+
+.sidebar-nav .nav-link.active {
+  background: var(--primary-color);
+  color: #ffffff;
+}
+
+.sidebar-nav .nav-link:hover {
+
+  background: var(--secondary-color);
+  color: var(--text-color);
+}
+
+.sidebar-nav .nav-link.active .nav-icon {
+  color: #ffffff;
+  font-size: 1.2em;
+}
+
+.sidebar-nav .nav-link .nav-icon {
+  color: var(--primary-color);
+  font-size: 1.2em;
+}
+
+
+
+/* For Chrome, Edge, Safari */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--primary-color);
+  border-radius: 10px;
+  border: 2px solid #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--primary-color);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  /* auto | thin | none */
+  scrollbar-color: --primary-color #f1f1f1;
+  /* thumb color, track color */
+}
+
+.root {
+  --primary-color: var(--primary-color);
+}
+
+.dropdown-item.active,
+.dropdown-item:active,
+.dropdown-item:focus {
+  background-color: var(--primary-color) !important;
+  color: #fff !important;
+}
+
+.form-select:focus {
+  padding-left: 15px !important;
+}
+
+.dropdown-toggle::after {
+  display: none !important;
+}
+
+.search-bar .css-tj5bde-Svg {
+  color: transparent !important;
+}
+
+.search-bar .css-8mmkcg {
+  fill: transparent !important;
+}
+.css-1xc3v61-indicatorContainer{
+  color: transparent !important;
+}

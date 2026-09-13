@@ -1,0 +1,75 @@
+/* Ensure tabs are in one single line */
+.tab-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  /* ❗ Prevent wrapping to next line */
+  overflow-x: auto;
+  /* Enable horizontal scroll if too many tabs */
+  white-space: nowrap;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 8px 0;
+  scrollbar-width: thin;
+  /* For Firefox */
+}
+
+/* Hide scrollbar on Chrome, Edge, and Safari */
+.tab-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Tab button styling */
+.tab-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent !important;
+  border: none !important;
+  color: var(--primary-color);
+  font-size: 12px;
+  padding: 0px 0px;
+  position: relative;
+  transition: all 0.3s ease;
+  border-radius: 6px;
+  min-width: 80px;
+  /* Ensures each tab has enough click area */
+  text-align: left;
+}
+
+.tab-button:hover {
+  background: #f9fafb;
+}
+
+.tab-icon {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.tab-label {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Active tab underline */
+.tab-button.active {
+  color: #0c2749;
+  font-weight: 600;
+}
+
+.tab-button.active .tab-icon {
+  color: #0c2749;
+}
+
+/* .tab-button.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 25%;
+  width: 50%;
+  height: 2px;
+  background-color: #007bff;
+  border-radius: 2px;
+} */

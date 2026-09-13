@@ -1,0 +1,116 @@
+/* Hide the sidebar on desktop */
+
+.mobile-bottom-sidebar {
+  display: none;
+}
+
+.fade:not(.show) {
+  opacity: 0;
+  z-index: -1;
+}
+
+
+
+@media (max-width: 767px) {
+  /* .mobile-bottom-sidebar {
+  justify-self: center;
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: static;
+  bottom: 0;
+  width: 100%;
+  height: 60px; 
+  background-color: white; 
+ border-radius:25px 25px 0 0;  
+ padding: 0 20px;
+  z-index: 1000;
+} */
+
+  .mobile-bottom-sidebar {
+    justify-self: center;
+    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background-color: white;
+    border-radius: 25px 25px 0 0;
+    padding: 0 20px;
+    z-index: 1000;
+  }
+
+  .nav {
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+  }
+
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: var(--primary-color);
+  }
+
+  .bottom-nav-item:hover {
+    transform: scale(1.1);
+  }
+
+  .bottom-nav-item.active {
+    background-color: white;
+    color: var(--primary-color);
+    border: 2px solid white;
+  }
+
+  .nav-icon {
+    margin-bottom: 2px;
+  }
+
+  .nav-text {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--primary-color);
+  }
+
+  .nav-text.active {
+    color: var(--primary-color);
+  }
+
+  /* Center Big Add User Button Style */
+  .center-add-user {
+    position: relative;
+    top: -20px;
+    background-color: #fff;
+    border-radius: 50%;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    padding: 5px;
+  }
+
+  .add-user-icon {
+    background: var(--primary-color);
+    border-radius: 50%;
+    padding: 8px;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 8px rgba(144, 76, 175, 0.4);
+    width: 50px;
+    height: 50px;
+    transition: transform 0.2s ease-in-out;
+  }
+
+  .add-user-icon:hover {
+    transform: scale(1.1);
+  }
+}
+
+

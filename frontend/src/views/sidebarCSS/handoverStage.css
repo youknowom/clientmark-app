@@ -1,0 +1,19 @@
+.file-upload-box {
+  border: 2px dashed #6fa8ff;
+  background: #f8faff;
+  border-radius: 10px;
+  transition: 0.2s ease-in-out;
+}
+
+.file-upload-box:hover {
+  background: #eef5ff;
+}
+
+.file-upload-active {
+  background: #e3efff !important;
+  border-color: #0d6efd !important;
+}
+
+.file-upload-box p {
+  color: #555;
+}

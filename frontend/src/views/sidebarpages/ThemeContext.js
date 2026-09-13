@@ -1,0 +1,76 @@
+import React, { createContext, useState, useEffect } from 'react'
+import apiClient from '../../api/axiosClient'
+
+const ThemeContext = createContext()
+
+const defaultTheme = {
+  primaryColor: '#00589f',
+  secondaryColor: '#72a3ca',
+  backgroundColor: '#f8f9fa',
+  textColor: '#0c2749',
+}
+
+export const ThemeProvider = ({ children }) => {
+
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem('theme')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed && typeof parsed === 'object' && parsed.primaryColor) {
+          return parsed
+        }
+      }
+    } catch (e) {
+      localStorage.removeItem('theme')
+    }
+    return defaultTheme
+  })
+
+  // Fetch theme once
+  const getMainTheme = async () => {
+    try {
+      const response = await apiClient.get('/software-setting/get-main-theme')
+      const mainTheme = response?.data?.data?.mainTheme
+
+      if (mainTheme) {
+        const updatedTheme = {
+          primaryColor: mainTheme.primaryColor || defaultTheme.primaryColor,
+          secondaryColor: mainTheme.secondaryColor || defaultTheme.secondaryColor,
+          backgroundColor: mainTheme.backgroundColor || defaultTheme.backgroundColor,
+          textColor: mainTheme.textColor || defaultTheme.textColor,
+        }
+
+        setTheme(updatedTheme)
+        localStorage.setItem('theme', JSON.stringify(updatedTheme))
+      }
+    } catch (error) {
+      setTheme(defaultTheme)
+    }
+  }
+
+  useEffect(() => {
+    getMainTheme()
+  }, [])
+
+  // Apply CSS variables whenever theme changes
+  useEffect(() => {
+    document.documentElement.style.setProperty('--primary-color', theme.primaryColor)
+    document.documentElement.style.setProperty('--secondary-color', theme.secondaryColor)
+    document.documentElement.style.setProperty('--background-color', theme.backgroundColor)
+    document.documentElement.style.setProperty('--text-color', theme.textColor)
+  }, [theme])
+
+  const updateTheme = (newTheme) => {
+    setTheme(newTheme)
+    localStorage.setItem('theme', JSON.stringify(newTheme))
+  }
+
+  return (
+    <ThemeContext.Provider value={{ theme, updateTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  )
+}
+
+export default ThemeContext

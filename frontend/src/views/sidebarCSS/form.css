@@ -1,0 +1,105 @@
+.body {
+  background-color: #ffffff;
+}
+
+/* Container for the entire form */
+.form-container {
+  margin: 40px auto;
+  /* max-width: 650px; */
+  background: #ffffff;
+  padding: 30px 15px;
+  border-radius: 12px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  line-height: 20px;
+}
+
+/* Title Box */
+.form-title-box {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+/* Main Title */
+.custom-form-title {
+  font-size: 26px;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+/* Form Styling */
+.custom-form-box {
+  padding: 20px;
+  line-height: 20px;
+}
+
+/* Labels */
+.custom-form-label {
+  font-size: 16px;
+  font-weight: 500;
+  margin-top: 10px;
+  color: #34495e;
+}
+
+/* Input Fields */
+.custom-form-input {
+  border-radius: 5px;
+  border: 1px solid #bdc3c7;
+  padding: 8px;
+  font-size: 14px;
+}
+
+/* Input Focus Effect */
+.custom-form-input:focus {
+  border-color: #3498db;
+  box-shadow: 0px 0px 5px rgba(52, 152, 219, 0.5);
+}
+
+/* Submit Button */
+.custom-submit-button {
+  width: auto;
+  margin-top: 10px;
+  background-color: var(--primary-color) !important;
+  border: none;
+  padding: 3px 20px;
+  font-size: 16px;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Submit Button Hover */
+.custom-submit-button:hover {
+  background-color: var(--secondary-color) !important;
+  color: var(--primary-color);
+}
+
+/* Submit Button Hover */
+.custom-submit-button:focus {
+  background-color: var(--secondary-color) !important;
+  color: var(--primary-color) !important;
+}
+
+.add-category {
+  background-color: var(--primary-color) !important;
+}
+
+.category-form {
+  padding: 10px 40px;
+}
+
+.comission-card {
+  padding: 20px 40px;
+}
+
+.bank-header {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 6px 10px;
+  border-bottom: none;
+}
+
+@media (max-width: 767.98px) {
+  .notification-text {
+    font-size: 18px;
+  }
+}

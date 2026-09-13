@@ -1,0 +1,59 @@
+.mainBGColor {
+  background-color: var(--primary-color);
+}
+
+/* Login Button Styling */
+.button {
+  background-color: var(--primary-color);
+  color: #ffffff;
+  font-weight: bold;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  transition: all ease 0.6s;
+}
+
+.button:hover {
+  color: #383b3d;
+  outline: 0.5px solid #000000 !important;
+  background: #ffffff;
+}
+
+/* Left Side Container */
+.leftDiv {
+  width: 50%;
+  background-color: #16192a;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+/* Make image responsive */
+.login-img {
+  max-width: 90%;
+  max-height: 80%;
+  object-fit: contain;
+  height: auto;
+}
+
+/* Tablet - Adjust layout */
+@media (max-width: 1000px) {
+  .login-img {
+    max-width: 75%;
+    max-height: 70%;
+  }
+}
+
+/* Mobile - Hide left side and focus on form */
+@media (max-width: 768px) {
+  .leftDiv {
+    display: none !important;
+  }
+
+  .rightInnerDiv {
+    width: 100%;
+    margin: 0 auto;
+  }
+}

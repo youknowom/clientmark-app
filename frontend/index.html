@@ -1,0 +1,51 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="BigHost CRM" />
+    <meta name="author" content="Sterling Motors" />
+    <meta name="keywords" content="BigHost CRM" />
+    <title>BigHost CRM</title>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="shortcut icon" href="favicon.ico" />
+    <script>
+      ;(() => {
+        try {
+          const savedFavicon = localStorage.getItem('bh_favicon_url')
+          if (!savedFavicon) return
+
+          let link = document.querySelector("link[rel='shortcut icon']")
+          if (!link) {
+            link = document.createElement('link')
+            link.rel = 'shortcut icon'
+            document.head.appendChild(link)
+          }
+          link.href = savedFavicon
+        } catch (e) {}
+      })()
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      * {
+        font-family: 'Noto Sans', sans-serif;
+        font-style: normal;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript> You need to enable JavaScript to run this app </noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/index.js"></script>
+    <!-- built files will be auto injected -->
+  </body>
+</html>

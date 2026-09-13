@@ -1,0 +1,624 @@
+/* ===================================
+   WhatsApp Modal - Production Ready CSS
+   =================================== */
+
+/* Modal Container */
+.whatsapp-modal .modal-content {
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+/* Modal Header */
+.whatsapp-modal .modal-header {
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  color: white;
+  padding: 1.25rem 1.5rem;
+}
+
+.whatsapp-modal .modal-title {
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+.whatsapp-modal .btn-close {
+  filter: brightness(0) invert(1);
+  opacity: 0.8;
+}
+
+.whatsapp-modal .btn-close:hover {
+  opacity: 1;
+}
+
+.whatsapp-icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  backdrop-filter: blur(10px);
+}
+
+/* Modal Body */
+.whatsapp-modal .modal-body {
+  position: relative;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.whatsapp-modal .modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.whatsapp-modal .modal-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.whatsapp-modal .modal-body::-webkit-scrollbar-thumb {
+  background: #25d366;
+  border-radius: 10px;
+}
+
+/* Lead Info Card */
+.lead-info-card {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-radius: 12px;
+  padding: 1rem;
+  border-left: 4px solid #25d366;
+  animation: slideInDown 0.3s ease;
+}
+
+.lead-info-row {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.lead-info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lead-info-label {
+  font-weight: 600;
+  color: #059669;
+  font-size: 0.875rem;
+}
+
+.lead-info-value {
+  color: #065f46;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+/* Section Headers */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.section-title {
+  color: #212529;
+  font-weight: 600;
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Templates Section */
+.templates-section {
+  animation: fadeIn 0.3s ease;
+}
+
+.btn-add-template {
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  transition: all 0.3s ease;
+  border-width: 2px;
+}
+
+.btn-add-template:hover:not(:disabled) {
+  background: #25d366;
+  border-color: #25d366;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+}
+
+/* Loading Container */
+.loading-container {
+  text-align: center;
+  padding: 3rem 1rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.loading-container .spinner-border {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+/* Empty State */
+.empty-state {
+  border-radius: 12px;
+  border: 2px dashed #bee3f8;
+  background: #ebf8ff;
+  padding: 2rem 1rem;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Templates Grid */
+.templates-grid {
+  display: grid;
+  gap: 0.875rem;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 0.25rem;
+  animation: slideInUp 0.3s ease;
+}
+
+.templates-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.templates-grid::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.templates-grid::-webkit-scrollbar-thumb {
+  background: #25d366;
+  border-radius: 10px;
+}
+
+/* Template Card */
+.template-card {
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.template-card:hover {
+  /* Hover effect removed for neutral behavior */
+}
+
+.template-card.selected {
+  border-color: #25d366;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  box-shadow: 0 4px 16px rgba(37, 211, 102, 0.25);
+  transform: translateY(-2px);
+}
+
+.template-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.template-name {
+  font-weight: 600;
+  color: #212529;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.template-card.selected .template-name {
+  color: #15803d;
+}
+
+.selected-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  animation: slideInRight 0.3s ease;
+  white-space: nowrap;
+}
+
+.template-preview {
+  color: #6c757d;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.template-card.selected .template-preview {
+  color: #16a34a;
+}
+
+/* Message Editor Section */
+.message-editor-section {
+  animation: fadeIn 0.3s ease;
+}
+
+.message-textarea {
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+  padding: 1rem;
+  font-size: 0.95rem;
+  resize: vertical;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.message-textarea:focus {
+  border-color: #25d366;
+  box-shadow: 0 0 0 0.2rem rgba(37, 211, 102, 0.15);
+  outline: none;
+}
+
+.message-textarea:disabled {
+  background-color: #f8f9fa;
+  opacity: 0.7;
+}
+
+/* Add Template Section */
+.add-template-section {
+  animation: slideInRight 0.3s ease;
+}
+
+.back-button {
+  color: #6c757d;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.back-button:hover:not(:disabled) {
+  color: #25d366;
+  text-decoration: none;
+  transform: translateX(-4px);
+}
+
+.form-control-custom {
+  border-radius: 10px;
+  border: 2px solid #e9ecef;
+  padding: 0.75rem 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-control-custom:focus {
+  border-color: #25d366;
+  box-shadow: 0 0 0 0.2rem rgba(37, 211, 102, 0.15);
+}
+
+.btn-save-template {
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  border: none;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.btn-save-template:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+}
+
+.btn-save-template:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-cancel {
+  border-radius: 10px;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+/* Success Animation Overlay */
+.success-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.98);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  animation: fadeIn 0.3s ease;
+  border-radius: 16px;
+}
+
+.success-animation {
+  text-align: center;
+  animation: scaleUp 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.success-checkmark {
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  color: white;
+  animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  box-shadow: 0 10px 30px rgba(37, 211, 102, 0.3);
+}
+
+.success-animation h4 {
+  color: #25d366;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.success-animation p {
+  margin-top: 0.5rem;
+  font-size: 1rem;
+}
+
+/* Modal Footer */
+.whatsapp-modal .modal-footer {
+  background: #f8f9fa;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.btn-close-modal {
+  border-radius: 10px;
+  font-weight: 500;
+  padding: 0.625rem 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn-close-modal:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn-send-message {
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  border: none;
+  font-weight: 500;
+  padding: 0.625rem 1.75rem;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn-send-message:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+}
+
+.btn-send-message:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleUp {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  70% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .whatsapp-modal .modal-dialog {
+    margin: 0.5rem;
+  }
+
+  .whatsapp-modal .modal-content {
+    border-radius: 12px;
+  }
+
+  .whatsapp-modal .modal-header {
+    padding: 1rem;
+  }
+
+  .whatsapp-modal .modal-title {
+    font-size: 1.1rem;
+  }
+
+  .whatsapp-icon-container {
+    width: 38px;
+    height: 38px;
+  }
+
+  .lead-info-card {
+    padding: 0.875rem;
+  }
+
+  .lead-info-row {
+    gap: 1rem;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .btn-add-template {
+    width: 100%;
+  }
+
+  .templates-grid {
+    max-height: 220px;
+  }
+
+  .template-card {
+    padding: 0.875rem;
+  }
+
+  .message-textarea {
+    font-size: 0.9rem;
+  }
+
+  .success-checkmark {
+    width: 80px;
+    height: 80px;
+  }
+
+  .success-checkmark svg {
+    font-size: 40px;
+  }
+
+  .success-animation h4 {
+    font-size: 1.25rem;
+  }
+
+  .btn-send-message,
+  .btn-close-modal {
+    font-size: 0.9rem;
+    padding: 0.5rem 1.25rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .whatsapp-modal .modal-body {
+    padding: 1rem !important;
+  }
+
+  .lead-info-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .templates-grid {
+    gap: 0.75rem;
+  }
+}
+
+/* Loading State Improvements */
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+  border-width: 0.15em;
+}
+
+/* Form Labels */
+.whatsapp-modal .form-label {
+  color: #495057;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+/* Alert Styling */
+.whatsapp-modal .alert {
+  border-radius: 10px;
+  border: none;
+}
+
+/* Badge Styling */
+.whatsapp-modal .badge {
+  font-weight: 500;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+}
+
+/* Smooth Transitions */
+.whatsapp-modal button,
+.whatsapp-modal input,
+.whatsapp-modal textarea {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Focus Visible States */
+.whatsapp-modal button:focus-visible,
+.whatsapp-modal input:focus-visible,
+.whatsapp-modal textarea:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 0.15rem rgba(37, 211, 102, 0.25);
+}
+
+/* Disabled States */
+.whatsapp-modal button:disabled {
+  cursor: not-allowed;
+}
+
+/* Print Styles */
+@media print {
+  .whatsapp-modal {
+    display: none;
+  }
+}

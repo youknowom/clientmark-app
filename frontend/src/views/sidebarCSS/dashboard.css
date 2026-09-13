@@ -1,0 +1,223 @@
+/* Dashboard.css */
+
+.dashboard-container {
+  padding: 20px;
+  margin: 40px auto;
+
+}
+
+.dashboard-card {
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.dashboard-card-header {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.dashboard-card-icon {
+  background-color: var(--primary-color);
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.service-card-icon {
+  background-color: white;
+  color: var(--primary-color);
+  width: 50px;
+  height: 50px;
+  border-radius: 5px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.service-card {
+  height: 150px;
+
+}
+
+.dashboard-card-value {
+  margin-top: 10px;
+  margin-bottom: 0;
+  font-weight: bold;
+  font-size: 25px;
+}
+
+
+.dashboard-course-card {
+  border-radius: 12px;
+  height: 150px;
+  padding: 15px;
+}
+
+.dashboard-course-card-header {
+  background-color: var(--secondary-color);
+  color: black;
+  width: 35px;
+  height: 40px;
+  border-radius: 5px;
+  text-align: center;
+  padding-top: 5px;
+}
+
+.dashboard-course-title {
+  font-size: 16px;
+  padding: 1rem;
+}
+
+
+
+.dashboard-class-card {
+  border-radius: 12px;
+  height: 120px;
+  margin-bottom: 10px;
+  padding: 15px;
+}
+
+.dashboard-class-card-icon {
+  background-color: var(--primary-color);
+  color: black;
+  width: 35px;
+  height: 40px;
+  border-radius: 5px;
+  text-align: center;
+  padding-top: 5px;
+}
+
+.dashboard-class-card-title {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.dashboard-class-card-details {
+  font-size: 14px;
+  color: #6c757d;
+  margin-bottom: 0;
+}
+
+.dashboard-daily-progress-header {
+  font-weight: bold;
+}
+
+.dashboard-daily-progress-list {
+  margin-top: 10px;
+}
+
+.dashboard-list-item {
+  background-color: #fff;
+}
+
+.dashboard-list-item:hover {
+  background-color: #fff1f1;
+}
+
+.dashboard-list-item span {
+  margin-left: 10px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-course-card {
+    margin-bottom: 15px;
+  }
+
+  .dashboard-class-card {
+    margin-bottom: 15px;
+  }
+
+  .dashboard-progress-bar {
+    width: 60%;
+  }
+
+  .dashboard-card-header {
+    font-weight: bold;
+    font-size: 12px;
+  }
+
+  .dashboard-card-value {
+    font-weight: bold;
+    font-size: 20px;
+  }
+}
+
+
+/* HomePage.css */
+
+
+.card {
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+
+.banner-container {
+  margin-bottom: 15px;
+}
+
+
+.dash-nav {
+  width: 100%;
+}
+
+.dash-nav-item {
+  flex: 1;
+  text-align: center;
+  padding: 5px 0;
+}
+
+.service-icon {
+  margin-bottom: 8px;
+}
+
+.service-nav-icon {
+  color: #6e3cc1;
+}
+
+.service-nav-text {
+  color: #6e3cc1;
+  font-size: 10px;
+}
+
+.btn-custom {
+  background-color: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 15px;
+}
+
+.service-img {
+  width: 80px;
+  height: 80px;
+}
+
+.btn-custom:hover {
+  background-color: #218838;
+}
+
+
+@media (max-width: 768px) {
+  .card-title {
+    font-size: 1.2rem;
+  }
+
+  .btn-custom {
+    padding: 6px 12px;
+  }
+}
+
+
+/* -------------------------nav js css---------------------------------------------------- */
+
+.nav-item-icon {
+  font-size: 14px;
+  margin-right: 10px;
+}
+
+.dashboard-tile-card {
+  padding: 25px;
+}
