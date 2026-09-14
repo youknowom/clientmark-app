@@ -4,24 +4,30 @@
 /* generous whitespace, strict grid alignment, zero generic neon gradients.  */
 
 :root {
-  /* Brand Colors */
-  --cm-primary: #111827;
+  /* Dynamic Theme Variables (populated by ThemeContext or default) */
+  --primary-color: #111827;
+  --secondary-color: #E05E3A;
+  --background-color: #FBFBF9;
+  --text-color: #111827;
+
+  /* Brand Colors (dynamically linked to tenant theme) */
+  --cm-primary: var(--primary-color, #111827);
   --cm-primary-light: #1F2937;
-  --cm-accent: #E05E3A;
+  --cm-accent: var(--secondary-color, #E05E3A);
   --cm-accent-hover: #C94E2C;
   --cm-accent-light: rgba(224, 94, 58, 0.08);
 
   /* Neutrals */
-  --cm-bg: #FBFBF9;
+  --cm-bg: var(--background-color, #FBFBF9);
   --cm-surface: #FFFFFF;
   --cm-surface-subtle: #F5F5F2;
   --cm-surface-muted: #EFEFEA;
   --cm-border: rgba(0, 0, 0, 0.08);
   --cm-border-light: rgba(0, 0, 0, 0.04);
-  --cm-border-focus: #111827;
+  --cm-border-focus: var(--primary-color, #111827);
 
   /* Text */
-  --cm-text-primary: #111827;
+  --cm-text-primary: var(--text-color, #111827);
   --cm-text-secondary: #4B5563;
   --cm-text-muted: #6B7280;
   --cm-text-tertiary: #9CA3AF;
@@ -63,8 +69,11 @@ body {
 /* ─── App Wrapper ────────────────────────────────────────────────────────────── */
 .wrapper {
   width: 100%;
+  @include ltr-rtl("padding-left", var(--cui-sidebar-occupy-start, 0));
+  @include ltr-rtl("padding-right", var(--cui-sidebar-occupy-end, 0));
   background-color: var(--cm-bg) !important;
   will-change: auto;
+  @include transition(padding .15s);
 }
 
 .body {
@@ -103,30 +112,51 @@ body {
 }
 
 .sidebar-nav .nav-link:hover:not(.active) {
-  background: var(--cm-surface-subtle) !important;
-  color: var(--cm-text-primary) !important;
+  background: #F4F4F1 !important;
+  color: var(--primary-color, #111827) !important;
 }
 
 .sidebar-nav .nav-link.active {
-  background: var(--cm-primary) !important;
-  color: #FFFFFF !important;
+  background: #F4F4F1 !important;
+  color: var(--primary-color, #111827) !important;
   font-weight: 600 !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
 }
 
-.sidebar-nav .nav-link .nav-icon {
-  color: var(--cm-text-muted) !important;
-  font-size: 1.1em;
-  margin-right: 10px;
+.sidebar-nav .nav-link .nav-icon,
+.sidebar-nav .nav-icon,
+svg.nav-icon {
+  fill: none !important;
+  stroke: currentColor !important;
+  color: #6B7280 !important;
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  max-width: 18px !important;
+  max-height: 18px !important;
+  flex: 0 0 18px !important;
+  margin-right: 12px !important;
+  margin-left: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  stroke-width: 2px !important;
   transition: color 0.15s ease;
 }
 
-.sidebar-nav .nav-link:hover .nav-icon {
-  color: var(--cm-text-primary) !important;
+.sidebar-nav .nav-link .nav-icon *,
+.sidebar-nav .nav-icon *,
+svg.nav-icon * {
+  fill: none !important;
+  stroke: currentColor !important;
 }
 
+.sidebar-nav .nav-link:hover .nav-icon,
 .sidebar-nav .nav-link.active .nav-icon {
-  color: #FFFFFF !important;
+  color: var(--primary-color, #111827) !important;
 }
 
 .sidebar-nav .nav-group-items .nav-link {
@@ -153,6 +183,7 @@ body {
   box-shadow: var(--cm-shadow-sm) !important;
   margin-bottom: 16px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  color: #111827 !important;
 }
 
 .card:hover {
@@ -165,7 +196,7 @@ body {
   padding: 14px 18px !important;
   font-size: 14px !important;
   font-weight: 650 !important;
-  color: var(--cm-text-primary) !important;
+  color: #111827 !important;
   letter-spacing: -0.015em;
   display: flex;
   align-items: center;

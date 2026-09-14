@@ -1,20 +1,20 @@
-/* ─── Clientmark Lead Tabs — Sarvam AI Visual Discipline ─────────────────── */
-
+/* Ensure tabs are in one single line */
 .tab-container {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
+  /* ❗ Prevent wrapping to next line */
   overflow-x: auto;
+  /* Enable horizontal scroll if too many tabs */
   white-space: nowrap;
-  background: #FFFFFF;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 10px;
-  padding: 10px 16px;
-  scrollbar-width: none;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-  gap: 12px;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 8px 0;
+  scrollbar-width: thin;
+  /* For Firefox */
 }
 
+/* Hide scrollbar on Chrome, Edge, and Safari */
 .tab-container::-webkit-scrollbar {
   display: none;
 }
@@ -22,45 +22,54 @@
 /* Tab button styling */
 .tab-button {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   background: transparent !important;
-  border: 1px solid transparent !important;
-  color: #6B7280;
-  font-size: 13px;
-  padding: 6px 14px;
+  border: none !important;
+  color: var(--primary-color);
+  font-size: 12px;
+  padding: 0px 0px;
   position: relative;
-  transition: all 0.15s ease;
-  border-radius: 9999px;
-  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 6px;
+  min-width: 80px;
+  /* Ensures each tab has enough click area */
+  text-align: left;
 }
 
 .tab-button:hover {
-  background: #F4F4F1 !important;
-  color: #111827;
+  background: #f9fafb;
 }
 
 .tab-icon {
-  font-size: 15px;
-  color: inherit;
+  font-size: 18px;
+  margin-bottom: 4px;
 }
 
 .tab-label {
-  font-size: 12.5px;
-  font-weight: 550;
+  font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
 }
 
-/* Active tab */
+/* Active tab underline */
 .tab-button.active {
-  background: #111827 !important;
-  color: #FFFFFF !important;
+  color: #0c2749;
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .tab-button.active .tab-icon {
-  color: #FFFFFF;
+  color: #0c2749;
 }
+
+/* .tab-button.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 25%;
+  width: 50%;
+  height: 2px;
+  background-color: #007bff;
+  border-radius: 2px;
+} */

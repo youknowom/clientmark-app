@@ -1,4 +1,4 @@
-﻿import React, { useContext, useEffect } from 'react'
+import React, { useContext, useEffect } from 'react'
 import { Col, Container, Row } from 'react-bootstrap'
 import { Helmet } from 'react-helmet'
 import { MdOutlineLeaderboard } from 'react-icons/md'

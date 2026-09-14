@@ -1,4 +1,4 @@
-﻿import React, { useContext } from 'react'
+import React, { useContext } from 'react'
 import { Col, Container, Row } from 'react-bootstrap'
 import { CgWebsite } from 'react-icons/cg'
 import { IoColorPaletteOutline } from 'react-icons/io5'

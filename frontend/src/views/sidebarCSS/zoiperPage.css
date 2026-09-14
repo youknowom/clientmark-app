@@ -1,86 +1,81 @@
-/* ─── Clientmark Calling Modal Styles — Sarvam AI Visual Discipline ──────── */
-
+/* Modal wrapper transparent */
 .connecting-modal .modal-content {
   background-color: transparent;
   border: none;
   box-shadow: none;
 }
 
-/* Modal inner body card */
+/* Modal inner body card (Glassmorphic style) */
 .connecting-modal-body {
-  background: #111827;
-  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  width: 540px;
-  max-width: 90%;
+  background: rgba(0, 89, 159, 0.3); /* translucent blue base */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 1.5rem;
+  width: 600px;
+  max-width: 80%;
   margin: auto;
-  color: #FFFFFF;
+  color: white;
   position: relative;
   overflow: hidden;
-  padding: 36px 24px;
-  text-align: center;
 }
 
 /* Accent color (timer text) */
 .text-accent {
-  color: #E05E3A;
-  font-weight: 600;
-  font-family: monospace;
+  color: #00ffcc;
 }
 
 /* Profile image + pulse ring */
 .profile-ring {
-  width: 88px;
-  height: 88px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.15);
   display: flex;
   justify-content: center;
   align-items: center;
   animation: pulse-ring 2s infinite;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  margin: 0 auto 20px auto;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 @keyframes pulse-ring {
   0% {
-    box-shadow: 0 0 0 0 rgba(224, 94, 58, 0.4);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.3);
   }
   70% {
-    box-shadow: 0 0 0 16px rgba(224, 94, 58, 0);
+    box-shadow: 0 0 0 15px rgba(255, 255, 255, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(224, 94, 58, 0);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
   }
 }
 
 /* Cancel button styling */
 .cancel-btn {
-  background: #DC2626 !important;
-  color: #FFFFFF !important;
-  border: 1px solid #DC2626 !important;
-  border-radius: 9999px;
-  padding: 8px 24px;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  background: rgba(255, 255, 255, 0.85) !important;
+  color: #00599f !important;
+  border: none !important;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 
 .cancel-btn:hover {
-  background: #B91C1C !important;
-  border-color: #B91C1C !important;
+  background: rgba(255, 255, 255, 0.95) !important;
 }
 
+/* Optional: Smooth entry animation */
 .connecting-modal-body {
-  animation: fadeInScale 0.3s ease;
+  animation: fadeInScale 0.4s ease;
 }
 
 @keyframes fadeInScale {
   from {
     opacity: 0;
-    transform: scale(0.97);
+    transform: scale(0.95);
   }
   to {
     opacity: 1;
@@ -88,20 +83,23 @@
   }
 }
 
+/* Responsive width for mobile */
 @media (max-width: 768px) {
   .connecting-modal-body {
     width: 90%;
-    max-width: 90%;
-    padding: 24px 16px;
+    max-width: 80%; /* ⬅️ max width on mobile */
   }
 }
 
+/* Make Modal Full Width */
 .full-width-modal .modal-dialog {
   max-width: 100% !important;
   width: 100% !important;
   margin: 0 !important;
   height: 100%;
 }
+/* ******* */
+/* FULLSCREEN OVERRIDE */
 
 .calling-modal-fullscreen .modal-dialog {
   margin: 0 !important;
@@ -117,3 +115,4 @@
   width: 100%;
   padding: 0 !important;
 }
+

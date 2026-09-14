@@ -10,25 +10,24 @@ import { syncFaviconFromSettings } from '../helpers/dynamicFavicon'
 
 // ─── Fallback brand mark when no custom logo is set ───────────────────────────
 const ClientmarkBrand = () => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 18px' }}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 16px' }}>
     <div style={{
-      width: '30px', height: '30px',
+      width: '28px', height: '28px',
       background: '#E05E3A',
-      borderRadius: '8px',
+      borderRadius: '7px',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       flexShrink: 0,
     }}>
-      <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
-        <path d="M8 10h16M8 16h11M8 22h14" stroke="white" strokeWidth="2.4" strokeLinecap="round" />
-        <circle cx="24" cy="22" r="2.8" fill="#E05E3A" stroke="white" strokeWidth="1.6" />
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+        <path d="M12 2L2 7l10 5 10-5-10-5zm0 7L2 14l10 5 10-5-10-5z" />
       </svg>
     </div>
     <span style={{
-      fontSize: '16px',
+      fontSize: '15px',
       fontWeight: '700',
-      color: '#111827',
-      letterSpacing: '-0.025em',
-      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
+      color: '#0F0F0F',
+      letterSpacing: '-0.02em',
+      fontFamily: 'Inter, sans-serif',
     }}>
       Clientmark
     </span>
@@ -89,15 +88,15 @@ const AppSidebar = () => {
       visible={sidebarShow}
       onVisibleChange={(visible) => dispatch({ type: 'set', sidebarShow: visible })}
       style={{
-        borderRight: '1px solid rgba(0, 0, 0, 0.08)',
+        borderRight: '1px solid #E8E8E5',
         backgroundColor: '#FFFFFF',
       }}
     >
       <CSidebarHeader
         className="p-0 d-flex align-items-center justify-content-between"
         style={{
-          borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
-          height: '56px',
+          borderBottom: '1px solid #F0F0ED',
+          height: '57px',
           backgroundColor: '#FFFFFF',
         }}
       >

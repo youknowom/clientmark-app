@@ -65,10 +65,8 @@ const AppHeader = () => {
       className="mb-0 p-0"
       ref={headerRef}
       style={{
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
+        backgroundColor: '#FFFFFF',
+        borderBottom: '1px solid #E8E8E5',
         boxShadow: 'none',
         zIndex: 1030,
       }}
@@ -81,26 +79,26 @@ const AppHeader = () => {
             onClick={() => dispatch({ type: 'set', sidebarShow: !sidebarShow })}
             aria-label="Toggle sidebar"
             style={{
-              background: '#FFFFFF',
-              border: '1px solid rgba(0, 0, 0, 0.08)',
-              borderRadius: '8px',
+              background: 'none',
+              border: '1px solid #E8E8E5',
+              borderRadius: '7px',
               width: '34px',
               height: '34px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              color: '#4B5563',
+              color: '#6B7280',
               transition: 'border-color 0.15s, color 0.15s',
               flexShrink: 0,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#111827'
-              e.currentTarget.style.color = '#111827'
+              e.currentTarget.style.borderColor = '#1A1F36'
+              e.currentTarget.style.color = '#1A1F36'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.08)'
-              e.currentTarget.style.color = '#4B5563'
+              e.currentTarget.style.borderColor = '#E8E8E5'
+              e.currentTarget.style.color = '#6B7280'
             }}
           >
             <MenuIcon />
@@ -112,26 +110,26 @@ const AppHeader = () => {
               onClick={() => navigate(-1)}
               aria-label="Go back"
               style={{
-                background: '#FFFFFF',
-                border: '1px solid rgba(0, 0, 0, 0.08)',
-                borderRadius: '8px',
+                background: 'none',
+                border: '1px solid #E8E8E5',
+                borderRadius: '7px',
                 width: '34px',
                 height: '34px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                color: '#4B5563',
+                color: '#6B7280',
                 transition: 'border-color 0.15s, color 0.15s',
                 flexShrink: 0,
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#111827'
-                e.currentTarget.style.color = '#111827'
+                e.currentTarget.style.borderColor = '#1A1F36'
+                e.currentTarget.style.color = '#1A1F36'
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.08)'
-                e.currentTarget.style.color = '#4B5563'
+                e.currentTarget.style.borderColor = '#E8E8E5'
+                e.currentTarget.style.color = '#6B7280'
               }}
             >
               <HiArrowUturnLeft size={15} />
@@ -155,28 +153,27 @@ const AppHeader = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                background: dropdownOpen ? '#F4F4F1' : '#FFFFFF',
+                background: dropdownOpen ? '#F5F5F3' : 'none',
                 border: '1px solid',
-                borderColor: dropdownOpen ? '#111827' : 'rgba(0, 0, 0, 0.08)',
-                borderRadius: '9999px',
-                padding: '4px 12px 4px 6px',
+                borderColor: dropdownOpen ? '#D0D0CC' : '#E8E8E5',
+                borderRadius: '8px',
+                padding: '5px 10px 5px 8px',
                 cursor: 'pointer',
                 transition: 'background 0.15s, border-color 0.15s',
                 height: '34px',
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)',
               }}
               onMouseEnter={(e) => {
-                if (!dropdownOpen) e.currentTarget.style.background = '#F4F4F1'
+                if (!dropdownOpen) e.currentTarget.style.background = '#F8F8F6'
               }}
               onMouseLeave={(e) => {
-                if (!dropdownOpen) e.currentTarget.style.background = '#FFFFFF'
+                if (!dropdownOpen) e.currentTarget.style.background = 'none'
               }}
             >
               {/* Avatar */}
               <div style={{
-                width: '24px', height: '24px',
+                width: '22px', height: '22px',
                 borderRadius: '50%',
-                background: '#111827',
+                background: 'var(--primary-color, #1A1F36)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: '#FFFFFF', fontSize: '10px', fontWeight: '700',
                 flexShrink: 0,
@@ -186,10 +183,10 @@ const AppHeader = () => {
 
               {!isMobile && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#0F0F0F', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
                     {userData?.fullName || 'User'}
                   </span>
-                  <span style={{ fontSize: '10.5px', color: '#6B7280', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: '11px', color: '#9CA3AF', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
                     {userData?.roleId?.roleName || ''}
                   </span>
                 </div>
@@ -215,9 +212,9 @@ const AppHeader = () => {
                   right: 0,
                   minWidth: '180px',
                   background: '#FFFFFF',
-                  border: '1px solid rgba(0, 0, 0, 0.08)',
+                  border: '1px solid #E8E8E5',
                   borderRadius: '10px',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.06)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
                   padding: '4px',
                   zIndex: 9999,
                 }}
@@ -230,18 +227,18 @@ const AppHeader = () => {
                     display: 'flex', alignItems: 'center', gap: '9px',
                     width: '100%', padding: '8px 10px',
                     background: 'none', border: 'none', borderRadius: '7px',
-                    cursor: 'pointer', fontSize: '13px', color: '#374151',
+                    cursor: 'pointer', fontSize: '13.5px', color: '#374151',
                     fontFamily: 'inherit', fontWeight: '500',
                     transition: 'background 0.12s',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#F5F5F2'}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#F5F5F3'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
                 >
                   <FiUser size={14} style={{ color: '#9CA3AF' }} />
                   Update Profile
                 </button>
 
-                <div style={{ height: '1px', background: 'rgba(0, 0, 0, 0.06)', margin: '4px 0' }} />
+                <div style={{ height: '1px', background: '#F0F0ED', margin: '4px 0' }} />
 
                 <button
                   role="menuitem"

@@ -1,119 +1,281 @@
-/* ─── Clientmark Dashboard Styles — Sarvam AI Visual Discipline ──────────── */
-/* Characteristics: Editorial typography, off-white stone base, hairline     */
-/* borders, clean KPI metric tiles, zero loud neon gradients or box-shadows. */
+/* Dashboard.css */
 
-.dashboard-container {
-  padding: 24px;
-  margin: 0 auto;
-  max-width: 1440px;
-}
-
-/* ─── Metric KPI Cards ───────────────────────────────────────────────────── */
-.dashboard-card {
+/* ─── Modern SaaS Metric Tile (Sarvam AI discipline) ─────────────────────── */
+.dashboard-kpi-card {
   background: #FFFFFF !important;
   border: 1px solid rgba(0, 0, 0, 0.08) !important;
-  border-radius: 10px !important;
-  padding: 20px !important;
-  margin-bottom: 16px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  border-radius: 12px !important;
+  padding: 18px 20px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+  transition: all 0.15s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 104px;
 }
 
-.dashboard-card:hover {
-  border-color: rgba(0, 0, 0, 0.15) !important;
-  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.05) !important;
+.dashboard-kpi-card:hover {
+  border-color: rgba(0, 0, 0, 0.16) !important;
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(-1px);
 }
 
-.dashboard-card-header {
-  font-size: 13px;
-  font-weight: 600;
-  color: #4B5563;
-  letter-spacing: -0.01em;
+.dashboard-kpi-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 8px;
 }
 
-.dashboard-card-icon {
-  background-color: #F4F4F1;
-  color: #111827;
+.dashboard-kpi-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B !important;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.dashboard-kpi-icon-wrap {
   width: 32px;
   height: 32px;
   border-radius: 8px;
+  background-color: #F4F4F1;
+  border: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  font-size: 15px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  color: var(--primary-color, #111827);
+  flex-shrink: 0;
+}
+
+.dashboard-kpi-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: #111827 !important;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.dashboard-container {
+  padding: 20px;
+  margin: 40px auto;
+}
+
+.dashboard-card {
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.dashboard-card-header {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.dashboard-card-icon {
+  background-color: var(--primary-color);
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.service-card-icon {
+  background-color: white;
+  color: var(--primary-color);
+  width: 50px;
+  height: 50px;
+  border-radius: 5px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.service-card {
+  height: 150px;
+
 }
 
 .dashboard-card-value {
   margin-top: 10px;
-  margin-bottom: 4px;
-  font-weight: 700;
-  font-size: 26px;
-  color: #111827;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
-}
-
-.dashboard-card-details {
-  font-size: 12px;
-  color: #6B7280;
   margin-bottom: 0;
-  font-weight: 500;
+  font-weight: bold;
+  font-size: 25px;
 }
 
-/* ─── Course / Service / Class Cards ─────────────────────────────────────── */
-.dashboard-course-card,
-.dashboard-class-card,
-.dashboard-tile-card {
-  background: #FFFFFF;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 10px;
-  padding: 18px;
-  margin-bottom: 16px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+.dashboard-course-card {
+  border-radius: 12px;
+  height: 150px;
+  padding: 15px;
 }
 
-.dashboard-course-card:hover,
-.dashboard-class-card:hover,
-.dashboard-tile-card:hover {
-  border-color: rgba(0, 0, 0, 0.15);
-  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.05);
+.dashboard-course-card-header {
+  background-color: var(--secondary-color);
+  color: black;
+  width: 35px;
+  height: 40px;
+  border-radius: 5px;
+  text-align: center;
+  padding-top: 5px;
 }
 
-.dashboard-class-card-title,
 .dashboard-course-title {
-  font-weight: 650;
-  font-size: 15px;
-  color: #111827;
-  letter-spacing: -0.015em;
+  font-size: 16px;
+  padding: 1rem;
 }
 
-.dashboard-course-card-header,
+
+
+.dashboard-class-card {
+  border-radius: 12px;
+  height: 120px;
+  margin-bottom: 10px;
+  padding: 15px;
+}
+
 .dashboard-class-card-icon {
-  background-color: #F4F4F1;
-  color: #111827;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background-color: var(--primary-color);
+  color: black;
+  width: 35px;
+  height: 40px;
+  border-radius: 5px;
+  text-align: center;
+  padding-top: 5px;
 }
 
-/* ─── Daily Progress & Lists ─────────────────────────────────────────────── */
-.dashboard-daily-progress-header {
-  font-weight: 650;
+.dashboard-class-card-title {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.dashboard-class-card-details {
   font-size: 14px;
-  color: #111827;
-  letter-spacing: -0.01em;
+  color: #6c757d;
+  margin-bottom: 0;
 }
 
+.dashboard-daily-progress-header {
+  font-weight: bold;
+}
+
+.dashboard-daily-progress-list {
+  margin-top: 10px;
+}
+
+.dashboard-list-item {
+  background-color: #fff;
+}
+
+.dashboard-list-item:hover {
+  background-color: #fff1f1;
+}
+
+.dashboard-list-item span {
+  margin-left: 10px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-course-card {
+    margin-bottom: 15px;
+  }
+
+  .dashboard-class-card {
+    margin-bottom: 15px;
+  }
+
+  .dashboard-progress-bar {
+    width: 60%;
+  }
+
+  .dashboard-card-header {
+    font-weight: bold;
+    font-size: 12px;
+  }
+
+  .dashboard-card-value {
+    font-weight: bold;
+    font-size: 20px;
+  }
+}
+
+
+/* HomePage.css */
+
+
+.card {
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+
+.banner-container {
+  margin-bottom: 15px;
+}
+
+
+.dash-nav {
+  width: 100%;
+}
+
+.dash-nav-item {
+  flex: 1;
+  text-align: center;
+  padding: 5px 0;
+}
+
+.service-icon {
+  margin-bottom: 8px;
+}
+
+.service-nav-icon {
+  color: #6e3cc1;
+}
+
+.service-nav-text {
+  color: #6e3cc1;
+  font-size: 10px;
+}
+
+.btn-custom {
+  background-color: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 15px;
+}
+
+.service-img {
+  width: 80px;
+  height: 80px;
+}
+
+.btn-custom:hover {
+  background-color: #218838;
+}
+
+
+@media (max-width: 768px) {
+  .card-title {
+    font-size: 1.2rem;
+  }
+
+  .btn-custom {
+    padding: 6px 12px;
+  }
+}
+
+
+/* -------------------------nav js css---------------------------------------------------- */
+
+.nav-item-icon {
+  font-size: 14px;
+  margin-right: 10px;
+}
+
+.dashboard-tile-card {
+  padding: 25px;
+}
 .dashboard-daily-progress-list {
   margin-top: 12px;
 }

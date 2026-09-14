@@ -3,15 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import { Doughnut, Bar } from 'react-chartjs-2'
 import apiClient from '../../api/axiosClient'
 import { Container, Row, Col, Card, Table, Button } from 'react-bootstrap'
-import { AiOutlineFileProtect } from 'react-icons/ai'
 import {
-  HiOutlineUsers,
-  HiOutlineUserGroup,
-  HiOutlinePhone,
-  HiOutlineCheckBadge,
-} from 'react-icons/hi2'
-import { MdOutlineComputer } from 'react-icons/md'
-import { BsCheckCircle } from 'react-icons/bs'
+  FiUsers,
+  FiPhoneCall,
+  FiCheckCircle,
+  FiUserCheck,
+  FiFolder,
+  FiLayers,
+  FiPieChart,
+  FiActivity,
+} from 'react-icons/fi'
 import { Helmet } from 'react-helmet'
 import ThemeContext from './ThemeContext'
 import toast from 'react-hot-toast'
@@ -104,7 +105,7 @@ const AdminDashboard = () => {
       })
       setTelecallerReport(res.data.data || [])
     } catch (err) {
-      toast.error('Failed to fetch telecaller report')
+      setTelecallerReport([])
     } finally {
     }
   }
@@ -304,36 +305,25 @@ const AdminDashboard = () => {
     {
       count: counts.totalLead || 0,
       label: 'Total Leads',
-      icon: <HiOutlineUsers size={26} />,
-      iconBg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      iconColor: '#fff',
-      filter: '',
+      icon: <FiUsers size={17} />,
       link: '/all-lead',
     },
     {
       count: counts.newLeadsToday || 0,
       label: 'New Leads Today',
-      icon: <HiOutlinePhone size={28} />,
-      iconBg: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-      iconColor: '#fff',
-      filter: '',
+      icon: <FiPhoneCall size={17} />,
       link: '/all-lead',
     },
     {
       count: counts.convertedLeads || 0,
       label: 'Converted Leads',
-      icon: <HiOutlineCheckBadge size={28} />,
-      iconBg: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-      iconColor: '#fff',
-      filter: '',
+      icon: <FiCheckCircle size={17} />,
       link: '/all-lead',
     },
     {
       count: `${counts.activeUsers || 0}/${counts.totalUsers || 0}`,
       label: 'Active Users',
-      icon: <HiOutlineUserGroup size={28} />,
-      iconBg: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-      iconColor: '#fff',
+      icon: <FiUserCheck size={17} />,
       filter: { excludeRole: 'developer' }, // exclude devs — show only TC & BDE
       link: '/all-user',
     },
@@ -344,36 +334,27 @@ const AdminDashboard = () => {
     {
       count: projectCounts.totalProjects || 0,
       label: 'Total Projects',
-      icon: <AiOutlineFileProtect size={28} />,
-      iconBg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      iconColor: '#fff',
-      filter: '',
+      icon: <FiFolder size={17} />,
       link: '/all-project',
     },
     {
       count: projectCounts.newProjectsToday || 0,
       label: 'Assigned Projects',
-      icon: <MdOutlineComputer size={28} />,
-      iconBg: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-      iconColor: '#fff',
+      icon: <FiLayers size={17} />,
       filter: 'Assigned', // ← navigates to AllProject with status=Assigned
       link: '/all-project',
     },
     {
       count: projectCounts.projectsInProgress || 0,
-      label: 'Completed',
-      icon: <BsCheckCircle size={28} />,
-      iconBg: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-      iconColor: '#fff',
+      label: 'Completed Projects',
+      icon: <FiCheckCircle size={17} />,
       filter: 'Completed',
       link: '/all-project',
     },
     {
       count: `${projectCounts.activeDevelopers || 0}/${projectCounts.completedProjects || 0}`,
       label: 'Active Developers',
-      icon: <HiOutlineUserGroup size={28} />,
-      iconBg: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-      iconColor: '#fff',
+      icon: <FiActivity size={17} />,
       filter: { role: 'developer' }, // Use a filter object for developers
       link: '/all-user',
     },
@@ -391,7 +372,7 @@ const AdminDashboard = () => {
           leadStatus.SALES || 0,
           leadStatus.CLOSED || 0,
         ],
-        backgroundColor: ['#3B82F6', '#F59E0B', '#10B981', '#EF4444'],
+        backgroundColor: ['#111827', '#E05E3A', '#10B981', '#64748B'],
         borderColor: ['#fff'],
         borderWidth: 2,
       },
@@ -410,7 +391,7 @@ const AdminDashboard = () => {
           leadNature.WON || 0,
           leadNature.LOST || 0,
         ],
-        backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56', '#4BC0C0', '#9966FF'],
+        backgroundColor: ['#111827', '#3B82F6', '#E05E3A', '#10B981', '#64748B'],
         borderWidth: 1,
       },
     ],
@@ -888,14 +869,13 @@ const AdminDashboard = () => {
             <div
               style={{
                 position: 'relative',
-                backgroundColor: '#f8f9fa',
-                border: '1px solid #e9ecef',
-                borderRadius: '18px',
+                backgroundColor: '#F4F4F1',
+                border: '1px solid rgba(0, 0, 0, 0.08)',
+                borderRadius: '20px',
                 padding: '3px',
                 display: 'flex',
-                minWidth: '140px',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                transition: 'all 0.3s ease',
+                minWidth: '150px',
+                transition: 'all 0.2s ease',
               }}
             >
               <div
@@ -905,10 +885,9 @@ const AdminDashboard = () => {
                   left: dashboardView === 'leads' ? '3px' : '50%',
                   width: 'calc(50% - 3px)',
                   height: 'calc(100% - 6px)',
-                  backgroundColor: '#007bff',
-                  borderRadius: '14px',
-                  transition: 'left 0.3s ease-in-out',
-                  boxShadow: '0 1px 3px rgba(0, 123, 255, 0.3)',
+                  backgroundColor: 'var(--primary-color, #111827)',
+                  borderRadius: '16px',
+                  transition: 'left 0.2s ease-in-out',
                 }}
               />
               <button
@@ -916,14 +895,14 @@ const AdminDashboard = () => {
                   position: 'relative',
                   zIndex: 2,
                   width: '50%',
-                  padding: '5px 8px',
+                  padding: '5px 12px',
                   border: 'none',
                   backgroundColor: 'transparent',
-                  color: dashboardView === 'leads' ? '#fff' : '#6c757d',
-                  fontWeight: dashboardView === 'leads' ? '600' : '500',
+                  color: dashboardView === 'leads' ? '#ffffff' : '#64748B',
+                  fontWeight: '600',
                   fontSize: '12px',
-                  borderRadius: '14px',
-                  transition: 'all 0.3s ease',
+                  borderRadius: '16px',
+                  transition: 'all 0.2s ease',
                   cursor: 'pointer',
                 }}
                 onClick={() => {
@@ -938,17 +917,16 @@ const AdminDashboard = () => {
                   position: 'relative',
                   zIndex: 2,
                   width: '50%',
-                  padding: '5px 8px',
+                  padding: '5px 12px',
                   border: 'none',
                   backgroundColor: 'transparent',
-                  color: dashboardView === 'projects' ? '#fff' : '#6c757d',
-                  fontWeight: dashboardView === 'projects' ? '600' : '500',
+                  color: dashboardView === 'projects' ? '#ffffff' : '#64748B',
+                  fontWeight: '600',
                   fontSize: '12px',
-                  borderRadius: '14px',
-                  transition: 'all 0.3s ease',
+                  borderRadius: '16px',
+                  transition: 'all 0.2s ease',
                   cursor: 'pointer',
                 }}
-                // Projects button
                 onClick={() => {
                   setDashboardView('projects')
                   localStorage.setItem('adminDashboardView', 'projects')
@@ -986,31 +964,21 @@ const AdminDashboard = () => {
                 <Row className="g-3">
                   {cardData.map((item, idx) => (
                     <Col key={idx} xs={12} sm={6} md={3}>
-                      <Card
-                        className="d-flex flex-row align-items-center justify-content-between shadow-sm rounded-4 dashboard-tile-card"
+                      <div
+                        className="dashboard-kpi-card"
                         onClick={() => handleCardClick(item)}
-                        style={{ cursor: 'pointer', height: '110px', padding: '20px' }}
+                        style={{ cursor: 'pointer' }}
                       >
-                        <div>
-                          <div className="text-muted small fw-bold mb-1">{item.label}</div>
-                          <div className="fw-bold fs-3 text-dark">
-                            {item.count.toLocaleString()}
-                          </div>
+                        <div className="dashboard-kpi-top">
+                          <span className="dashboard-kpi-label">{item.label}</span>
+                          <div className="dashboard-kpi-icon-wrap">{item.icon}</div>
                         </div>
-                        <div
-                          className="d-flex align-items-center justify-content-center ms-3"
-                          style={{
-                            width: '60px',
-                            height: '60px',
-                            borderRadius: '50%',
-                            background: item.iconBg,
-                            color: item.iconColor,
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                          }}
-                        >
-                          {item.icon}
+                        <div className="dashboard-kpi-value">
+                          {typeof item.count === 'number'
+                            ? item.count.toLocaleString()
+                            : item.count}
                         </div>
-                      </Card>
+                      </div>
                     </Col>
                   ))}
                 </Row>
@@ -1032,8 +1000,25 @@ const AdminDashboard = () => {
                         &nbsp;|&nbsp; New: {leadStatus.NEW || 0} &nbsp;|&nbsp; Closed:{' '}
                         {leadStatus.CLOSED || 0}
                       </p>
-                      <div style={{ width: '280px', height: '280px', margin: 'auto' }}>
-                        <Doughnut data={doughnutData} options={doughnutOptions} />
+                      <div
+                        style={{
+                          width: '280px',
+                          height: '280px',
+                          margin: 'auto',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {(leadStatus.NEW || 0) +
+                          (leadStatus.TELECALLING || 0) +
+                          (leadStatus.SALES || 0) +
+                          (leadStatus.CLOSED || 0) ===
+                        0 ? (
+                          <div className="text-center text-muted small">No lead stage data yet</div>
+                        ) : (
+                          <Doughnut data={doughnutData} options={doughnutOptions} />
+                        )}
                       </div>
                     </Card>
                   </Col>
@@ -1060,44 +1045,12 @@ const AdminDashboard = () => {
                     <Card className="p-3 shadow-sm rounded-4" style={{ height: '250px' }}>
                       <h6 className="fw-bold mb-3">Recent Leads</h6>
                       <Table hover responsive className="user-table">
-                        <thead style={{ backgroundColor: '#FF8C42' }}>
+                        <thead>
                           <tr>
-                            <th
-                              style={{
-                                color: 'white',
-                                backgroundColor: '#FF8C42',
-                                fontSize: '14px',
-                              }}
-                            >
-                              Lead
-                            </th>
-                            <th
-                              style={{
-                                color: 'white',
-                                backgroundColor: '#FF8C42',
-                                fontSize: '14px',
-                              }}
-                            >
-                              Customer
-                            </th>
-                            <th
-                              style={{
-                                color: 'white',
-                                backgroundColor: '#FF8C42',
-                                fontSize: '14px',
-                              }}
-                            >
-                              Status
-                            </th>
-                            <th
-                              style={{
-                                color: 'white',
-                                backgroundColor: '#FF8C42',
-                                fontSize: '14px',
-                              }}
-                            >
-                              Telecaller
-                            </th>
+                            <th>Lead</th>
+                            <th>Customer</th>
+                            <th>Status</th>
+                            <th>Telecaller</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1163,16 +1116,12 @@ const AdminDashboard = () => {
                         <span style={{ fontWeight: 'bold' }}>TeleCaller Team Work</span>
                       </Card.Header>
                       <Table hover responsive className="user-table">
-                        <thead style={{ backgroundColor: '#FF8C42' }}>
+                        <thead>
                           <tr>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>
-                              TeleCaller
-                            </th>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>Total</th>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>Pending</th>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>
-                              Completed
-                            </th>
+                            <th>TeleCaller</th>
+                            <th>Total</th>
+                            <th>Pending</th>
+                            <th>Completed</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1204,17 +1153,15 @@ const AdminDashboard = () => {
                         <span style={{ fontWeight: 'bold' }}>Call Logs</span>
                       </Card.Header>
                       <Table hover responsive className="user-table">
-                        <thead style={{ backgroundColor: '#FF8C42' }}>
+                        <thead>
                           <tr>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>Lead No</th>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>Status</th>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>Call By</th>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>Call To</th>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>
-                              Call Time
-                            </th>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>Duration</th>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>Outcome</th>
+                            <th>Lead No</th>
+                            <th>Status</th>
+                            <th>Call By</th>
+                            <th>Call To</th>
+                            <th>Call Time</th>
+                            <th>Duration</th>
+                            <th>Outcome</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1280,33 +1227,21 @@ const AdminDashboard = () => {
                 <Row className="g-3">
                   {projectCardData.map((item, idx) => (
                     <Col key={idx} xs={12} sm={6} md={3}>
-                      <Card
-                        className="d-flex flex-row align-items-center justify-content-between shadow-sm rounded-4 dashboard-tile-card"
+                      <div
+                        className="dashboard-kpi-card"
                         onClick={() => handleCardClick(item)}
-                        style={{ cursor: 'pointer', height: '110px', padding: '20px' }}
+                        style={{ cursor: 'pointer' }}
                       >
-                        <div>
-                          <div className="text-muted small fw-bold mb-1">{item.label}</div>
-                          <div className="fw-bold fs-3 text-dark">
-                            {typeof item.count === 'number'
-                              ? item.count.toLocaleString()
-                              : item.count}
-                          </div>
+                        <div className="dashboard-kpi-top">
+                          <span className="dashboard-kpi-label">{item.label}</span>
+                          <div className="dashboard-kpi-icon-wrap">{item.icon}</div>
                         </div>
-                        <div
-                          className="d-flex align-items-center justify-content-center ms-3"
-                          style={{
-                            width: '60px',
-                            height: '60px',
-                            borderRadius: '50%',
-                            background: item.iconBg,
-                            color: item.iconColor,
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                          }}
-                        >
-                          {item.icon}
+                        <div className="dashboard-kpi-value">
+                          {typeof item.count === 'number'
+                            ? item.count.toLocaleString()
+                            : item.count}
                         </div>
-                      </Card>
+                      </div>
                     </Col>
                   ))}
                 </Row>
@@ -1324,8 +1259,21 @@ const AdminDashboard = () => {
                         {projectStatus['In Progress'] || 0} &nbsp;|&nbsp; Completed:{' '}
                         {projectStatus.Completed || 0}
                       </p>
-                      <div style={{ width: '280px', height: '280px', margin: 'auto' }}>
-                        <Doughnut data={projectDoughnutData} options={doughnutOptions} />
+                      <div
+                        style={{
+                          width: '280px',
+                          height: '280px',
+                          margin: 'auto',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {projectCounts.totalProjects === 0 ? (
+                          <div className="text-center text-muted small">No project status data yet</div>
+                        ) : (
+                          <Doughnut data={projectDoughnutData} options={doughnutOptions} />
+                        )}
                       </div>
                     </Card>
                   </Col>
@@ -1351,44 +1299,12 @@ const AdminDashboard = () => {
                     <Card className="p-3 shadow-sm rounded-4" style={{ height: '250px' }}>
                       <h6 className="fw-bold mb-3">Recent Projects</h6>
                       <Table hover responsive className="user-table">
-                        <thead style={{ backgroundColor: '#FF8C42' }}>
+                        <thead>
                           <tr>
-                            <th
-                              style={{
-                                color: 'white',
-                                backgroundColor: '#FF8C42',
-                                fontSize: '14px',
-                              }}
-                            >
-                              Project ID
-                            </th>
-                            <th
-                              style={{
-                                color: 'white',
-                                backgroundColor: '#FF8C42',
-                                fontSize: '14px',
-                              }}
-                            >
-                              Project Name
-                            </th>
-                            <th
-                              style={{
-                                color: 'white',
-                                backgroundColor: '#FF8C42',
-                                fontSize: '14px',
-                              }}
-                            >
-                              Status
-                            </th>
-                            <th
-                              style={{
-                                color: 'white',
-                                backgroundColor: '#FF8C42',
-                                fontSize: '14px',
-                              }}
-                            >
-                              Project Manager
-                            </th>
+                            <th>Project ID</th>
+                            <th>Project Name</th>
+                            <th>Status</th>
+                            <th>Project Manager</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1456,16 +1372,12 @@ const AdminDashboard = () => {
                         <span style={{ fontWeight: 'bold' }}>Project Team Work</span>
                       </Card.Header>
                       <Table hover responsive className="user-table">
-                        <thead style={{ backgroundColor: '#FF8C42' }}>
+                        <thead>
                           <tr>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>
-                              Developer
-                            </th>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>Total</th>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>Assigned</th>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>
-                              Completed
-                            </th>
+                            <th>Developer</th>
+                            <th>Total</th>
+                            <th>Assigned</th>
+                            <th>Completed</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1497,17 +1409,11 @@ const AdminDashboard = () => {
                         <span style={{ fontWeight: 'bold' }}>Project Activities</span>
                       </Card.Header>
                       <Table hover responsive className="user-table">
-                        <thead style={{ backgroundColor: '#FF8C42' }}>
+                        <thead>
                           <tr>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>
-                              Project Name
-                            </th>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>
-                              Assigned Manager
-                            </th>
-                            <th style={{ color: 'white', backgroundColor: '#FF8C42' }}>
-                              Developers
-                            </th>
+                            <th>Project Name</th>
+                            <th>Assigned Manager</th>
+                            <th>Developers</th>
                           </tr>
                         </thead>
                         <tbody>
