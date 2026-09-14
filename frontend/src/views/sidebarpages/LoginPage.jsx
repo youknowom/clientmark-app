@@ -115,7 +115,7 @@ const LoginPage = () => {
       {/* ── Left Brand Panel ───────────────────────────────────────────────── */}
       <div className="auth-left" aria-hidden="true">
         <div className="auth-left-top">
-          <div className="auth-brand">
+          <Link to="/" className="auth-brand">
             {siteSetting?.mainLogo ? (
               <img
                 src={`${BASE_URL}${siteSetting.mainLogo}`}
@@ -130,8 +130,9 @@ const LoginPage = () => {
                 <span className="auth-brand-name">{siteSetting?.projectName || 'Clientmark'}</span>
               </>
             )}
-          </div>
+          </Link>
 
+          <span className="auth-left-eyebrow">Enterprise CRM Workspace</span>
           <h2 className="auth-left-headline">
             Lead tracking and project delivery workspace
           </h2>
@@ -180,6 +181,7 @@ const LoginPage = () => {
           </div>
 
           <div className="auth-form-header">
+            <span className="auth-form-eyebrow">Member Access</span>
             <h1 className="auth-form-title">Sign in</h1>
             <p className="auth-form-sub">Enter your credentials to access your workspace</p>
           </div>

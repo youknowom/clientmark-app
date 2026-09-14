@@ -5,84 +5,112 @@ import { resetToDefaultFavicon } from '../../helpers/dynamicFavicon'
 import '../sidebarCSS/landing.css'
 
 // ─── SVG Icons ─────────────────────────────────────────────────────────────────
-const LogoMark = ({ size = 16, color = 'white' }) => (
+const LogoMark = ({ size = 20, color = '#E05E3A' }) => (
   <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-    <rect width="32" height="32" rx="8" fill={color === 'white' ? '#E05E3A' : '#1A1F36'} />
-    <path d="M8 10h16M8 16h10M8 22h13" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-    <circle cx="23" cy="22" r="3" fill="#E05E3A" stroke="white" strokeWidth="1.5" />
+    <rect width="32" height="32" rx="8" fill={color} />
+    <path d="M8 10h16M8 16h11M8 22h14" stroke="white" strokeWidth="2.4" strokeLinecap="round" />
+    <circle cx="24" cy="22" r="2.8" fill={color} stroke="white" strokeWidth="1.6" />
   </svg>
 )
 
 const IconArrowRight = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
     <path d="M5 12h14M12 5l7 7-7 7" />
   </svg>
 )
 
-// ─── Mock Dashboard UI (hero illustration) ─────────────────────────────────────
-const MockDashboard = () => (
-  <div className="lp-mock">
-    {/* Header bar */}
-    <div className="lp-mock-header">
-      <div className="lp-mock-logo">
-        <div style={{ width: 18, height: 18, background: '#E05E3A', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: 8, height: 1.5, background: 'white', borderRadius: 2, boxShadow: '0 3px 0 white, 0 6px 0 white' }} />
-        </div>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#0F0F0F' }}>Clientmark</span>
+const IconCheck = () => (
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M13.5 4L6.5 11l-4-4" />
+  </svg>
+)
+
+// ─── Precision Mock UI (Workspace preview) ─────────────────────────────────────
+const MockWorkspacePreview = () => (
+  <div className="lp2-mock">
+    {/* Clean light header */}
+    <div className="lp2-mock-header">
+      <div className="lp2-mock-logo">
+        <LogoMark size={20} />
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#111827', letterSpacing: '-0.02em' }}>
+          Clientmark
+        </span>
+        <span style={{ fontSize: 11, color: '#6B7280', marginLeft: 8, padding: '2px 8px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 9999 }}>
+          HQ Workspace
+        </span>
       </div>
-      <div style={{ display: 'flex', gap: 6 }}>
-        <div style={{ width: 60, height: 20, background: '#F5F5F3', borderRadius: 4 }} />
-        <div style={{ width: 24, height: 24, background: '#1A1F36', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: 9, color: 'white', fontWeight: 700 }}>A</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ fontSize: 11, color: '#6B7280', padding: '4px 10px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 6 }}>
+          Search leads, tasks... ⌘K
+        </div>
+        <div style={{ width: 26, height: 26, background: '#111827', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: 10, color: '#FFFFFF', fontWeight: 700 }}>A</span>
         </div>
       </div>
     </div>
 
     {/* Body */}
-    <div className="lp-mock-body">
+    <div className="lp2-mock-body">
       {/* Sidebar */}
-      <div className="lp-mock-sidebar">
-        {['Dashboard', 'Leads', 'Projects', 'Users', 'Reports'].map((item, i) => (
-          <div key={item} className={`lp-mock-nav-item ${i === 0 ? 'active' : ''}`}>
-            <div style={{ width: 8, height: 8, borderRadius: 2, background: i === 0 ? 'white' : '#D1D5DB', flexShrink: 0 }} />
-            <span>{item}</span>
+      <div className="lp2-mock-sidebar">
+        {[
+          { name: 'Dashboard', active: true },
+          { name: 'Lead Pipeline', active: false },
+          { name: 'Projects', active: false },
+          { name: 'Telecallers', active: false },
+          { name: 'WhatsApp', active: false },
+          { name: 'Reports', active: false },
+        ].map((item) => (
+          <div key={item.name} className={`lp2-mock-nav-item ${item.active ? 'active' : ''}`}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: item.active ? '#E05E3A' : '#D1D5DB' }} />
+            <span>{item.name}</span>
           </div>
         ))}
       </div>
 
-      {/* Content */}
-      <div className="lp-mock-content">
-        {/* Stat cards */}
-        <div className="lp-mock-cards">
+      {/* Content Area */}
+      <div className="lp2-mock-content">
+        {/* Metric Cards */}
+        <div className="lp2-mock-cards">
           {[
-            { label: 'Total Leads', val: '2,847', trend: '+12%', color: '#3B82F6' },
-            { label: 'Converted', val: '384', trend: '+8%', color: '#10B981' },
-            { label: 'Projects', val: '91', trend: '+5%', color: '#8B5CF6' },
-            { label: 'Active Users', val: '24', trend: '+2', color: '#F59E0B' },
+            { label: 'Active Pipeline', val: '2,847', trend: '+14% this month', color: '#10B981' },
+            { label: 'Converted Won', val: '384', trend: '13.5% conversion', color: '#10B981' },
+            { label: 'Live Projects', val: '92', trend: '98% on track', color: '#6366F1' },
+            { label: 'Calls Today', val: '640', trend: '8 telecallers', color: '#4B5563' },
           ].map((card) => (
-            <div key={card.label} className="lp-mock-card">
-              <div style={{ fontSize: 8, color: '#9CA3AF', marginBottom: 3 }}>{card.label}</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#0F0F0F', lineHeight: 1 }}>{card.val}</div>
-              <div style={{ fontSize: 8, color: card.color, marginTop: 2, fontWeight: 600 }}>{card.trend}</div>
+            <div key={card.label} className="lp2-mock-card">
+              <div style={{ fontSize: 11, color: '#6B7280', fontWeight: 500, marginBottom: 4 }}>{card.label}</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', letterSpacing: '-0.02em', lineHeight: 1.1 }}>{card.val}</div>
+              <div style={{ fontSize: 10, color: card.color, marginTop: 4, fontWeight: 600 }}>{card.trend}</div>
             </div>
           ))}
         </div>
 
-        {/* Lead table */}
-        <div className="lp-mock-table">
-          <div style={{ fontSize: 8, fontWeight: 700, color: '#374151', marginBottom: 6 }}>Recent Leads</div>
+        {/* Lead Table */}
+        <div className="lp2-mock-table">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 650, color: '#111827', letterSpacing: '-0.01em' }}>
+              Real-time Lead Activity
+            </div>
+            <div style={{ fontSize: 11, color: '#6B7280' }}>Updated just now</div>
+          </div>
           {[
-            { name: 'Arjun Mehta', status: 'SALES', stage: 'TELECALLING' },
-            { name: 'Priya Sharma', status: 'NEW', stage: 'NEW' },
-            { name: 'Rohan Patel', status: 'WON', stage: 'CLOSED' },
-            { name: 'Sanjay Kumar', status: 'NEW', stage: 'TELECALLING' },
+            { name: 'Arjun Mehta', org: 'TechCorp Pvt Ltd', stage: 'Won', tag: 'won', rep: 'Priya S.', time: '5m ago' },
+            { name: 'Kavita Rao', org: 'Apex Solutions', stage: 'Negotiation', tag: 'sales', rep: 'Rohan P.', time: '18m ago' },
+            { name: 'Vikram Joshi', org: 'Zenith Global', stage: 'New Inquiry', tag: 'new', rep: 'Sunita M.', time: '42m ago' },
+            { name: 'Rahul Nair', org: 'Omega Logistics', stage: 'Telecalling', tag: 'sales', rep: 'Priya S.', time: '1h ago' },
           ].map((row, i) => (
-            <div key={i} className="lp-mock-row">
-              <div style={{ width: 14, height: 14, borderRadius: '50%', background: `hsl(${i * 60 + 200}, 60%, 55%)`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: 6, color: 'white', fontWeight: 700 }}>{row.name[0]}</span>
+            <div key={i} className="lp2-mock-row">
+              <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#374151' }}>
+                {row.name[0]}
               </div>
-              <span style={{ flex: 1, fontSize: 8, color: '#374151', fontWeight: 500 }}>{row.name}</span>
-              <span className={`lp-mock-badge lp-badge-${row.status.toLowerCase()}`}>{row.status}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#111827' }}>{row.name}</div>
+                <div style={{ fontSize: 10, color: '#6B7280' }}>{row.org}</div>
+              </div>
+              <div style={{ fontSize: 11, color: '#4B5563', marginRight: 16 }}>{row.rep}</div>
+              <span className={`lp2-mock-badge lp-badge-${row.tag}`}>{row.stage}</span>
+              <div style={{ fontSize: 10, color: '#9CA3AF', width: 50, textAlign: 'right' }}>{row.time}</div>
             </div>
           ))}
         </div>
@@ -91,95 +119,92 @@ const MockDashboard = () => (
   </div>
 )
 
-// ─── Feature card data ─────────────────────────────────────────────────────────
-const features = [
+// ─── Capability Data ─────────────────────────────────────────────────────────
+const capabilities = [
   {
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E05E3A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" />
       </svg>
     ),
-    title: 'Lead Pipeline',
-    desc: 'Record incoming inquiries, assign leads to telecallers, log calls, and monitor pipeline stages from new to won.',
-    color: '#3B82F6',
+    title: 'Lead Pipeline & Staging',
+    desc: 'Capture incoming inquiries, assign telecallers, log call summaries, and track prospects smoothly from initial inquiry to won deal.',
   },
   {
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E05E3A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" />
       </svg>
     ),
-    title: 'Project Delivery',
-    desc: 'Convert won leads into active projects with milestone tracking, deadline dates, and task assignments.',
-    color: '#10B981',
+    title: 'Project Delivery & Milestones',
+    desc: 'Convert closed deals into active projects with milestone tracking, deadline dates, task delegation, and customer status previews.',
   },
   {
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E05E3A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
       </svg>
     ),
-    title: 'WhatsApp Messaging',
-    desc: 'Send templated WhatsApp messages, status updates, and follow-up reminders directly from the lead record.',
-    color: '#25D366',
+    title: 'Native WhatsApp Messaging',
+    desc: 'Send templated messages, quotes, and follow-up reminders directly from each lead card without juggling personal devices.',
   },
   {
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E05E3A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
       </svg>
     ),
-    title: 'Real-time Dashboards',
-    desc: 'Monitor team conversion rates, calling activities, and project status across your entire workspace.',
-    color: '#8B5CF6',
+    title: 'Real-Time Team Analytics',
+    desc: 'Evaluate telecaller calling velocity, lead conversion ratios, and delivery progress across branches with real-time reporting.',
   },
   {
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E05E3A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
       </svg>
     ),
-    title: 'Role Permissions',
-    desc: 'Configure access controls per role. Admin, BDE, Telecaller, and Developer see only relevant records.',
-    color: '#F59E0B',
+    title: 'Granular Role Permissions',
+    desc: 'Keep data strictly governed. Admins, BDEs, Telecallers, and Delivery Developers only access the records their role permits.',
   },
   {
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E05E3A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
       </svg>
     ),
-    title: 'Multi-Branch Management',
-    desc: 'Organize office locations and track regional sales teams under a single company account.',
-    color: '#E05E3A',
+    title: 'Multi-Branch & Tenant Isolation',
+    desc: 'Manage multiple regional offices and teams under a unified workspace with complete tenant data isolation and custom branding.',
   },
 ]
 
-const pricing = [
+// ─── Pricing Data ─────────────────────────────────────────────────────────────
+const pricingPlans = [
   {
     plan: 'Starter',
     price: '₹0',
     period: 'Free',
-    desc: 'For testing and small teams',
-    features: ['3 team members', '100 leads per month', '1 branch', 'Lead and task tracking', 'Email support'],
+    desc: 'Ideal for evaluation and small agency teams',
+    features: ['3 team members', '100 leads / month', '1 branch location', 'Lead and task tracking', 'Email support'],
     cta: 'Create free account',
     solid: false,
+    popular: false,
   },
   {
     plan: 'Growth',
     price: '₹1,499',
     period: '/month',
-    desc: 'For growing sales teams',
-    features: ['15 team members', '5,000 leads per month', '3 branches', 'WhatsApp messaging', 'Project tracking', 'Performance reports'],
+    desc: 'For active sales teams closing daily deals',
+    features: ['15 team members', '5,000 leads / month', '3 branches', 'WhatsApp messaging', 'Project milestone tracking', 'Conversion analytics'],
     cta: 'Start 14-day trial',
     solid: false,
+    popular: false,
   },
   {
     plan: 'Professional',
     price: '₹2,999',
     period: '/month',
-    desc: 'For established sales and delivery teams',
-    features: ['40 team members', '25,000 leads per month', '10 branches', 'Automated follow-ups', 'Role permissions', 'Priority support'],
+    desc: 'For growing companies with multiple sales reps',
+    features: ['40 team members', '25,000 leads / month', '10 branches', 'Automated follow-ups', 'Role permissions engine', 'Priority support'],
     cta: 'Start 14-day trial',
     solid: true,
     popular: true,
@@ -188,34 +213,34 @@ const pricing = [
     plan: 'Enterprise',
     price: 'Custom',
     period: '',
-    desc: 'For multi-branch organizations',
-    features: ['Custom team seats', 'High-volume lead capacity', 'Unlimited branches', 'Custom workflows', 'Dedicated onboarding', 'Service level agreement'],
+    desc: 'For high-volume multi-branch organizations',
+    features: ['Unlimited team seats', 'High-volume lead ingestion', 'Unlimited branches', 'Custom pipeline workflows', 'Dedicated onboarding rep', '99.9% uptime SLA'],
     cta: 'Contact sales',
     solid: false,
+    popular: false,
   },
 ]
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+// ─── Component ─────────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const navRef = useRef(null)
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
-    // Landing page ALWAYS enforces the OG Clientmark favicon and title
     resetToDefaultFavicon()
-    document.title = 'Clientmark — Lead and Project CRM'
+    document.title = 'Clientmark — The Lead and Project CRM'
 
-    const onScroll = () => setScrolled(window.scrollY > 10)
+    const onScroll = () => setScrolled(window.scrollY > 15)
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const navLinks = ['Features', 'How it works', 'Pricing']
+  const navLinks = ['Capabilities', 'Workflow', 'Pricing']
 
   return (
     <div className="lp2-root">
-      {/* ─── Navbar ──────────────────────────────────────────────────────── */}
+      {/* ─── Top Navigation ───────────────────────────────────────────────── */}
       <header ref={navRef} className={`lp2-nav ${scrolled ? 'scrolled' : ''}`}>
         <div className="lp2-nav-inner">
           <Link to="/" className="lp2-brand">
@@ -225,16 +250,18 @@ export default function LandingPage() {
 
           <nav className="lp2-nav-links">
             {navLinks.map((l) => (
-              <a key={l} href={`#${l.toLowerCase().replace(' ', '-')}`} className="lp2-nav-link">{l}</a>
+              <a key={l} href={`#${l.toLowerCase().replace(' ', '-')}`} className="lp2-nav-link">
+                {l}
+              </a>
             ))}
           </nav>
 
           <div className="lp2-nav-actions">
             <Link to="/login" className="lp2-btn-ghost">Sign in</Link>
-            <Link to="/register" className="lp2-btn-cta">Start free</Link>
+            <Link to="/register" className="lp2-btn-cta">Start free trial</Link>
           </div>
 
-          <button className="lp2-hamburger" aria-label="Open menu" onClick={() => setMobileOpen(!mobileOpen)}>
+          <button className="lp2-hamburger" aria-label="Open navigation menu" onClick={() => setMobileOpen(!mobileOpen)}>
             <span /><span /><span />
           </button>
         </div>
@@ -242,208 +269,229 @@ export default function LandingPage() {
         {mobileOpen && (
           <div className="lp2-mobile-menu">
             {navLinks.map((l) => (
-              <a key={l} href={`#${l.toLowerCase().replace(' ', '-')}`} onClick={() => setMobileOpen(false)} className="lp2-mobile-link">{l}</a>
+              <a
+                key={l}
+                href={`#${l.toLowerCase().replace(' ', '-')}`}
+                onClick={() => setMobileOpen(false)}
+                className="lp2-mobile-link"
+              >
+                {l}
+              </a>
             ))}
             <div className="lp2-mobile-actions">
-              <Link to="/login" onClick={() => setMobileOpen(false)} className="lp2-btn-ghost" style={{ textAlign: 'center' }}>Sign in</Link>
-              <Link to="/register" onClick={() => setMobileOpen(false)} className="lp2-btn-cta" style={{ textAlign: 'center' }}>Start free</Link>
+              <Link to="/login" onClick={() => setMobileOpen(false)} className="lp2-btn-ghost" style={{ textAlign: 'center' }}>
+                Sign in
+              </Link>
+              <Link to="/register" onClick={() => setMobileOpen(false)} className="lp2-btn-cta" style={{ textAlign: 'center' }}>
+                Start free trial
+              </Link>
             </div>
           </div>
         )}
       </header>
 
-      {/* ─── Hero ────────────────────────────────────────────────────────── */}
+      {/* ─── Hero Section ─────────────────────────────────────────────────── */}
       <section className="lp2-hero">
-        <div className="lp2-hero-bg-grid" aria-hidden="true" />
-
         <div className="lp2-hero-content">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             className="lp2-hero-badge"
           >
             <span className="lp2-badge-dot" />
-            Lead & Project CRM
+            Lead Management & Project Delivery CRM
           </motion.div>
 
           <motion.h1
-            initial={{ opacity: 0, y: 28 }}
+            initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.65, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.55, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
             className="lp2-hero-h1"
           >
-            Manage sales leads and track<br />
-            <span className="lp2-hero-accent">project delivery in one system.</span>
+            The single system for sales leads<br />
+            and <span className="lp2-hero-accent">project delivery.</span>
           </motion.h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.55, delay: 0.16, ease: [0.16, 1, 0.3, 1] }}
             className="lp2-hero-sub"
           >
-            Clientmark organizes incoming leads, team follow-ups, WhatsApp communication,
-            and project handovers in one workspace.
+            Clientmark unifies inbound lead capture, telecaller follow-ups, direct WhatsApp
+            messaging, and project handovers into one organized workspace.
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.34, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.55, delay: 0.24, ease: [0.16, 1, 0.3, 1] }}
             className="lp2-hero-actions"
           >
             <Link to="/register" className="lp2-btn-hero-primary">
               Create an account <IconArrowRight />
             </Link>
             <Link to="/login" className="lp2-btn-hero-ghost">
-              Sign in
+              Sign in to workspace
             </Link>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.48 }}
+            transition={{ duration: 0.5, delay: 0.36 }}
             className="lp2-hero-trust"
           >
-            {['14-day trial', 'No credit card required'].map((t) => (
-              <span key={t} className="lp2-trust-item">
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M13.5 4L6.5 11l-4-4" />
-                </svg>
-                {t}
-              </span>
-            ))}
+            <span className="lp2-trust-item">
+              <span style={{ color: '#10B981' }}><IconCheck /></span> 14-day free trial
+            </span>
+            <span className="lp2-trust-item">
+              <span style={{ color: '#10B981' }}><IconCheck /></span> No credit card required
+            </span>
+            <span className="lp2-trust-item">
+              <span style={{ color: '#10B981' }}><IconCheck /></span> Setup in under 2 minutes
+            </span>
           </motion.div>
         </div>
 
-        {/* Mock Dashboard */}
+        {/* Mock Product Visual */}
         <motion.div
-          initial={{ opacity: 0, y: 48, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.85, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          initial={{ opacity: 0, y: 36 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
           className="lp2-hero-visual"
         >
           <div className="lp2-mock-wrap">
-            <MockDashboard />
+            <MockWorkspacePreview />
           </div>
         </motion.div>
       </section>
 
-      {/* ─── Features ────────────────────────────────────────────────────── */}
-      <section id="features" className="lp2-section lp2-features-section">
+      <hr className="lp2-hairline" />
+
+      {/* ─── Capabilities Section ─────────────────────────────────────────── */}
+      <section id="capabilities" className="lp2-section">
         <div className="lp2-container">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-60px' }}
-            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            viewport={{ once: true, margin: '-50px' }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             className="lp2-section-head"
           >
             <span className="lp2-eyebrow">Core Capabilities</span>
             <h2 className="lp2-section-title">Built around your sales and delivery pipeline</h2>
-            <p className="lp2-section-desc">Track prospects through every stage from initial inquiry to final handover.</p>
+            <p className="lp2-section-desc">
+              Track prospects through every step of the commercial cycle, from first phone call to delivered project.
+            </p>
           </motion.div>
 
           <div className="lp2-features-grid">
-            {features.map((f, i) => (
+            {capabilities.map((cap, i) => (
               <motion.div
-                key={f.title}
-                initial={{ opacity: 0, y: 28 }}
+                key={cap.title}
+                initial={{ opacity: 0, y: 22 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-40px' }}
-                transition={{ duration: 0.5, delay: i * 0.07, ease: [0.16, 1, 0.3, 1] }}
+                viewport={{ once: true, margin: '-30px' }}
+                transition={{ duration: 0.45, delay: i * 0.06, ease: [0.16, 1, 0.3, 1] }}
                 className="lp2-feature-card"
               >
-                <div className="lp2-feature-icon" style={{ background: `${f.color}15`, color: f.color }}>
-                  {f.icon}
+                <div className="lp2-feature-icon" style={{ background: 'var(--cm-surface-subtle)' }}>
+                  {cap.icon}
                 </div>
-                <h3 className="lp2-feature-title">{f.title}</h3>
-                <p className="lp2-feature-desc">{f.desc}</p>
+                <h3 className="lp2-feature-title">{cap.title}</h3>
+                <p className="lp2-feature-desc">{cap.desc}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── How It Works (Workflow) ─────────────────────────────────────── */}
-      <section id="how-it-works" className="lp2-section lp2-hiw-section">
+      <hr className="lp2-hairline" />
+
+      {/* ─── Workflow Section ─────────────────────────────────────────────── */}
+      <section id="workflow" className="lp2-section">
         <div className="lp2-container">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-60px' }}
-            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            viewport={{ once: true, margin: '-50px' }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             className="lp2-section-head"
           >
-            <span className="lp2-eyebrow">Workflow</span>
-            <h2 className="lp2-section-title">From lead inquiry to project delivery</h2>
+            <span className="lp2-eyebrow">Operating Rhythm</span>
+            <h2 className="lp2-section-title">From initial inquiry to delivered handover</h2>
+            <p className="lp2-section-desc">
+              A structured progression that keeps sales reps accountable and delivery teams informed.
+            </p>
           </motion.div>
 
           <div className="lp2-steps">
             {[
               {
-                n: '01',
-                title: 'Set up your workspace',
-                desc: 'Create your company account, add team members, and configure branch locations.',
+                num: '01',
+                title: 'Set up your workspace & branches',
+                desc: 'Register your company account, invite sales reps and telecallers, and map branch locations.',
               },
               {
-                n: '02',
-                title: 'Track incoming leads',
-                desc: 'Log lead details, assign telecallers or BDEs, schedule follow-ups, and record call notes.',
+                num: '02',
+                title: 'Capture & advance sales leads',
+                desc: 'Log lead requirements, assign telecallers, trigger WhatsApp follow-ups, and track status.',
               },
               {
-                n: '03',
-                title: 'Deliver the project',
-                desc: 'Convert won leads into active projects, track stage milestones, and share status previews.',
+                num: '03',
+                title: 'Deliver milestones & report health',
+                desc: 'Transition won deals into project milestones, monitor team metrics, and share status links.',
               },
             ].map((step, i) => (
               <motion.div
-                key={step.n}
-                initial={{ opacity: 0, x: -24 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, margin: '-40px' }}
-                transition={{ duration: 0.5, delay: i * 0.12, ease: [0.16, 1, 0.3, 1] }}
+                key={step.num}
+                initial={{ opacity: 0, y: 22 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-30px' }}
+                transition={{ duration: 0.45, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
                 className="lp2-step"
               >
-                <div className="lp2-step-num">{step.n}</div>
-                <div>
-                  <h3 className="lp2-step-title">{step.title}</h3>
-                  <p className="lp2-step-desc">{step.desc}</p>
-                </div>
+                <span className="lp2-step-num">{step.num}</span>
+                <h3 className="lp2-step-title">{step.title}</h3>
+                <p className="lp2-step-desc">{step.desc}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── Pricing ─────────────────────────────────────────────────────── */}
-      <section id="pricing" className="lp2-section lp2-pricing-section">
+      <hr className="lp2-hairline" />
+
+      {/* ─── Pricing Section ─────────────────────────────────────────────── */}
+      <section id="pricing" className="lp2-section">
         <div className="lp2-container">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-60px' }}
-            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            viewport={{ once: true, margin: '-50px' }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             className="lp2-section-head"
           >
-            <span className="lp2-eyebrow">Pricing</span>
-            <h2 className="lp2-section-title">Plans for teams of any size</h2>
-            <p className="lp2-section-desc">Choose a plan based on your team size and monthly lead volume.</p>
+            <span className="lp2-eyebrow">Pricing Plans</span>
+            <h2 className="lp2-section-title">Predictable plans for growing teams</h2>
+            <p className="lp2-section-desc">
+              Transparent tiers with zero hidden fees. Scale as your sales volume and telecallers expand.
+            </p>
           </motion.div>
 
           <div className="lp2-pricing-grid">
-            {pricing.map((plan, i) => (
+            {pricingPlans.map((plan, i) => (
               <motion.div
                 key={plan.plan}
-                initial={{ opacity: 0, y: 28 }}
+                initial={{ opacity: 0, y: 22 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-40px' }}
-                transition={{ duration: 0.5, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                viewport={{ once: true, margin: '-30px' }}
+                transition={{ duration: 0.45, delay: i * 0.07, ease: [0.16, 1, 0.3, 1] }}
                 className={`lp2-price-card ${plan.popular ? 'popular' : ''}`}
               >
-                {plan.popular && <div className="lp2-popular-badge">Most popular</div>}
+                {plan.popular && <div className="lp2-popular-badge">Most Popular</div>}
                 <div className="lp2-plan-name">{plan.plan}</div>
                 <div className="lp2-plan-price">
                   {plan.price}
@@ -454,10 +502,10 @@ export default function LandingPage() {
                 <ul className="lp2-plan-features">
                   {plan.features.map((f) => (
                     <li key={f}>
-                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke={plan.popular ? '#E05E3A' : '#16A34A'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M13.5 4L6.5 11l-4-4" />
-                      </svg>
-                      {f}
+                      <span style={{ color: plan.popular ? '#E05E3A' : '#10B981', flexShrink: 0, marginTop: 2 }}>
+                        <IconCheck />
+                      </span>
+                      <span>{f}</span>
                     </li>
                   ))}
                 </ul>
@@ -473,30 +521,29 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── CTA Banner ──────────────────────────────────────────────────── */}
+      {/* ─── Bottom CTA ──────────────────────────────────────────────────── */}
       <section className="lp2-cta-section">
         <div className="lp2-container">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 22 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-60px' }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            viewport={{ once: true, margin: '-50px' }}
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
             className="lp2-cta-inner"
           >
-            <div className="lp2-cta-grid-bg" aria-hidden="true" />
-            <span className="lp2-eyebrow" style={{ color: '#E05E3A' }}>Get started</span>
+            <span className="lp2-eyebrow">Get Started</span>
             <h2 className="lp2-cta-title">
-              Start organizing your<br />leads and projects.
+              Start organizing your leads<br />and delivery pipeline today.
             </h2>
             <p className="lp2-cta-sub">
-              Set up your workspace in minutes with a 14-day trial. No credit card required.
+              Create your company workspace in less than two minutes. 14-day free trial with no credit card required.
             </p>
             <div className="lp2-cta-actions">
-              <Link to="/register" className="lp2-btn-cta-white">
+              <Link to="/register" className="lp2-btn-cta-primary">
                 Create an account <IconArrowRight />
               </Link>
               <Link to="/login" className="lp2-btn-cta-outline">
-                Sign in
+                Sign in to workspace
               </Link>
             </div>
           </motion.div>
@@ -509,25 +556,26 @@ export default function LandingPage() {
           <div className="lp2-footer-top">
             <div className="lp2-footer-brand">
               <Link to="/" className="lp2-brand">
-                <LogoMark size={26} />
-                <span className="lp2-brand-name" style={{ color: '#0F0F0F' }}>Clientmark</span>
+                <LogoMark size={24} />
+                <span className="lp2-brand-name">Clientmark</span>
               </Link>
               <p className="lp2-footer-tagline">
-                Lead tracking and project delivery CRM.<br />clientmark.app
+                Lead tracking and project delivery software for sales and delivery teams.<br />
+                clientmark.app
               </p>
             </div>
 
             <div className="lp2-footer-links-grid">
               <div>
                 <div className="lp2-footer-col-title">Product</div>
-                <a href="#features" className="lp2-footer-link">Features</a>
+                <a href="#capabilities" className="lp2-footer-link">Capabilities</a>
+                <a href="#workflow" className="lp2-footer-link">Workflow</a>
                 <a href="#pricing" className="lp2-footer-link">Pricing</a>
-                <a href="#how-it-works" className="lp2-footer-link">How it works</a>
               </div>
               <div>
-                <div className="lp2-footer-col-title">Account</div>
-                <Link to="/login" className="lp2-footer-link">Sign in</Link>
-                <Link to="/register" className="lp2-footer-link">Register</Link>
+                <div className="lp2-footer-col-title">Access</div>
+                <Link to="/login" className="lp2-footer-link">Sign In</Link>
+                <Link to="/register" className="lp2-footer-link">Create Account</Link>
               </div>
             </div>
           </div>
