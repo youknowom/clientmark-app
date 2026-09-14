@@ -1,6 +1,6 @@
 import express from "express";
 import { upload } from "../services/fileUploadService.js";
-import { authUser, authAccess } from "../middlewares/authMiddleware.js";
+import { authUser, authAccess, optionalAuthUser } from "../middlewares/authMiddleware.js";
 import {
   updateMainTheme,
   getMainTheme,
@@ -17,9 +17,9 @@ softwareSettingRouter.put(
   updateMainTheme,
 ); //update main theme
 
-softwareSettingRouter.get("/get-main-theme", getMainTheme); //get main theme
+softwareSettingRouter.get("/get-main-theme", optionalAuthUser, getMainTheme); //get main theme
 
-softwareSettingRouter.get("/get-site-setting", getSiteSetting); //get software setting logo, etc
+softwareSettingRouter.get("/get-site-setting", optionalAuthUser, getSiteSetting); //get software setting logo, etc
 
 softwareSettingRouter.post(
   "/update-site-setting",

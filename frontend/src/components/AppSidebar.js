@@ -65,12 +65,19 @@ const AppSidebar = () => {
     getSiteSetting()
   }, [])
 
+  const currentTenantId = userData?.tenantId?._id || userData?.tenantId
+
   useEffect(() => {
     if (!socket) return
-    const events = ['updateSiteSetting']
-    events.forEach((event) => socket.on(event, getSiteSetting))
-    return () => events.forEach((event) => socket.off(event, getSiteSetting))
-  }, [socket])
+    const handleUpdate = (payload) => {
+      if (payload?.tenantId && currentTenantId && payload.tenantId !== currentTenantId.toString()) {
+        return
+      }
+      getSiteSetting()
+    }
+    socket.on('updateSiteSetting', handleUpdate)
+    return () => socket.off('updateSiteSetting', handleUpdate)
+  }, [socket, currentTenantId])
 
   return (
     <CSidebar

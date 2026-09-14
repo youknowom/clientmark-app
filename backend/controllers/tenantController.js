@@ -7,6 +7,7 @@ import UserModel from "../models/userModel.js";
 import RoleModel from "../models/roleModel.js";
 import PermissionModel from "../models/permissionModel.js";
 import ThemeModel from "../models/themeModel.js";
+import SoftwareSettingModel from "../models/softwareSettingModel.js";
 
 // ── Permission data (same as seedDatabase) ──
 const PERMISSIONS_DATA = [
@@ -167,6 +168,18 @@ const seedTenantData = async (tenantId, adminData) => {
     ...DEFAULT_THEME,
   });
 
+  // 6. Create clean, isolated software setting for this tenant
+  await SoftwareSettingModel.create({
+    tenantId,
+    projectName: adminData.companyName || "Clientmark",
+    mainLogo: "",
+    favicon: "",
+    email: adminData.email || "",
+    phone: adminData.mobileNo || "",
+    logoWidth: 150,
+    logoHeight: 50,
+  });
+
   return adminUser;
 };
 
@@ -239,9 +252,10 @@ const registerTenant = async (req, res) => {
       },
     });
 
-    // 2. Seed permissions, roles, admin user, theme
+    // 2. Seed permissions, roles, admin user, theme, site settings
     const adminUser = await seedTenantData(tenant._id, {
       fullName: fullName || companyName,
+      companyName: companyName.trim(),
       userName,
       email: email.toLowerCase().trim(),
       mobileNo: phone || "",

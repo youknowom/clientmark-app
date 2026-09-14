@@ -78,4 +78,36 @@ const authAccess = (...access) => {
   };
 };
 
-export { authUser, authAccess };
+// Optional auth — attaches user and tenantId if valid token provided, but doesn't block unauthenticated requests
+const optionalAuthUser = async (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return next();
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded?.tenantId) {
+      req.tenantId = decoded.tenantId;
+    }
+
+    const user = await UserModel.findOne({ _id: decoded.userId })
+      .populate("roleId")
+      .select("-password");
+
+    if (user && user.status === "Active") {
+      req.user = user;
+      req.user.tenantId = decoded.tenantId || user.tenantId;
+      req.tenantId = decoded.tenantId || user.tenantId;
+    }
+  } catch (err) {
+    // Ignore invalid/expired token on optional routes
+  }
+
+  next();
+};
+
+export { authUser, authAccess, optionalAuthUser };
