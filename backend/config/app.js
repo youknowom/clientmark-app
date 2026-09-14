@@ -28,8 +28,13 @@ app.use(helmet({
 //cors setup
 app.use(
   cors({
-    origin: process.env.DOMAIN_URL || "*",
+    origin: (origin, callback) => {
+      // Dynamically reflect origin to allow clientmark.app, www.clientmark.app, and localhost with credentials
+      callback(null, true);
+    },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   }),
 );
 
@@ -105,11 +110,9 @@ app.use((err, req, res, next) => {
   next();
 });
 
-//server frontend pages
-const buildPath = path.join(__dirname, "../../public_html");
-app.use(express.static(buildPath));
-app.get(/^\/(?!api).*/, (req, res) => {
-  res.sendFile(path.join(buildPath, "index.html"));
+// Root API health check
+app.get("/", (req, res) => {
+  res.json({ success: true, message: "Clientmark API is running" });
 });
 
 export default app;

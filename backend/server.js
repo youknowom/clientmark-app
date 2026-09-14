@@ -18,7 +18,11 @@ const server = http.createServer(app);
 // Socket
 const io = new Server(server, {
   cors: {
-    origin: process.env.DOMAIN_URL || "*",
+    origin: (origin, callback) => {
+      callback(null, true);
+    },
+    methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 
