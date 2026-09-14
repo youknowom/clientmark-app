@@ -10,24 +10,25 @@ import { syncFaviconFromSettings } from '../helpers/dynamicFavicon'
 
 // ─── Fallback brand mark when no custom logo is set ───────────────────────────
 const ClientmarkBrand = () => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 16px' }}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 18px' }}>
     <div style={{
-      width: '28px', height: '28px',
+      width: '30px', height: '30px',
       background: '#E05E3A',
-      borderRadius: '7px',
+      borderRadius: '8px',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       flexShrink: 0,
     }}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-        <path d="M12 2L2 7l10 5 10-5-10-5zm0 7L2 14l10 5 10-5-10-5z" />
+      <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
+        <path d="M8 10h16M8 16h11M8 22h14" stroke="white" strokeWidth="2.4" strokeLinecap="round" />
+        <circle cx="24" cy="22" r="2.8" fill="#E05E3A" stroke="white" strokeWidth="1.6" />
       </svg>
     </div>
     <span style={{
-      fontSize: '15px',
+      fontSize: '16px',
       fontWeight: '700',
-      color: '#0F0F0F',
-      letterSpacing: '-0.02em',
-      fontFamily: 'Inter, sans-serif',
+      color: '#111827',
+      letterSpacing: '-0.025em',
+      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
     }}>
       Clientmark
     </span>
@@ -35,7 +36,7 @@ const ClientmarkBrand = () => (
 )
 
 const AppSidebar = () => {
-  const { siteSetting, setSiteSetting } = useContext(AuthContext)
+  const { siteSetting, setSiteSetting, userData } = useContext(AuthContext)
   const dispatch = useDispatch()
   const unfoldable = useSelector((state) => state.sidebarUnfoldable)
   const sidebarShow = useSelector((state) => state.sidebarShow)
@@ -88,15 +89,15 @@ const AppSidebar = () => {
       visible={sidebarShow}
       onVisibleChange={(visible) => dispatch({ type: 'set', sidebarShow: visible })}
       style={{
-        borderRight: '1px solid #E8E8E5',
+        borderRight: '1px solid rgba(0, 0, 0, 0.08)',
         backgroundColor: '#FFFFFF',
       }}
     >
       <CSidebarHeader
         className="p-0 d-flex align-items-center justify-content-between"
         style={{
-          borderBottom: '1px solid #F0F0ED',
-          height: '57px',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+          height: '56px',
           backgroundColor: '#FFFFFF',
         }}
       >

@@ -4,10 +4,10 @@ import apiClient from '../../api/axiosClient'
 const ThemeContext = createContext()
 
 const defaultTheme = {
-  primaryColor: '#00589f',
-  secondaryColor: '#72a3ca',
-  backgroundColor: '#f8f9fa',
-  textColor: '#0c2749',
+  primaryColor: '#111827',
+  secondaryColor: '#E05E3A',
+  backgroundColor: '#FBFBF9',
+  textColor: '#111827',
 }
 
 export const ThemeProvider = ({ children }) => {

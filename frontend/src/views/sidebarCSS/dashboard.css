@@ -1,223 +1,178 @@
-/* Dashboard.css */
+/* ─── Clientmark Dashboard Styles — Sarvam AI Visual Discipline ──────────── */
+/* Characteristics: Editorial typography, off-white stone base, hairline     */
+/* borders, clean KPI metric tiles, zero loud neon gradients or box-shadows. */
 
 .dashboard-container {
-  padding: 20px;
-  margin: 40px auto;
-
+  padding: 24px;
+  margin: 0 auto;
+  max-width: 1440px;
 }
 
+/* ─── Metric KPI Cards ───────────────────────────────────────────────────── */
 .dashboard-card {
-  border-radius: 12px;
-  margin-bottom: 10px;
+  background: #FFFFFF !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 10px !important;
+  padding: 20px !important;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dashboard-card:hover {
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.05) !important;
 }
 
 .dashboard-card-header {
-  font-weight: bold;
-  font-size: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4B5563;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .dashboard-card-icon {
-  background-color: var(--primary-color);
-  color: white;
-  width: 30px;
-  height: 30px;
-  border-radius: 5px;
-  text-align: center;
-  font-weight: bold;
-}
-
-.service-card-icon {
-  background-color: white;
-  color: var(--primary-color);
-  width: 50px;
-  height: 50px;
-  border-radius: 5px;
-  text-align: center;
-  font-weight: bold;
-}
-
-.service-card {
-  height: 150px;
-
+  background-color: #F4F4F1;
+  color: #111827;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 15px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .dashboard-card-value {
   margin-top: 10px;
+  margin-bottom: 4px;
+  font-weight: 700;
+  font-size: 26px;
+  color: #111827;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.dashboard-card-details {
+  font-size: 12px;
+  color: #6B7280;
   margin-bottom: 0;
-  font-weight: bold;
-  font-size: 25px;
+  font-weight: 500;
 }
 
-
-.dashboard-course-card {
-  border-radius: 12px;
-  height: 150px;
-  padding: 15px;
+/* ─── Course / Service / Class Cards ─────────────────────────────────────── */
+.dashboard-course-card,
+.dashboard-class-card,
+.dashboard-tile-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.dashboard-course-card-header {
-  background-color: var(--secondary-color);
-  color: black;
-  width: 35px;
-  height: 40px;
-  border-radius: 5px;
-  text-align: center;
-  padding-top: 5px;
+.dashboard-course-card:hover,
+.dashboard-class-card:hover,
+.dashboard-tile-card:hover {
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.05);
 }
 
+.dashboard-class-card-title,
 .dashboard-course-title {
-  font-size: 16px;
-  padding: 1rem;
+  font-weight: 650;
+  font-size: 15px;
+  color: #111827;
+  letter-spacing: -0.015em;
 }
 
-
-
-.dashboard-class-card {
-  border-radius: 12px;
-  height: 120px;
-  margin-bottom: 10px;
-  padding: 15px;
-}
-
+.dashboard-course-card-header,
 .dashboard-class-card-icon {
-  background-color: var(--primary-color);
-  color: black;
-  width: 35px;
-  height: 40px;
-  border-radius: 5px;
-  text-align: center;
-  padding-top: 5px;
+  background-color: #F4F4F1;
+  color: #111827;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.dashboard-class-card-title {
-  font-weight: bold;
-  font-size: 16px;
-}
-
-.dashboard-class-card-details {
-  font-size: 14px;
-  color: #6c757d;
-  margin-bottom: 0;
-}
-
+/* ─── Daily Progress & Lists ─────────────────────────────────────────────── */
 .dashboard-daily-progress-header {
-  font-weight: bold;
+  font-weight: 650;
+  font-size: 14px;
+  color: #111827;
+  letter-spacing: -0.01em;
 }
 
 .dashboard-daily-progress-list {
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 .dashboard-list-item {
-  background-color: #fff;
+  background-color: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  transition: background-color 0.15s ease;
 }
 
 .dashboard-list-item:hover {
-  background-color: #fff1f1;
+  background-color: #FAFAF8;
 }
 
 .dashboard-list-item span {
-  margin-left: 10px;
+  margin-left: 8px;
+  font-size: 13px;
+  color: #374151;
 }
 
-@media (max-width: 768px) {
-  .dashboard-course-card {
-    margin-bottom: 15px;
-  }
-
-  .dashboard-class-card {
-    margin-bottom: 15px;
-  }
-
-  .dashboard-progress-bar {
-    width: 60%;
-  }
-
-  .dashboard-card-header {
-    font-weight: bold;
-    font-size: 12px;
-  }
-
-  .dashboard-card-value {
-    font-weight: bold;
-    font-size: 20px;
-  }
-}
-
-
-/* HomePage.css */
-
-
-.card {
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
-
-
-.banner-container {
-  margin-bottom: 15px;
-}
-
-
-.dash-nav {
-  width: 100%;
-}
-
-.dash-nav-item {
-  flex: 1;
-  text-align: center;
-  padding: 5px 0;
-}
-
-.service-icon {
-  margin-bottom: 8px;
-}
-
-.service-nav-icon {
-  color: #6e3cc1;
-}
-
-.service-nav-text {
-  color: #6e3cc1;
-  font-size: 10px;
-}
-
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
 .btn-custom {
-  background-color: #28a745;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 15px;
-}
-
-.service-img {
-  width: 80px;
-  height: 80px;
+  background-color: #111827;
+  color: #FFFFFF;
+  border: 1px solid #111827;
+  border-radius: 9999px;
+  padding: 7px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transition: all 0.15s ease;
+  cursor: pointer;
 }
 
 .btn-custom:hover {
-  background-color: #218838;
+  background-color: #1F2937;
+  border-color: #1F2937;
+  color: #FFFFFF;
 }
-
-
-@media (max-width: 768px) {
-  .card-title {
-    font-size: 1.2rem;
-  }
-
-  .btn-custom {
-    padding: 6px 12px;
-  }
-}
-
-
-/* -------------------------nav js css---------------------------------------------------- */
 
 .nav-item-icon {
   font-size: 14px;
-  margin-right: 10px;
+  margin-right: 8px;
 }
 
-.dashboard-tile-card {
-  padding: 25px;
+/* ─── Responsive Queries ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 14px;
+  }
+
+  .dashboard-card-value {
+    font-size: 22px;
+  }
+
+  .dashboard-card-header {
+    font-size: 12px;
+  }
 }

@@ -1,105 +1,134 @@
+/* ─── Clientmark Form Styles — Sarvam AI Visual Discipline ───────────────── */
+/* Characteristics: Editorial typography, off-white stone base, hairline     */
+/* borders, clean input focus rings, obsidian pill buttons.                  */
+
 .body {
-  background-color: #ffffff;
+  background-color: #FBFBF9;
 }
 
 /* Container for the entire form */
 .form-container {
-  margin: 40px auto;
-  /* max-width: 650px; */
-  background: #ffffff;
-  padding: 30px 15px;
+  margin: 24px auto;
+  background: #FFFFFF;
+  padding: 32px 28px;
   border-radius: 12px;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-  line-height: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  line-height: 1.6;
 }
 
 /* Title Box */
 .form-title-box {
-  text-align: center;
-  margin-bottom: 10px;
+  margin-bottom: 24px;
 }
 
 /* Main Title */
 .custom-form-title {
-  font-size: 26px;
-  font-weight: bold;
-  color: #2c3e50;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.025em;
+  margin-bottom: 6px;
 }
 
-/* Form Styling */
+/* Form Styling Box */
 .custom-form-box {
-  padding: 20px;
-  line-height: 20px;
+  padding: 12px 0;
+  line-height: 1.6;
 }
 
 /* Labels */
 .custom-form-label {
-  font-size: 16px;
-  font-weight: 500;
-  margin-top: 10px;
-  color: #34495e;
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  letter-spacing: -0.01em;
+  margin-top: 12px;
+  margin-bottom: 6px;
 }
 
 /* Input Fields */
 .custom-form-input {
-  border-radius: 5px;
-  border: 1px solid #bdc3c7;
-  padding: 8px;
-  font-size: 14px;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 9px 13px;
+  font-size: 13.5px;
+  color: #111827;
+  background-color: #FFFFFF;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-family: inherit;
 }
 
-/* Input Focus Effect */
+/* Input Focus Effect (Sarvam Obsidian Focus Ring) */
 .custom-form-input:focus {
-  border-color: #3498db;
-  box-shadow: 0px 0px 5px rgba(52, 152, 219, 0.5);
+  border-color: #111827;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.06);
 }
 
-/* Submit Button */
+/* Submit Button (Sarvam Obsidian Pill) */
 .custom-submit-button {
   width: auto;
-  margin-top: 10px;
-  background-color: var(--primary-color) !important;
-  border: none;
-  padding: 3px 20px;
-  font-size: 16px;
-  color: white;
-  border-radius: 5px;
+  margin-top: 16px;
+  background-color: #111827 !important;
+  color: #FFFFFF !important;
+  border: 1px solid #111827 !important;
+  padding: 9px 24px;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  border-radius: 9999px;
   cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 /* Submit Button Hover */
-.custom-submit-button:hover {
-  background-color: var(--secondary-color) !important;
-  color: var(--primary-color);
-}
-
-/* Submit Button Hover */
+.custom-submit-button:hover,
 .custom-submit-button:focus {
-  background-color: var(--secondary-color) !important;
-  color: var(--primary-color) !important;
+  background-color: #1F2937 !important;
+  border-color: #1F2937 !important;
+  color: #FFFFFF !important;
 }
 
 .add-category {
-  background-color: var(--primary-color) !important;
+  background-color: #111827 !important;
+  color: #FFFFFF !important;
+  border-radius: 9999px;
 }
 
 .category-form {
-  padding: 10px 40px;
+  padding: 10px 20px;
 }
 
 .comission-card {
-  padding: 20px 40px;
+  padding: 20px 24px;
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
 }
 
 .bank-header {
-  background-color: var(--primary-color);
-  color: white;
-  padding: 6px 10px;
-  border-bottom: none;
+  background-color: #F4F4F1;
+  color: #111827;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  font-weight: 650;
+  font-size: 13px;
+  letter-spacing: -0.01em;
 }
 
 @media (max-width: 767.98px) {
+  .form-container {
+    padding: 20px 16px;
+  }
   .notification-text {
-    font-size: 18px;
+    font-size: 16px;
   }
 }

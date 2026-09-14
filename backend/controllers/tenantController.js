@@ -110,10 +110,10 @@ const PERMISSIONS_DATA = [
 
 const DEFAULT_THEME = {
   mainTheme: {
-    primaryColor: "#6366f1",
-    secondaryColor: "#8b5cf6",
-    backgroundColor: "#0f172a",
-    textColor: "#f8fafc",
+    primaryColor: "#111827",
+    secondaryColor: "#E05E3A",
+    backgroundColor: "#FBFBF9",
+    textColor: "#111827",
   },
 };
 
