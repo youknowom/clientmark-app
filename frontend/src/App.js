@@ -7,6 +7,7 @@ import ProtectedRoute from './ProtectedRoute'
 import AuthProvider from './AuthContext'
 import { SocketProvider } from './SocketContext'
 import { ThemeProvider } from './views/sidebarpages/ThemeContext'
+import { Analytics } from '@vercel/analytics/react'
 
 // Lazy load pages
 const Landing = React.lazy(() => import('./views/sidebarpages/LandingPage'))
@@ -155,6 +156,9 @@ const App = () => {
           </SocketProvider>
         </ThemeProvider>
       </BrowserRouter>
+
+      {/* Vercel Analytics */}
+      <Analytics />
 
       {/* Toast Notifications */}
       <Toaster
