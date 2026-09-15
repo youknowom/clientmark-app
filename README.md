@@ -5,7 +5,7 @@
     <strong>Organize leads. Automate follow-ups. Accelerate conversions.</strong>
   </p>
 
-  <img src="./banner.jpg" alt="Clientmark Banner" width="800" />
+  <img src="./banner.png" alt="Clientmark Banner" width="800" />
 </div>
 
 <br />
@@ -18,15 +18,6 @@ It is built for two primary real-world workflows:
 
 1. **Lead Pipeline & Sales Acceleration** — capture inquiries, assign leads to telecallers and BDEs, manage interaction stages, and track conversion velocity.
 2. **Project Delivery & Client Handover** — instantly convert closed deals into active projects with milestones, team tasks, timeline tracking, and live client previews.
-
----
-
-<div align="center">
-  <h3>🖥️ Application & Dashboard Preview</h3>
-  <img src="./landing-preview.jpg" alt="Clientmark Dashboard Preview" width="800" />
-</div>
-
----
 
 ## ✨ Features
 
@@ -68,15 +59,3 @@ It is built for two primary real-world workflows:
 - **Frontend**: React 18, Vite, CoreUI, Framer Motion, Bootstrap 5, Redux, React Router 6, AG Charts
 - **Backend**: Node.js, Express.js, MongoDB (Mongoose), Socket.io, JWT Authentication, Multer
 - **Integrations**: WhatsApp Cloud API, Dynamic Favicon & White-labeling engine
-
----
-
-## 👨‍💻 Developed By
-
-**Omkar Bagul**
-
-Final-year B.Tech Computer Science Engineering student passionate about building real-world full-stack applications.
-
-<div align="center">
-  <strong>Made with ❤️ by Omkar Bagul</strong>
-</div>
