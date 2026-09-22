@@ -110,10 +110,10 @@ const PERMISSIONS_DATA = [
 
 const DEFAULT_THEME = {
   mainTheme: {
-    primaryColor: "#6366f1",
-    secondaryColor: "#8b5cf6",
-    backgroundColor: "#0f172a",
-    textColor: "#f8fafc",
+    primaryColor: "#111827",
+    secondaryColor: "#E05E3A",
+    backgroundColor: "#FBFBF9",
+    textColor: "#111827",
   },
 };
 
@@ -140,13 +140,64 @@ const seedTenantData = async (tenantId, adminData) => {
     p.subPermission.map((sp) => sp.code)
   );
 
-  // 3. Create Admin role for this tenant
-  const adminRole = await RoleModel.create({
-    tenantId,
-    roleName: "Admin",
-    priority: 1,
-    permissions: allPermissionCodes,
-  });
+  // 3. Create standard roles for this tenant
+  const defaultRoles = [
+    {
+      tenantId,
+      roleName: "Admin",
+      priority: 1,
+      permissions: allPermissionCodes,
+    },
+    {
+      tenantId,
+      roleName: "BDE",
+      priority: 2,
+      permissions: [
+        "view:dashboard-master",
+        "add:lead",
+        "view:lead-master",
+        "view:lead",
+        "update:lead",
+        "view:project-master",
+        "view:project",
+        "view:profile",
+        "view:report-master",
+        "view:bde-lead-report",
+        "view:lead-status-report",
+      ],
+    },
+    {
+      tenantId,
+      roleName: "Telecaller",
+      priority: 3,
+      permissions: [
+        "view:dashboard-master",
+        "view:lead-master",
+        "view:lead",
+        "update:lead",
+        "view:profile",
+        "view:report-master",
+        "view:telecaller-lead-report",
+        "view:whatsapp-chat-record",
+      ],
+    },
+    {
+      tenantId,
+      roleName: "Developer",
+      priority: 4,
+      permissions: [
+        "view:dashboard-master",
+        "view:project-master",
+        "view:project",
+        "view:profile",
+        "view:report-master",
+        "view:project-status-report",
+      ],
+    },
+  ];
+
+  const createdRoles = await RoleModel.insertMany(defaultRoles);
+  const adminRole = createdRoles.find((r) => r.roleName === "Admin");
 
   // 4. Create admin user
   const hashedPassword = await bcrypt.hash(adminData.password, 10);
@@ -369,4 +420,71 @@ const updateTenant = async (req, res) => {
   }
 };
 
-export { registerTenant, getMyTenant, updateTenant };
+// ══════════════════════════════════════════════════════════════
+// POST /tenant/demo-login — 1-Click Sandbox Guest Login
+// ══════════════════════════════════════════════════════════════
+const getDemoSession = async (req, res) => {
+  try {
+    let demoTenant = await TenantModel.findOne({ slug: "demo-workspace" });
+    if (!demoTenant) {
+      const { seedDemoTenant } = await import("../config/seedDemoTenant.js");
+      demoTenant = await seedDemoTenant();
+    }
+
+    if (!demoTenant) {
+      return res.status(500).json({
+        success: false,
+        message: "Demo workspace is temporarily unavailable. Please try again shortly.",
+      });
+    }
+
+    const demoUser = await UserModel.findOne({
+      tenantId: demoTenant._id,
+      userName: "demo_admin",
+    });
+
+    if (!demoUser) {
+      return res.status(500).json({
+        success: false,
+        message: "Demo user not found.",
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        userId: demoUser._id,
+        role: "Admin",
+        tenantId: demoTenant._id,
+        isDemo: true,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    return res.status(200).json({
+      success: true,
+      token,
+      isDemo: true,
+      tenant: {
+        id: demoTenant._id,
+        companyName: demoTenant.companyName,
+        slug: demoTenant.slug,
+      },
+      user: {
+        id: demoUser._id,
+        fullName: demoUser.fullName,
+        userName: demoUser.userName,
+        role: "Admin",
+      },
+      message: "Welcome to Acme Digital Agency (Live Demo)!",
+    });
+  } catch (error) {
+    console.error("Demo login error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Could not initialize demo session.",
+    });
+  }
+};
+
+export { registerTenant, getMyTenant, updateTenant, getDemoSession };

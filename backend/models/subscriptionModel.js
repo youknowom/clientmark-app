@@ -3,11 +3,16 @@ import mongoose from "mongoose";
 const PaymentHistorySchema = new mongoose.Schema(
   {
     amount: { type: Number, required: true },
+    currency: { type: String, default: "INR" },
+    status: { type: String, default: "success" }, // "success", "failed", "pending", "refunded"
     paidAt: { type: Date, default: Date.now },
-    transactionId: { type: String },
-    method: { type: String, default: "manual" }, // "razorpay", "stripe", "manual"
+    transactionId: { type: String }, // razorpay_payment_id
+    orderId: { type: String }, // razorpay_order_id
+    method: { type: String, default: "razorpay" }, // "razorpay", "manual"
+    errorReason: { type: String, default: "" },
+    receipt: { type: String, default: "" },
   },
-  { _id: false }
+  { _id: true }
 );
 
 const SubscriptionSchema = new mongoose.Schema(
@@ -25,10 +30,76 @@ const SubscriptionSchema = new mongoose.Schema(
       required: true,
     },
 
+    billingCycle: {
+      type: String,
+      enum: ["monthly", "yearly"],
+      default: "monthly",
+    },
+
+    razorpayOrderId: {
+      type: String,
+      default: "",
+      index: true,
+    },
+
+    razorpayPaymentId: {
+      type: String,
+      default: "",
+    },
+
+    razorpaySubscriptionId: {
+      type: String,
+      default: "",
+      index: true,
+    },
+
+    razorpayCustomerId: {
+      type: String,
+      default: "",
+    },
+
+    stripeCustomerId: {
+      type: String,
+      default: "",
+      index: true,
+    },
+
+    stripeSubscriptionId: {
+      type: String,
+      default: "",
+      index: true,
+    },
+
+    stripeSessionId: {
+      type: String,
+      default: "",
+      index: true,
+    },
+
+    amount: {
+      type: Number,
+      default: 0,
+    },
+
+    currency: {
+      type: String,
+      default: "INR",
+    },
+
     status: {
       type: String,
-      enum: ["trial", "active", "expired", "cancelled"],
+      enum: ["trial", "active", "past_due", "cancelled", "expired"],
       default: "trial",
+    },
+
+    cancelAtPeriodEnd: {
+      type: Boolean,
+      default: false,
+    },
+
+    cancelledAt: {
+      type: Date,
+      default: null,
     },
 
     startDate: {
@@ -37,6 +108,16 @@ const SubscriptionSchema = new mongoose.Schema(
     },
 
     endDate: {
+      type: Date,
+      default: null,
+    },
+
+    currentPeriodStart: {
+      type: Date,
+      default: Date.now,
+    },
+
+    currentPeriodEnd: {
       type: Date,
       default: null,
     },

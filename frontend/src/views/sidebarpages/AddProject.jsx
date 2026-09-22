@@ -5,8 +5,7 @@ import { Container, Card, Form, Button, Row, Col, Spinner, Badge, ListGroup } fr
 import ReactQuill from 'react-quill'
 import { Country, State, City } from 'country-state-city'
 import 'react-quill/dist/quill.snow.css'
-import { IoAddCircle, IoClose } from 'react-icons/io5'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import apiClient from '../../api/axiosClient'
 import Select from 'react-select'
 import toast from 'react-hot-toast'
@@ -16,7 +15,10 @@ import '../sidebarCSS/comStyle.css'
 
 const AddProject = ({ editData }) => {
   const { userData } = useContext(AuthContext)
+  const location = useLocation()
+  const navigate = useNavigate()
   const isEdit = !!editData
+  const fromLead = location.state?.fromLead
 
   let initialData = {
     // Project fields
@@ -82,6 +84,35 @@ const AddProject = ({ editData }) => {
   ]
 
   const disableButton = isSubmitting
+
+  // Auto-populate form if navigated from Lead conversion
+  useEffect(() => {
+    if (fromLead && !isEdit) {
+      setFormData((prev) => ({
+        ...prev,
+        ClientName: fromLead.fullName || fromLead.businessName || '',
+        mobileNo: fromLead.mobileNo || '',
+        whatsappNo: fromLead.whatsappNo || fromLead.mobileNo || '',
+        email: fromLead.email || '',
+        gender: fromLead.gender || 'Male',
+        country: fromLead.country || 'India',
+        state: fromLead.state || '',
+        city: fromLead.city || '',
+        address: fromLead.address || '',
+        ProjectName: fromLead.businessName
+          ? `${fromLead.businessName} - Project`
+          : fromLead.serviceRequirement
+          ? `${fromLead.serviceRequirement} Project`
+          : `${fromLead.fullName}'s Project`,
+        ProjectDescription: fromLead.serviceRequirement
+          ? `<p><strong>Service Requirement:</strong> ${fromLead.serviceRequirement}</p>${
+              fromLead.remark ? `<p><strong>Lead Notes:</strong> ${fromLead.remark}</p>` : ''
+            }`
+          : fromLead.remark || '',
+      }))
+      toast.success(`Loaded details from Lead #${fromLead.leadNo || ''}`, { id: 'lead-convert-notice' })
+    }
+  }, [fromLead, isEdit])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -200,8 +231,6 @@ const AddProject = ({ editData }) => {
     }
   }
 
-  const navigate = useNavigate()
-
   useEffect(() => {
     if (isEdit && editData) {
       setFormData((prev) => ({
@@ -309,6 +338,27 @@ const AddProject = ({ editData }) => {
             {isEdit ? 'Update Project Data' : 'Add Project Data'}
           </Card.Header>
           <Card.Body>
+            {fromLead && (
+              <div
+                style={{
+                  background: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  color: '#065F46',
+                  fontSize: '13px',
+                }}
+              >
+                <div>
+                  <strong>Converting Lead #{fromLead.leadNo}:</strong> Client contact and service requirements have been pre-filled from <em>{fromLead.fullName}</em>.
+                </div>
+                <Badge bg="success" style={{ fontWeight: 500, fontSize: '11px' }}>Converted from Lead</Badge>
+              </div>
+            )}
             <Row>
               {/* ===PROJECT DETAILS=== */}
               <h5 className="col-12">Project Information</h5>

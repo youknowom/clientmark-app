@@ -1,0 +1,515 @@
+/* ─── HubSpot Global Home & Setup Guide System ───────────────────────────── */
+
+/* ── Inline Setup Guide Container (Dashboard Global Home) ────────────────── */
+.hubspot-setup-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.06);
+  margin-bottom: 28px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+/* ── Top Welcome & Overview Header ───────────────────────────────────────── */
+.hubspot-setup-header {
+  padding: 24px 30px 20px 30px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: #FFFFFF;
+}
+
+.hubspot-setup-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hubspot-setup-compass {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #FFF7F5;
+  border: 1px solid rgba(224, 94, 58, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #E05E3A;
+  flex-shrink: 0;
+}
+
+.hubspot-setup-portal-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #E05E3A;
+  background: #FFF7F5;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.hubspot-setup-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 3px 0;
+  letter-spacing: -0.02em;
+}
+
+.hubspot-setup-sub {
+  font-size: 13px;
+  color: #6B7280;
+  margin: 0;
+}
+
+.hubspot-setup-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hubspot-setup-progress-pill {
+  background: #F4F4F1;
+  color: #111827;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.hubspot-setup-dismiss-btn {
+  background: transparent;
+  border: none;
+  font-size: 12.5px;
+  color: #9CA3AF;
+  cursor: pointer;
+  padding: 5px 9px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.hubspot-setup-dismiss-btn:hover {
+  color: #111827;
+  background-color: #F4F4F1;
+}
+
+/* ── Progress Bar ────────────────────────────────────────────────────────── */
+.hubspot-progress-container {
+  padding: 0 30px;
+  background: #FAFAF8;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.hubspot-progress-track {
+  height: 6px;
+  background: #E5E7EB;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin: 14px 0;
+}
+
+.hubspot-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #E05E3A 0%, #F97316 100%);
+  border-radius: 9999px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Category Filter Tabs (HubSpot-style) ─────────────────────────────────── */
+.hubspot-tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 30px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: #FFFFFF;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.hubspot-tabs-row::-webkit-scrollbar {
+  display: none;
+}
+
+.hubspot-tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #6B7280;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.hubspot-tab-btn:hover {
+  color: #111827;
+  background: #F4F4F1;
+}
+
+.hubspot-tab-btn.active {
+  background: #111827;
+  color: #FFFFFF;
+}
+
+/* ── 2-Column Split Body Layout ──────────────────────────────────────────── */
+.hubspot-global-home-layout {
+  display: flex;
+  width: 100%;
+}
+
+.hubspot-global-home-main {
+  flex: 1;
+  min-width: 0;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.hubspot-global-home-sidebar {
+  width: 330px;
+  flex-shrink: 0;
+  background: #FAFAF8;
+  padding: 24px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Task List Accordion ─────────────────────────────────────────────────── */
+.hubspot-task-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.hubspot-task-item {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  transition: background-color 0.15s;
+}
+
+.hubspot-task-item:last-child {
+  border-bottom: none;
+}
+
+.hubspot-task-item:hover {
+  background-color: #FAFAF8;
+}
+
+.hubspot-task-item.active {
+  background-color: #FFFDFD;
+}
+
+.hubspot-task-row {
+  padding: 16px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.hubspot-task-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+}
+
+.hubspot-task-check-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #D1D5DB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  background-color: white;
+  cursor: pointer;
+}
+
+.hubspot-task-check-circle.completed {
+  background-color: #10B981;
+  border-color: #10B981;
+  color: white;
+}
+
+.hubspot-task-name {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.hubspot-task-name.completed {
+  text-decoration: line-through;
+  color: #9CA3AF;
+}
+
+.hubspot-task-badge-time {
+  font-size: 11.5px;
+  color: #6B7280;
+  background: #F3F4F6;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+.hubspot-task-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hubspot-task-expand-arrow {
+  color: #9CA3AF;
+  transition: transform 0.2s;
+}
+
+.hubspot-task-expand-arrow.open {
+  transform: rotate(180deg);
+}
+
+/* ── Task Expanded Body ──────────────────────────────────────────────────── */
+.hubspot-task-expanded {
+  padding: 4px 30px 22px 68px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hubspot-task-description {
+  font-size: 13.5px;
+  color: #4B5563;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 640px;
+}
+
+.hubspot-task-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.hubspot-task-primary-btn {
+  background-color: #E05E3A;
+  color: white;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: 9999px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+  box-shadow: 0 1px 4px rgba(224, 94, 58, 0.2);
+}
+
+.hubspot-task-primary-btn:hover {
+  background-color: #C94E2C;
+  transform: translateY(-1px);
+}
+
+.hubspot-task-toggle-btn {
+  background: transparent;
+  border: 1px solid #D1D5DB;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #4B5563;
+  padding: 7px 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.hubspot-task-toggle-btn:hover {
+  background-color: #F3F4F6;
+  color: #111827;
+}
+
+/* ── Right Column Cards (Readiness & Quick Actions) ──────────────────────── */
+.hubspot-sidebar-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.hubspot-sidebar-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hubspot-gauge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hubspot-gauge-circle {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+}
+
+.hubspot-gauge-text {
+  font-size: 14px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.hubspot-gauge-label {
+  font-size: 12px;
+  color: #6B7280;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.hubspot-quick-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hubspot-quick-action-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #F9FAFB;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.hubspot-quick-action-link:hover {
+  background: #FFF7F5;
+  border-color: #E05E3A;
+  color: #E05E3A;
+  transform: translateX(2px);
+}
+
+/* ── Slide-Out Drawer Mode ───────────────────────────────────────────────── */
+.hubspot-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1050;
+  display: flex;
+  justify-content: flex-end;
+  animation: obFadeIn 0.2s ease-out;
+}
+
+.hubspot-drawer-panel {
+  width: 100%;
+  max-width: 500px;
+  height: 100vh;
+  background: #FFFFFF;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1051;
+}
+
+.hubspot-drawer-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FFFFFF;
+}
+
+.hubspot-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+/* ── Top Header Button Badge ─────────────────────────────────────────────── */
+.hubspot-header-badge-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #FFF7F5;
+  border: 1px solid rgba(224, 94, 58, 0.25);
+  color: #E05E3A;
+  border-radius: 9999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  height: 34px;
+}
+
+.hubspot-header-badge-btn:hover {
+  background: #FFEFEA;
+  border-color: #E05E3A;
+  transform: translateY(-1px);
+}
+
+.hubspot-header-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #E05E3A;
+}
+
+@media (max-width: 992px) {
+  .hubspot-global-home-layout {
+    flex-direction: column;
+  }
+  .hubspot-global-home-main {
+    border-right: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+  .hubspot-global-home-sidebar {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .hubspot-setup-header,
+  .hubspot-task-row,
+  .hubspot-progress-container,
+  .hubspot-tabs-row {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .hubspot-task-expanded {
+    padding-left: 48px;
+    padding-right: 16px;
+  }
+}

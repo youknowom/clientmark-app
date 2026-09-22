@@ -91,7 +91,10 @@ const createProject = async (req, res) => {
       .replace(/\s+/g, "-")
       .replace(/-+/g, "-");
 
+    const tenantId = req.user?.tenantId || req.tenantId;
+
     const project = new ProjectModel({
+      tenantId,
       ProjectId: finalProjectId,
       ProjectName,
       ClientName,
@@ -159,6 +162,8 @@ const getProjects = async (req, res) => {
     limit = parseInt(limit);
 
     const filter = {};
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (tenantId) filter.tenantId = tenantId;
 
     const loginUserRole = req.user?.roleId?.roleName;
     const loginUserId = req.user._id;

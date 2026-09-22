@@ -20,7 +20,9 @@ import {
   FaDownload,
   FaFileImport,
   FaWhatsapp,
+  FaFolderPlus,
 } from 'react-icons/fa'
+import EmptyState from '../../components/mycomponent/EmptyState'
 import { RiCustomerService2Line } from 'react-icons/ri'
 import { GrDocumentPerformance } from 'react-icons/gr'
 import { BsFunnel, BsThreeDotsVertical } from 'react-icons/bs'
@@ -137,25 +139,25 @@ function AllLead() {
   const [showCallingModal, setShowCallingModal] = useState(false)
 
   const leadStageColor = {
-    NEW: { bg: '#a7284eff', tx: '#fff' },
-    TELECALLING: { bg: '#00a2ff', tx: '#fff' },
-    SALES: { bg: '#003cff', tx: '#fff' },
-    CLOSED: { bg: '#28a745', tx: '#fff' },
+    NEW: { bg: '#F3F4F6', tx: '#374151' },
+    TELECALLING: { bg: '#EFF6FF', tx: '#1D4ED8' },
+    SALES: { bg: '#EEF2FF', tx: '#4338CA' },
+    CLOSED: { bg: '#ECFDF5', tx: '#047857' },
   }
 
   const callStatusColor = {
-    PENDING: { bg: '#fac022', tx: '#000000' },
-    NOT_CONNECTED: { bg: '#ff0000', tx: '#fff' },
-    CONNECTED: { bg: '#28a745', tx: '#fff' },
-    CALL_BACK: { bg: '#5c34eb', tx: '#fff' },
+    PENDING: { bg: '#FFFBEB', tx: '#B45309' },
+    NOT_CONNECTED: { bg: '#FEF2F2', tx: '#B91C1C' },
+    CONNECTED: { bg: '#ECFDF5', tx: '#047857' },
+    CALL_BACK: { bg: '#F5F3FF', tx: '#6D28D9' },
   }
 
   const leadStatusColor = {
-    NEW: '#a7284eff',
-    ASSIGNED_TO_TELECALLER: '#00a2ff',
-    ASSIGNED_TO_BDE: '#003cff',
-    WON: '#28a745',
-    LOST: '#ff0000',
+    NEW: { bg: '#F3F4F6', tx: '#374151' },
+    ASSIGNED_TO_TELECALLER: { bg: '#EFF6FF', tx: '#1D4ED8' },
+    ASSIGNED_TO_BDE: { bg: '#EEF2FF', tx: '#4338CA' },
+    WON: { bg: '#ECFDF5', tx: '#047857' },
+    LOST: { bg: '#FEF2F2', tx: '#B91C1C' },
   }
 
   const leadStageDD = [
@@ -819,8 +821,27 @@ function AllLead() {
               <tbody>
                 {data?.length === 0 ? (
                   <tr>
-                    <td colSpan="11" className="text-center py-2">
-                      --- No Records Found ---
+                    <td colSpan="11" className="p-0 border-0">
+                      <EmptyState
+                        title="No leads found"
+                        description={
+                          filter?.search || filter?.leadStatus || filter?.fromDate
+                            ? "No leads matched your active filters. Try resetting filters."
+                            : "No leads are currently available. Create your first lead to start tracking."
+                        }
+                        actionLabel={
+                          filter?.search || filter?.leadStatus || filter?.fromDate
+                            ? "Reset Filters"
+                            : hasPermission(userData, 'add:lead')
+                            ? "Add New Lead"
+                            : null
+                        }
+                        onAction={
+                          filter?.search || filter?.leadStatus || filter?.fromDate
+                            ? handleReset
+                            : () => navigate('/lead-tab?tab=addLead')
+                        }
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -881,14 +902,15 @@ function AllLead() {
                         <td>
                           <span
                             style={{
-                              backgroundColor: leadStatusColor[d.leadStatus],
-                              color: '#fff',
-                              padding: '1px 8px',
-                              borderRadius: '4px',
-                              fontWeight: '500',
+                              backgroundColor: leadStatusColor[d.leadStatus]?.bg || '#F3F4F6',
+                              color: leadStatusColor[d.leadStatus]?.tx || '#374151',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              fontWeight: '600',
+                              fontSize: '11px',
                               display: 'inline-block',
-                              minWidth: '50px',
                               textAlign: 'center',
+                              border: '1px solid rgba(0,0,0,0.06)',
                             }}
                           >
                             {d.leadStatus === 'ASSIGNED_TO_TELECALLER' ? 'ASSIGNED_TO_TC' : d.leadStatus}
@@ -947,6 +969,36 @@ function AllLead() {
                           >
                             <FaPencilAlt />
                           </Button>
+
+                          {/* //Convert to Project */}
+                          {hasPermission(userData, 'add:project') && (
+                            <Button
+                              title="Convert to Project"
+                              className="me-2"
+                              style={{
+                                backgroundColor: d.leadStatus === 'WON' ? '#10B981' : '#F3F4F6',
+                                borderColor: d.leadStatus === 'WON' ? '#10B981' : 'rgba(0,0,0,0.08)',
+                                color: d.leadStatus === 'WON' ? '#FFFFFF' : '#374151',
+                                fontSize: '11px',
+                                padding: '5px 8px',
+                                borderRadius: '6px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                navigate('/add-project', {
+                                  state: { fromLead: d },
+                                })
+                              }}
+                            >
+                              <FaFolderPlus />
+                              {d.leadStatus === 'WON' && (
+                                <span style={{ fontSize: '10px', fontWeight: 600 }}>Convert</span>
+                              )}
+                            </Button>
+                          )}
 
                           {/* //Delete */}
                           {hasPermission(userData, 'delete:lead') && (

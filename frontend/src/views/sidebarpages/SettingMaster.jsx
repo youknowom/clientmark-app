@@ -3,6 +3,7 @@ import { Col, Container, Row } from 'react-bootstrap'
 import { CgWebsite } from 'react-icons/cg'
 import { IoColorPaletteOutline } from 'react-icons/io5'
 import { FaWhatsapp, FaUserShield } from 'react-icons/fa6'
+import { FiCreditCard } from 'react-icons/fi'
 
 import { Helmet } from 'react-helmet'
 
@@ -22,6 +23,12 @@ function SettingMaster() {
   }
 
   const menus = [
+    {
+      icon: <FiCreditCard size={30} className="text-primary" />,
+      label: 'Subscription & Billing',
+      link: '/billing',
+      bg: 'rgba(238, 242, 255, 0.8)',
+    },
     {
       icon: <IoColorPaletteOutline size={30} className="text-success" />,
       label: 'Theme Setting',
@@ -53,7 +60,7 @@ function SettingMaster() {
     },
   ]
 
-  const filterMenus = menus.filter((menu) => hasPermission(userData, menu.permission))
+  const filterMenus = menus.filter((menu) => !menu.permission || hasPermission(userData, menu.permission))
 
   return (
     <Container className="p-0 pb-4 container-lg mt-2">

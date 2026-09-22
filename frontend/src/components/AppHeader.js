@@ -4,10 +4,13 @@ import { CContainer, CHeader, CHeaderToggler } from '@coreui/react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import Cookies from 'js-cookie'
 import { HiArrowUturnLeft } from 'react-icons/hi2'
-import { FiLogOut, FiUser, FiChevronDown } from 'react-icons/fi'
+import { FiLogOut, FiUser, FiChevronDown, FiCreditCard } from 'react-icons/fi'
 import { AuthContext } from '../AuthContext'
 import NotificationPanel from '../views/sidebarpages/NotificationsPanel'
 import { useSocket } from '../SocketContext'
+import SetupGuide from './SetupGuide'
+import OnboardingWizard from './OnboardingWizard'
+import '../views/sidebarCSS/setupGuide.css'
 
 // ─── Sidebar toggle icon ───────────────────────────────────────────────────────
 const MenuIcon = () => (
@@ -28,6 +31,8 @@ const AppHeader = () => {
   const sidebarShow = useSelector((state) => state.sidebarShow)
   const [isMobile, setIsMobile] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [showSetupDrawer, setShowSetupDrawer] = useState(false)
+  const [showWizard, setShowWizard] = useState(false)
   const dropdownRef = useRef()
 
   const handleLogout = () => {
@@ -139,6 +144,16 @@ const AppHeader = () => {
 
         {/* ── Right side ──────────────────────────────────────────────────── */}
         <div className="d-flex align-items-center gap-2">
+          {/* HubSpot-style Setup Guide Button */}
+          <button
+            className="hubspot-header-badge-btn"
+            onClick={() => setShowSetupDrawer(true)}
+            title="Open Setup Guide"
+          >
+            <span className="hubspot-header-badge-dot" />
+            <span className="d-none d-sm-inline">Setup Guide</span>
+          </button>
+
           {/* Notifications */}
           <NotificationPanel />
 
@@ -238,6 +253,24 @@ const AppHeader = () => {
                   Update Profile
                 </button>
 
+                <button
+                  role="menuitem"
+                  onClick={() => { navigate('/billing'); setDropdownOpen(false) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '9px',
+                    width: '100%', padding: '8px 10px',
+                    background: 'none', border: 'none', borderRadius: '7px',
+                    cursor: 'pointer', fontSize: '13.5px', color: '#374151',
+                    fontFamily: 'inherit', fontWeight: '500',
+                    transition: 'background 0.12s',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#F5F5F3'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                >
+                  <FiCreditCard size={14} style={{ color: '#9CA3AF' }} />
+                  Billing & Plans
+                </button>
+
                 <div style={{ height: '1px', background: '#F0F0ED', margin: '4px 0' }} />
 
                 <button
@@ -262,6 +295,23 @@ const AppHeader = () => {
           </div>
         </div>
       </CContainer>
+
+      {/* HubSpot-style Slide-out Setup Guide Drawer */}
+      <SetupGuide
+        mode="drawer"
+        isOpen={showSetupDrawer}
+        onClose={() => setShowSetupDrawer(false)}
+        onLaunchWizard={() => {
+          setShowSetupDrawer(false)
+          setShowWizard(true)
+        }}
+      />
+
+      <OnboardingWizard
+        isOpen={showWizard}
+        onClose={() => setShowWizard(false)}
+        onComplete={() => setShowWizard(false)}
+      />
     </CHeader>
   )
 }

@@ -1,5 +1,6 @@
 import express from "express";
 import { authUser, authAccess } from "../middlewares/authMiddleware.js";
+import { checkBranchLimit } from "../middlewares/usageLimitMiddleware.js";
 import {
   addBranch,
   updateBranch,
@@ -10,7 +11,7 @@ import {
 
 const branchRouter = express.Router();
 
-branchRouter.post("/add-branch", authUser, authAccess("add:branch"), addBranch); //add branch
+branchRouter.post("/add-branch", authUser, authAccess("add:branch"), checkBranchLimit, addBranch); //add branch
 
 branchRouter.put(
   "/update-branch",

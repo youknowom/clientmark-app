@@ -23,6 +23,7 @@ import {
 } from "../controllers/projectController.js";
 
 import { authUser, authAccess } from "../middlewares/authMiddleware.js";
+import { checkProjectLimit } from "../middlewares/usageLimitMiddleware.js";
 import {
   getWhatsappCred,
   sendLinkToClient,
@@ -37,7 +38,7 @@ projectRouter.get("/export-projects", authUser, exportProjects); // Export proje
 
 projectRouter.delete("/delete-many-projects", authUser, deleteManyProjects); // Delete many projects
 
-projectRouter.post("/create-project", authUser, createProject); // Create new project
+projectRouter.post("/create-project", authUser, checkProjectLimit, createProject); // Create new project
 
 projectRouter.get(
   "/get-projects",

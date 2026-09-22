@@ -31,6 +31,7 @@ const ThemeSetting = React.lazy(() => import('./views/sidebarpages/ThemeSetting'
 const SiteSetting = React.lazy(() => import('./views/sidebarpages/SiteSetting'))
 const WhatsappSetting = React.lazy(() => import('./views/sidebarpages/WhatsappSetting'))
 const WhatsappchatRecord = React.lazy(() => import('./views/sidebarpages/WhatsappchatRecord'))
+const BillingPage = React.lazy(() => import('./views/sidebarpages/BillingPage'))
 
 //====REPORT====//
 const ReportMaster = React.lazy(() => import('./views/sidebarpages/ReportMaster'))
@@ -199,6 +200,11 @@ const routes = [
     name: 'Whatsapp chat log',
     element: WhatsappchatRecord,
     permission: 'view:whatsapp-chat-record',
+  },
+  {
+    path: '/billing',
+    name: 'Subscription & Billing',
+    element: BillingPage,
   },
 ]
 

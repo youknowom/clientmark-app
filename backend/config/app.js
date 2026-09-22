@@ -15,6 +15,8 @@ import projectRouter from "../routers/projectRouter.js";
 import notificationRouter from "../routers/notificationRouter.js";
 import tenantRouter from "../routers/tenantRouter.js";
 import subscriptionRouter from "../routers/subscriptionRouter.js";
+import onboardingRouter from "../routers/onboardingRouter.js";
+import chatbotRouter from "../routers/chatbotRouter.js";
 
 const __dirname = getDirname(import.meta.url);
 
@@ -38,8 +40,15 @@ app.use(
   }),
 );
 
-//JSON parse with body size limit
-app.use(express.json({ limit: "1mb" }));
+// JSON parse with body size limit & rawBody preservation for webhooks
+app.use(
+  express.json({
+    limit: "2mb",
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 
 // General API rate limit (100 requests per minute per IP)
 const generalLimiter = rateLimit({
@@ -87,6 +96,8 @@ app.use("/project", projectRouter);
 app.use("/notification", notificationRouter);
 app.use("/tenant", tenantRouter);
 app.use("/subscription", subscriptionRouter);
+app.use("/onboarding", onboardingRouter);
+app.use("/chatbot", chatbotRouter);
 
 // Centralized error handling (Multer errors, payload limits, file validation)
 app.use((err, req, res, next) => {

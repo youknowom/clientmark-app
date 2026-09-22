@@ -35,6 +35,42 @@ const PlanSchema = new mongoose.Schema(
       apiAccessEnabled: { type: Boolean, default: false },
     },
 
+    slug: {
+      type: String,
+      trim: true,
+      lowercase: true,
+    },
+
+    description: {
+      type: String,
+      default: "",
+    },
+
+    features: {
+      type: [String],
+      default: [],
+    },
+
+    razorpayMonthlyPlanId: {
+      type: String,
+      default: "",
+    },
+
+    razorpayYearlyPlanId: {
+      type: String,
+      default: "",
+    },
+
+    stripePriceIdMonthly: {
+      type: String,
+      default: "",
+    },
+
+    stripePriceIdYearly: {
+      type: String,
+      default: "",
+    },
+
     isActive: {
       type: Boolean,
       default: true,

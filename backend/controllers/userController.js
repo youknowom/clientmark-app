@@ -352,16 +352,19 @@ const loginByPass = async (req, res) => {
 
     //create token
     const token = jwt.sign(
-      { userId: userDtl._id, role: userDtl.roleId.roleName, tenantId: userDtl.tenantId },
+      { userId: userDtl._id, role: userDtl.roleId?.roleName, tenantId: userDtl.tenantId },
       process.env.JWT_SECRET,
       { expiresIn: "7d" },
     );
+
+    const userObj = userDtl.toObject ? userDtl.toObject() : { ...userDtl };
+    delete userObj.password;
 
     return res.status(200).json({
       message: "Login Success",
       success: true,
       token: token,
-      userDtl: userDtl,
+      userDtl: userObj,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message, success: false });
@@ -453,8 +456,11 @@ const createUser = async (req, res) => {
     //hash password
     const hashPassword = await bcrypt.hash(password, 10);
 
+    const tenantId = req.user?.tenantId || req.tenantId || null;
+
     //save data
     const newUser = await UserModel.create({
+      tenantId,
       branchId: branchId || null,
       departmentId: departmentId || null,
       email,
@@ -506,6 +512,9 @@ const getUserList = async (req, res) => {
     limit = parseInt(limit, 10);
 
     let filter = {};
+    if (req.user?.tenantId) {
+      filter.tenantId = req.user.tenantId;
+    }
     if (search && search?.trim() !== "") {
       filter.$or = [
         { fullName: { $regex: search, $options: "i" } },
@@ -538,6 +547,7 @@ const getUserList = async (req, res) => {
       filter.createdAt.$lte = adjustedDate;
     }
     const userList = await UserModel.find(filter)
+      .select("-password")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)

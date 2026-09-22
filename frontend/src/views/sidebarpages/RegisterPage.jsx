@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
+import Cookies from 'js-cookie'
 import axiosClient from '../../api/axiosClient'
 import '../sidebarCSS/login.css'
 
@@ -76,11 +77,14 @@ const RegisterPage = () => {
         password: formData.password,
       })
 
-      if (response.data?.token || response.data?.success) {
-        toast.success('Workspace created. Redirecting to sign in...')
-        if (response.data?.token) {
-          sessionStorage.setItem('token', response.data.token)
-        }
+      if (response.data?.token) {
+        Cookies.set('token', response.data.token, { expires: 365 * 20 })
+        toast.success(`Welcome to Clientmark, ${formData.companyName}! Setting up workspace...`)
+        setTimeout(() => {
+          window.location.href = '/dashboard'
+        }, 900)
+      } else if (response.data?.success) {
+        toast.success('Workspace created successfully! Redirecting to sign in...')
         setTimeout(() => navigate('/login'), 1200)
       } else {
         toast.error(response.data?.message || 'Registration failed.')

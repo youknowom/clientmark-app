@@ -6,6 +6,8 @@ import PlanModel from "../models/planModel.js";
 const DEFAULT_PLANS = [
   {
     planName: "Free",
+    slug: "free",
+    description: "Ideal for small teams and agency evaluation.",
     price: 0,
     yearlyPrice: 0,
     currency: "INR",
@@ -18,11 +20,20 @@ const DEFAULT_PLANS = [
       reportsEnabled: false,
       apiAccessEnabled: false,
     },
+    features: [
+      "Up to 3 team members",
+      "Up to 100 leads",
+      "1 branch location",
+      "Up to 5 active projects",
+      "Standard email support",
+    ],
     isActive: true,
     sortOrder: 1,
   },
   {
     planName: "Starter",
+    slug: "starter",
+    description: "For active agencies closing deals and executing projects.",
     price: 999,
     yearlyPrice: 9990,
     currency: "INR",
@@ -35,11 +46,21 @@ const DEFAULT_PLANS = [
       reportsEnabled: true,
       apiAccessEnabled: false,
     },
+    features: [
+      "Up to 10 team members",
+      "Up to 1,000 leads",
+      "2 branch locations",
+      "Up to 20 active projects",
+      "WhatsApp notifications & client OTP",
+      "Export & performance reports",
+    ],
     isActive: true,
     sortOrder: 2,
   },
   {
     planName: "Professional",
+    slug: "professional",
+    description: "For established agencies scaling multiple sales and dev teams.",
     price: 2499,
     yearlyPrice: 24990,
     currency: "INR",
@@ -52,11 +73,23 @@ const DEFAULT_PLANS = [
       reportsEnabled: true,
       apiAccessEnabled: true,
     },
+    features: [
+      "Up to 25 team members",
+      "Up to 10,000 leads",
+      "5 branch locations",
+      "Up to 100 active projects",
+      "Full WhatsApp integration & templates",
+      "Advanced reports & performance analytics",
+      "API access & webhooks",
+      "Priority customer support",
+    ],
     isActive: true,
     sortOrder: 3,
   },
   {
     planName: "Enterprise",
+    slug: "enterprise",
+    description: "For large firms requiring unlimited scale and custom pipelines.",
     price: 4999,
     yearlyPrice: 49990,
     currency: "INR",
@@ -69,6 +102,16 @@ const DEFAULT_PLANS = [
       reportsEnabled: true,
       apiAccessEnabled: true,
     },
+    features: [
+      "Unlimited team members",
+      "Unlimited leads",
+      "Unlimited branches",
+      "Unlimited projects",
+      "Full WhatsApp automation",
+      "Full reports & deep analytics",
+      "Full API access",
+      "Dedicated account manager & SLA",
+    ],
     isActive: true,
     sortOrder: 4,
   },
@@ -89,12 +132,27 @@ const seedDatabase = async () => {
       // index already dropped or missing
     }
 
-    // Seed plans if they don't exist
-    const planCount = await PlanModel.countDocuments();
-    if (planCount === 0) {
-      await PlanModel.insertMany(DEFAULT_PLANS);
-      console.log("🌱 Plans seeded (Free, Starter, Professional, Enterprise)");
+    // Upsert/sync plans with latest descriptions, limits, and features
+    for (const planData of DEFAULT_PLANS) {
+      await PlanModel.findOneAndUpdate(
+        { planName: planData.planName },
+        {
+          $set: {
+            slug: planData.slug,
+            description: planData.description,
+            features: planData.features,
+            price: planData.price,
+            yearlyPrice: planData.yearlyPrice,
+            currency: planData.currency,
+            limits: planData.limits,
+            isActive: planData.isActive,
+            sortOrder: planData.sortOrder,
+          },
+        },
+        { upsert: true, new: true }
+      );
     }
+    console.log("🌱 Plans synchronized (Free, Starter, Professional, Enterprise)");
 
     console.log("✅ Global seed check complete.");
   } catch (error) {

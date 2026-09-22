@@ -18,6 +18,9 @@ export const ThemeProvider = ({ children }) => {
       if (saved) {
         const parsed = JSON.parse(saved)
         if (parsed && typeof parsed === 'object' && parsed.primaryColor) {
+          if (parsed.backgroundColor === '#0f172a') {
+            parsed.backgroundColor = defaultTheme.backgroundColor
+          }
           return parsed
         }
       }
@@ -34,10 +37,15 @@ export const ThemeProvider = ({ children }) => {
       const mainTheme = response?.data?.data?.mainTheme
 
       if (mainTheme) {
+        const bg =
+          mainTheme.backgroundColor === '#0f172a'
+            ? defaultTheme.backgroundColor
+            : (mainTheme.backgroundColor || defaultTheme.backgroundColor)
+
         const updatedTheme = {
           primaryColor: mainTheme.primaryColor || defaultTheme.primaryColor,
           secondaryColor: mainTheme.secondaryColor || defaultTheme.secondaryColor,
-          backgroundColor: mainTheme.backgroundColor || defaultTheme.backgroundColor,
+          backgroundColor: bg,
           textColor: mainTheme.textColor || defaultTheme.textColor,
         }
 

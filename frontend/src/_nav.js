@@ -8,6 +8,7 @@ import {
   FiUsers,
   FiBarChart2,
   FiSettings,
+  FiCreditCard,
 } from 'react-icons/fi'
 import { hasPermission } from './helpers/hasPermission'
 
@@ -47,6 +48,12 @@ const fullNavItems = [
     to: '/report-master',
     icon: <FiBarChart2 className="nav-icon" />,
     permission: 'view:report-master',
+  },
+  {
+    component: CNavItem,
+    name: 'Billing',
+    to: '/billing',
+    icon: <FiCreditCard className="nav-icon" />,
   },
   {
     component: CNavItem,

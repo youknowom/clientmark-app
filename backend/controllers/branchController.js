@@ -6,6 +6,7 @@ import UserModel from "../models/userModel.js";
 const addBranch = async (req, res) => {
   try {
     const { branchName, address, branchCode } = req.body;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     if (!branchName || branchName?.trim() === "") {
       return res
@@ -19,8 +20,11 @@ const addBranch = async (req, res) => {
         .json({ message: "Branch code is required.", success: false });
     }
 
-    //check dublicate branch code
-    const isDublicateBranchCode = await BranchModel.findOne({ branchCode });
+    //check duplicate branch code
+    const isDublicateBranchCode = await BranchModel.findOne({
+      branchCode,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (isDublicateBranchCode) {
       return res
         .status(400)
@@ -28,8 +32,10 @@ const addBranch = async (req, res) => {
     }
 
     //check how many branches already added
-    const noOfAlreadyAdded = await BranchModel.countDocuments();
-    const branchLimit = process.env.BRANCH_LIMIT;
+    const noOfAlreadyAdded = await BranchModel.countDocuments(
+      tenantId ? { tenantId } : {}
+    );
+    const branchLimit = process.env.BRANCH_LIMIT || 5;
 
     if (noOfAlreadyAdded >= branchLimit) {
       return res.status(400).json({
@@ -39,6 +45,7 @@ const addBranch = async (req, res) => {
     }
 
     const newBranch = await BranchModel.create({
+      tenantId,
       branchName,
       address,
       branchCode,
@@ -46,7 +53,7 @@ const addBranch = async (req, res) => {
 
     return res
       .status(201)
-      .json({ message: "Successfully save branch.", success: true });
+      .json({ message: "Successfully save branch.", success: true, data: newBranch });
   } catch (error) {
     return res.status(500).json({ message: error.message, success: false });
   }
@@ -56,6 +63,7 @@ const addBranch = async (req, res) => {
 const updateBranch = async (req, res) => {
   try {
     const { branchId, branchName, branchCode, address } = req.body;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     if (!branchName || branchName?.trim() === "") {
       return res
@@ -69,10 +77,11 @@ const updateBranch = async (req, res) => {
         .json({ message: "Branch code is required.", success: false });
     }
 
-    //check dublicate branch code
+    //check duplicate branch code
     const isDublicateBranchCode = await BranchModel.findOne({
       branchCode,
       _id: { $ne: branchId },
+      ...(tenantId ? { tenantId } : {}),
     });
     if (isDublicateBranchCode) {
       return res
@@ -81,7 +90,8 @@ const updateBranch = async (req, res) => {
     }
 
     //find old branch details
-    const branchDtl = await BranchModel.findOne({ _id: branchId });
+    const branchQuery = { _id: branchId, ...(tenantId ? { tenantId } : {}) };
+    const branchDtl = await BranchModel.findOne(branchQuery);
     if (!branchDtl) {
       return res
         .status(400)
@@ -89,7 +99,7 @@ const updateBranch = async (req, res) => {
     }
 
     const isUpdate = await BranchModel.updateOne(
-      { _id: branchId },
+      branchQuery,
       {
         $set: {
           branchName,
@@ -117,8 +127,13 @@ const updateBranch = async (req, res) => {
 const getBranches = async (req, res) => {
   try {
     let { search, branchId } = req.query;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     let filter = {};
+
+    if (tenantId) {
+      filter.tenantId = new mongoose.Types.ObjectId(tenantId);
+    }
 
     if (search && search?.trim() !== "") {
       filter.$or = [
@@ -156,8 +171,8 @@ const getBranches = async (req, res) => {
     ]);
     if (!branchList || branchList?.length === 0) {
       return res
-        .status(400)
-        .json({ message: "No branches found.", success: false });
+        .status(200)
+        .json({ message: "No branches found.", success: true, data: [] });
     }
 
     return res.status(200).json({
