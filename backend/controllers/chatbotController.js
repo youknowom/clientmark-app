@@ -116,21 +116,29 @@ Keep answers clear, helpful, professional, and formatted in clean markdown.`;
         // Append current message
         contents.push({ role: "user", parts: [{ text: message }] });
 
-        const response = await axios.post(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
-          {
-            contents,
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 600,
-            },
-          },
-          { timeout: 10000 }
-        );
+        const candidateModels = ['gemini-3.5-flash-lite', 'gemini-3.6-flash']
+        for (const modelName of candidateModels) {
+          try {
+            const response = await axios.post(
+              `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiApiKey}`,
+              {
+                contents,
+                generationConfig: {
+                  temperature: 0.7,
+                  maxOutputTokens: 600,
+                },
+              },
+              { timeout: 10000 }
+            );
 
-        botReply = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            botReply = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (botReply) break;
+          } catch (modelErr) {
+            console.warn(`Model ${modelName} failed, trying next:`, modelErr.response?.data?.error?.message || modelErr.message);
+          }
+        }
       } catch (geminiError) {
-        console.warn("Gemini API call failed or timed out, falling back to CRM knowledge engine:", geminiError.message);
+        console.warn("Gemini API call failed, falling back to CRM knowledge engine:", geminiError.message);
       }
     }
 
