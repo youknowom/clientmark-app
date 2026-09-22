@@ -1,7 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import Cookies from 'js-cookie'
+import { toast } from 'react-hot-toast'
+import apiClient from '../../api/axiosClient'
 import { resetToDefaultFavicon } from '../../helpers/dynamicFavicon'
+import ChatbotWidget from '../../components/ChatbotWidget'
 import '../sidebarCSS/landing.css'
 
 // ─── SVG Icons ─────────────────────────────────────────────────────────────────
@@ -43,7 +47,7 @@ const MockWorkspacePreview = () => (
         <div style={{ fontSize: 11, color: '#6B7280', padding: '4px 10px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 6 }}>
           Search leads, tasks... ⌘K
         </div>
-        <div style={{ width: 26, height: 26, background: '#111827', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 26, height: 26, background: '#E05E3A', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <span style={{ fontSize: 10, color: '#FFFFFF', fontWeight: 700 }}>A</span>
         </div>
       </div>
@@ -75,7 +79,7 @@ const MockWorkspacePreview = () => (
           {[
             { label: 'Active Pipeline', val: '2,847', trend: '+14% this month', color: '#10B981' },
             { label: 'Converted Won', val: '384', trend: '13.5% conversion', color: '#10B981' },
-            { label: 'Live Projects', val: '92', trend: '98% on track', color: '#6366F1' },
+            { label: 'Live Projects', val: '92', trend: '98% on track', color: '#E05E3A' },
             { label: 'Calls Today', val: '640', trend: '8 telecallers', color: '#4B5563' },
           ].map((card) => (
             <div key={card.label} className="lp2-mock-card">
@@ -226,6 +230,33 @@ export default function LandingPage() {
   const navRef = useRef(null)
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [demoLoading, setDemoLoading] = useState(false)
+
+  const handleDemoLogin = async () => {
+    try {
+      setDemoLoading(true)
+      toast.loading('Launching Acme Agency demo workspace...', { id: 'demo-launch' })
+      const res = await apiClient.post('/tenant/demo-login')
+      toast.dismiss('demo-launch')
+
+      if (res.data?.success && res.data?.token) {
+        Cookies.set('token', res.data.token, { expires: 1 })
+        Cookies.set('isDemoMode', 'true', { expires: 1 })
+        sessionStorage.setItem('isDemoMode', 'true')
+        toast.success('Welcome to the Live Demo Sandbox!')
+        setTimeout(() => {
+          window.location.href = '/dashboard'
+        }, 500)
+      } else {
+        toast.error(res.data?.message || 'Failed to start demo.')
+      }
+    } catch (err) {
+      toast.dismiss('demo-launch')
+      toast.error(err?.response?.data?.message || 'Could not load demo workspace.')
+    } finally {
+      setDemoLoading(false)
+    }
+  }
 
   useEffect(() => {
     resetToDefaultFavicon()
@@ -257,6 +288,23 @@ export default function LandingPage() {
           </nav>
 
           <div className="lp2-nav-actions">
+            <button
+              type="button"
+              onClick={handleDemoLogin}
+              disabled={demoLoading}
+              className="lp2-btn-ghost"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                cursor: 'pointer',
+                border: '1px solid rgba(224, 94, 58, 0.4)',
+                color: '#E05E3A',
+                fontWeight: 600,
+              }}
+            >
+              <span>⚡</span> {demoLoading ? 'Loading...' : 'Live Demo'}
+            </button>
             <Link to="/login" className="lp2-btn-ghost">Sign in</Link>
             <Link to="/register" className="lp2-btn-cta">Start free trial</Link>
           </div>
@@ -279,6 +327,15 @@ export default function LandingPage() {
               </a>
             ))}
             <div className="lp2-mobile-actions">
+              <button
+                type="button"
+                onClick={handleDemoLogin}
+                disabled={demoLoading}
+                className="lp2-btn-ghost"
+                style={{ textAlign: 'center', color: '#E05E3A', fontWeight: 600 }}
+              >
+                ⚡ {demoLoading ? 'Loading...' : 'Explore Live Demo'}
+              </button>
               <Link to="/login" onClick={() => setMobileOpen(false)} className="lp2-btn-ghost" style={{ textAlign: 'center' }}>
                 Sign in
               </Link>
@@ -330,10 +387,28 @@ export default function LandingPage() {
             className="lp2-hero-actions"
           >
             <Link to="/register" className="lp2-btn-hero-primary">
-              Create an account <IconArrowRight />
+              Start Free Trial <IconArrowRight />
             </Link>
+            <button
+              type="button"
+              onClick={handleDemoLogin}
+              disabled={demoLoading}
+              className="lp2-btn-hero-ghost"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                borderColor: 'rgba(224, 94, 58, 0.4)',
+                backgroundColor: 'rgba(224, 94, 58, 0.05)',
+                color: '#111827',
+                fontWeight: 600,
+              }}
+            >
+              <span style={{ color: '#E05E3A' }}>⚡</span> {demoLoading ? 'Loading Demo...' : 'Explore Live Demo'}
+            </button>
             <Link to="/login" className="lp2-btn-hero-ghost">
-              Sign in to workspace
+              Sign in
             </Link>
           </motion.div>
 
@@ -368,7 +443,38 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      <hr className="lp2-hairline" />
+      {/* ─── Social Proof Strip ───────────────────────────────────────────── */}
+      <section className="lp2-social-proof">
+        <div className="lp2-container">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-30px' }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="lp2-proof-inner"
+          >
+            <div className="lp2-proof-stat">
+              <div className="lp2-proof-number">2,400+</div>
+              <div className="lp2-proof-label">Teams onboarded</div>
+            </div>
+            <div className="lp2-proof-divider" />
+            <div className="lp2-proof-stat">
+              <div className="lp2-proof-number">99.9%</div>
+              <div className="lp2-proof-label">Platform uptime</div>
+            </div>
+            <div className="lp2-proof-divider" />
+            <div className="lp2-proof-stat">
+              <div className="lp2-proof-number">1.2M+</div>
+              <div className="lp2-proof-label">Leads managed</div>
+            </div>
+            <div className="lp2-proof-divider" />
+            <div className="lp2-proof-stat">
+              <div className="lp2-proof-number">14 days</div>
+              <div className="lp2-proof-label">Free trial, no card</div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
 
       {/* ─── Capabilities Section ─────────────────────────────────────────── */}
       <section id="capabilities" className="lp2-section">
@@ -397,7 +503,7 @@ export default function LandingPage() {
                 transition={{ duration: 0.45, delay: i * 0.06, ease: [0.16, 1, 0.3, 1] }}
                 className="lp2-feature-card"
               >
-                <div className="lp2-feature-icon" style={{ background: 'var(--cm-surface-subtle)' }}>
+                <div className="lp2-feature-icon">
                   {cap.icon}
                 </div>
                 <h3 className="lp2-feature-title">{cap.title}</h3>
@@ -462,6 +568,31 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ─── Testimonial Section ──────────────────────────────────────────── */}
+      <section className="lp2-testimonial-section">
+        <div className="lp2-container">
+          <motion.div
+            initial={{ opacity: 0, y: 22 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            className="lp2-testimonial-card"
+          >
+            <div className="lp2-testimonial-quote-icon">"</div>
+            <p className="lp2-testimonial-text">
+              Clientmark replaced three separate tools for us — a spreadsheet for leads, WhatsApp groups for follow-ups, and a project tracker for delivery. Now everything flows through one workspace and our conversion rate jumped 34% in the first quarter.
+            </p>
+            <div className="lp2-testimonial-author">
+              <div className="lp2-testimonial-avatar">R</div>
+              <div className="lp2-testimonial-info">
+                <div className="lp2-testimonial-name">Rajesh Kapoor</div>
+                <div className="lp2-testimonial-role">Director of Sales, Vertex Digital Solutions</div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       <hr className="lp2-hairline" />
 
       {/* ─── Pricing Section ─────────────────────────────────────────────── */}
@@ -521,7 +652,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Bottom CTA ──────────────────────────────────────────────────── */}
+      {/* ─── Bottom CTA (Dark Banner) ─────────────────────────────────────── */}
       <section className="lp2-cta-section">
         <div className="lp2-container">
           <motion.div
@@ -586,6 +717,9 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Floating AI Chatbot Assistant */}
+      <ChatbotWidget />
     </div>
   )
 }

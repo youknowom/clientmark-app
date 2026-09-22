@@ -60,8 +60,12 @@ const createLead = async (req, res) => {
       });
     }
 
+    const tenantId = req.user?.tenantId || req.tenantId;
+
     //find last index number
-    const lastRecord = await LeadModel.findOne().sort({ currentIndex: -1 });
+    const lastRecord = await LeadModel.findOne(
+      tenantId ? { tenantId } : {}
+    ).sort({ currentIndex: -1 });
     let currentIndex = lastRecord ? (lastRecord.currentIndex || 0) + 1 : 1;
 
     //current year
@@ -71,6 +75,7 @@ const createLead = async (req, res) => {
     let leadNo = `S${process.env.FORMAT}/${currentYear}/${paddedSerial}`;
 
     const newLead = new LeadModel({
+      tenantId,
       leadNo,
       fullName,
       mobileNo,
@@ -129,6 +134,10 @@ const getLeads = async (req, res) => {
     limit = Math.max(1, parseInt(limit, 10) || 100);
 
     const filter = {};
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (tenantId) {
+      filter.tenantId = tenantId;
+    }
 
     // Role-based filtering
     if (role === "TeleCaller") {
@@ -449,6 +458,7 @@ const importLead = async (req, res) => {
       }
 
       leads.push({
+        tenantId: req.user?.tenantId || req.tenantId,
         leadNo,
         fullName,
         mobileNo: mobileNo?.toString(),
@@ -515,6 +525,10 @@ const exportLead = async (req, res) => {
       req.query;
 
     const filter = {};
+    const tenantId = req.user?.tenantId || req.tenantId;
+    if (tenantId) {
+      filter.tenantId = tenantId;
+    }
 
     // ===== SEARCH FILTER =====
     if (search && search.trim()) {
@@ -667,26 +681,6 @@ const downSample = async (req, res) => {
 
     await workbook.xlsx.write(res);
     return res.end();
-  } catch (error) {
-    return res.status(500).json({ message: error.message, success: false });
-  }
-};
-
-//check lead accesss
-const checkLeadAccess = async (req, res) => {
-  try {
-    //get user first
-    const users = await UserModel.find().sort({ createdAt: -1 }).lean();
-
-    //check url
-    let lead = await LeadModel.findOne().sort({ createdAt: -1 }).lean();
-    let allowUrl = process.env.urlDB;
-
-    //check access
-    let isAccess = allowUrl;
-    return res
-      .status(200)
-      .json({ message: "Access Allow", success: true, isAccess: isAccess });
   } catch (error) {
     return res.status(500).json({ message: error.message, success: false });
   }
@@ -2357,7 +2351,6 @@ export {
   deleteManyLead,
   importLead,
   downSample,
-  checkLeadAccess,
   exportLead,
   manyAdminToTelecaller,
   manyTelecallerToBde,

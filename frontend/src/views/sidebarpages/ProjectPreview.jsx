@@ -63,7 +63,7 @@ const OtpModal = ({ mobile, slug, onVerified }) => {
   const handleSendOtp = async () => {
     setSending(true)
     try {
-      await apiClient.post(`/project/send-whatsapp-otp`, { slug, mobileNo: MobileNumber })
+      await apiClient.post(`/project/send-whatsapp-otp`, { slug, mobileNo: mobile })
       toast.success('Verification code sent to your WhatsApp.')
       setOtpSent(true)
       startTimer()
@@ -88,7 +88,7 @@ const OtpModal = ({ mobile, slug, onVerified }) => {
       await apiClient.post(`/project/verify-whatsapp-otp`, {
         slug,
         otp: otpValue,
-        mobileNo: MobileNumber,
+        mobileNo: mobile,
       })
       // Save to localStorage with expiry
       const expiry = Date.now() + OTP_EXPIRY_HOURS * 60 * 60 * 1000

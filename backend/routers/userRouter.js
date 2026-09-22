@@ -1,5 +1,6 @@
 import express from "express";
 import { authUser, authAccess } from "../middlewares/authMiddleware.js";
+import { checkUserLimit } from "../middlewares/usageLimitMiddleware.js";
 import {
   getPermissionList,
   addRole,
@@ -38,7 +39,7 @@ userRouter.post("/login-by-pass", loginByPass); //login by password
 
 userRouter.get("/get-login-user-detail", authUser, getLoginUserDetail); //get login user details
 
-userRouter.post("/create-user", authUser, authAccess("add:user"), createUser); //create user
+userRouter.post("/create-user", authUser, authAccess("add:user"), checkUserLimit, createUser); //create user
 
 userRouter.delete(
   "/delete-role",

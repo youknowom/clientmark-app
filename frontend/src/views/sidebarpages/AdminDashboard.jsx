@@ -12,6 +12,11 @@ import {
   FiLayers,
   FiPieChart,
   FiActivity,
+  FiCheck,
+  FiArrowRight,
+  FiCompass,
+  FiUserPlus,
+  FiCreditCard,
 } from 'react-icons/fi'
 import { Helmet } from 'react-helmet'
 import ThemeContext from './ThemeContext'
@@ -21,6 +26,8 @@ import { AuthContext } from '../../AuthContext'
 import '../sidebarCSS/dashboard.css'
 import '../sidebarCSS/comStyle.css'
 import '../sidebarCSS/table.css'
+import SetupGuide from '../../components/SetupGuide'
+import OnboardingWizard from '../../components/OnboardingWizard'
 
 import {
   Chart as ChartJS,
@@ -840,6 +847,10 @@ const AdminDashboard = () => {
 
     return () => events.forEach((event) => socket.off(event, handler))
   }, [socket, dashboardView, dateFilter])
+
+  // ── Setup Guide & Onboarding Wizard ──────────────────────────
+  const [showWizard, setShowWizard] = useState(false)
+
   return (
     <div>
       <Helmet>
@@ -847,6 +858,18 @@ const AdminDashboard = () => {
       </Helmet>
 
       <Container className="mt-4 container-lg p-0">
+        {/* ─── HubSpot-Style Setup Guide & Onboarding ─── */}
+        <SetupGuide
+          mode="inline"
+          onLaunchWizard={() => setShowWizard(true)}
+        />
+
+        <OnboardingWizard
+          isOpen={showWizard}
+          onClose={() => setShowWizard(false)}
+          onComplete={() => setShowWizard(false)}
+        />
+
         <Row className="mb-3 align-items-center justify-content-between">
           <Col xs="12" md="6">
             <h1

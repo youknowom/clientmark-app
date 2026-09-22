@@ -6,7 +6,6 @@ import {
   updateLead,
   deleteLead,
   downSample,
-  checkLeadAccess,
   importLead,
   deleteManyLead,
   exportLead,
@@ -31,14 +30,13 @@ import {
 } from "../controllers/leadController.js";
 import { authUser, authAccess } from "../middlewares/authMiddleware.js";
 import { upload } from "../services/fileUploadService.js";
+import { checkLeadLimit } from "../middlewares/usageLimitMiddleware.js";
 
 const leadRouter = express.Router();
 
 leadRouter.get("/down-sample", authUser, downSample); //download seller sample
 
-leadRouter.get("/check-access-lead", checkLeadAccess); //check lead access
-
-leadRouter.post("/import-lead", authUser, upload.single("file"), importLead); //import seller leads
+leadRouter.post("/import-lead", authUser, checkLeadLimit, upload.single("file"), importLead); //import seller leads
 
 leadRouter.get("/export-lead", authUser, exportLead); //export lead details
 
@@ -49,7 +47,7 @@ leadRouter.delete(
   deleteManyLead,
 ); //delete many lead
 
-leadRouter.post("/create-lead", authUser, createLead); // Create new lead
+leadRouter.post("/create-lead", authUser, checkLeadLimit, createLead); // Create new lead
 
 leadRouter.get("/get-leads", authUser, authAccess("view:lead"), getLeads); // Get all leads
 

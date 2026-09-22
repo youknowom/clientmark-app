@@ -5,12 +5,16 @@ import http from "http";
 import app from "./config/app.js";
 import connectDB from "./config/db.js";
 import seedDatabase from "./config/seedDatabase.js";
+import { seedDemoTenant } from "./config/seedDemoTenant.js";
 import initializeSocket from "./config/socket.js";
 import { Server } from "socket.io";
 import initScheduledNotifications from "./workers/scheduledNotifications.js";
 
 //DB Connect & Auto-Seed
-connectDB().then(() => seedDatabase());
+connectDB().then(async () => {
+  await seedDatabase();
+  await seedDemoTenant();
+});
 
 //Server Setup
 const server = http.createServer(app);

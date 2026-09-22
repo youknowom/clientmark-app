@@ -65,6 +65,11 @@ const TenantSchema = new mongoose.Schema(
       default: true,
     },
 
+    isDemo: {
+      type: Boolean,
+      default: false,
+    },
+
     settings: {
       logo: { type: String, default: "" },
       favicon: { type: String, default: "" },

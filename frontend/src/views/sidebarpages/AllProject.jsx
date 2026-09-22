@@ -14,6 +14,7 @@ import toast from 'react-hot-toast'
 const ConfirmationModal = React.lazy(() => import('../../components/mycomponent/ConfirmationModal'))
 import { getListState, saveListState } from '../../helpers/listStateStorage'
 import { useSocket } from '../../SocketContext'
+import EmptyState from '../../components/mycomponent/EmptyState'
 
 import '../sidebarCSS/comStyle.css'
 import '../sidebarCSS/table.css'
@@ -66,31 +67,30 @@ function AllProject() {
     onConfirm: () => {},
   })
 
-  // Priority and Status color mapping (same as AddProject.jsx)
+  // Priority and Status color mapping with modern, accessible palette
   const priorityDD = [
-    { label: 'Low', value: 'Low', color: '#28a745' }, // green
-    { label: 'Medium', value: 'Medium', color: '#ffc107' }, // yellow
-    { label: 'High', value: 'High', color: '#dc3545' }, // red
+    { label: 'Low', value: 'Low', bg: '#ECFDF5', tx: '#047857' },
+    { label: 'Medium', value: 'Medium', bg: '#FFFBEB', tx: '#B45309' },
+    { label: 'High', value: 'High', bg: '#FEF2F2', tx: '#B91C1C' },
   ]
 
   const statusDD = [
-    { label: 'Not assigned', value: 'Not assigned', color: '#6c757d' }, // grey
-    { label: 'Assigned', value: 'Assigned', color: '#0d6efd' }, // blue
-    { label: 'Hold', value: 'Hold', color: '#ffc107' }, // yellow
-    { label: 'In Progress', value: 'In Progress', color: '#17a2b8' }, // cyan
-    { label: 'Testing', value: 'Testing', color: '#6610f2' }, // purple
-    { label: 'Client Review', value: 'Client Review', color: '#fd7e14' }, // orange
-    { label: 'Completed', value: 'Completed', color: '#28a745' }, // green
+    { label: 'Not assigned', value: 'Not assigned', bg: '#F3F4F6', tx: '#374151' },
+    { label: 'Assigned', value: 'Assigned', bg: '#EFF6FF', tx: '#1D4ED8' },
+    { label: 'Hold', value: 'Hold', bg: '#FFFBEB', tx: '#B45309' },
+    { label: 'In Progress', value: 'In Progress', bg: '#F0FDFA', tx: '#0F766E' },
+    { label: 'Testing', value: 'Testing', bg: '#F5F3FF', tx: '#6D28D9' },
+    { label: 'Client Review', value: 'Client Review', bg: '#FFF7ED', tx: '#C2410C' },
+    { label: 'Completed', value: 'Completed', bg: '#ECFDF5', tx: '#047857' },
   ]
 
-  // Helper functions to get color for priority and status
-  const getPriorityColor = (priority) => {
+  const getPriorityBadge = (priority) => {
     const found = priorityDD.find((p) => p.value === priority)
-    return found ? found.color : '#6c757d'
+    return found || { bg: '#F3F4F6', tx: '#374151' }
   }
-  const getStatusColor = (status) => {
+  const getStatusBadge = (status) => {
     const found = statusDD.find((s) => s.value === status)
-    return found ? found.color : '#6c757d'
+    return found || { bg: '#F3F4F6', tx: '#374151' }
   }
 
   const handlePageChange = (newPage) => {
@@ -521,8 +521,25 @@ function AllProject() {
               <tbody>
                 {data?.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="text-center py-2">
-                      --- No Records Found ---
+                    <td colSpan="9" className="p-0 border-0">
+                      <EmptyState
+                        title="No projects found"
+                        description={
+                          filter?.search || filter?.status || filter?.priority || filter?.fromDate
+                            ? "No projects matched your active filters. Try resetting filters."
+                            : "No projects exist yet. Create your first project or convert a closed lead."
+                        }
+                        actionLabel={
+                          filter?.search || filter?.status || filter?.priority || filter?.fromDate
+                            ? "Reset Filters"
+                            : "Create Project"
+                        }
+                        onAction={
+                          filter?.search || filter?.status || filter?.priority || filter?.fromDate
+                            ? handleReset
+                            : () => navigate('/add-project')
+                        }
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -549,24 +566,25 @@ function AllProject() {
                         <td>{d.ProjectName}</td>
                         <td>{d.ClientName || '--'}</td>
                         <td>
-                          <span
-                            className="badge-pro"
-                            style={{
-                              backgroundColor: getStatusColor(d.ProjectStatus),
-                              color: d.ProjectStatus === 'Hold' ? '#000' : '#fff',
-                              padding: '2px 8px',
-                              borderRadius: '2px',
-                              fontSize: '11px',
-                              fontWeight: 'bold',
-                              minWidth: '50px',
-                              display: 'inline-block',
-                              textAlign: 'center',
-                              height: '20px',
-                              lineHeight: '16px',
-                            }}
-                          >
-                            {d.ProjectStatus}
-                          </span>
+                          {(() => {
+                            const badge = getStatusBadge(d.ProjectStatus)
+                            return (
+                              <span
+                                style={{
+                                  backgroundColor: badge.bg,
+                                  color: badge.tx,
+                                  padding: '2px 8px',
+                                  borderRadius: '12px',
+                                  fontSize: '11px',
+                                  fontWeight: '600',
+                                  display: 'inline-block',
+                                  border: '1px solid rgba(0,0,0,0.06)',
+                                }}
+                              >
+                                {d.ProjectStatus}
+                              </span>
+                            )
+                          })()}
                         </td>
                         <td>
                           {d.createdAt ? formatDateTime(new Date(d.createdAt)) : '--'}
