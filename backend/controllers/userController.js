@@ -19,7 +19,9 @@ import OTPModel from "../models/otpModel.js";
 //get permission
 const getPermissionList = async (req, res) => {
   try {
-    const permissionList = await PermissionModel.find().sort({ index: 1 });
+    const tenantId = req.tenantId || req.user?.tenantId;
+    const filter = tenantId ? { tenantId } : {};
+    const permissionList = await PermissionModel.find(filter).sort({ index: 1 });
 
     if (!permissionList || permissionList?.length === 0) {
       return res
@@ -86,9 +88,11 @@ const addRole = async (req, res) => {
 
     const uniquePermissions = [...new Set(permissions)];
 
-    // Determine expected priority for company or super-admin
+    const tenantId = req.tenantId || req.user?.tenantId;
+
+    // Determine expected priority for this tenant
     let expectedPriority;
-    const lastRole = await RoleModel.findOne().sort({ priority: -1 }).lean();
+    const lastRole = await RoleModel.findOne({ tenantId }).sort({ priority: -1 }).lean();
     expectedPriority = lastRole ? lastRole.priority + 1 : 1;
 
     if (priority !== expectedPriority) {
@@ -98,9 +102,10 @@ const addRole = async (req, res) => {
       });
     }
 
-    // Pre-check duplicates with clear messages BEFORE create
+    // Pre-check duplicates within this tenant BEFORE create
     const existingName = await RoleModel.findOne({
       roleName,
+      tenantId,
     }).lean();
 
     if (existingName) {
@@ -112,6 +117,7 @@ const addRole = async (req, res) => {
 
     const existingPriority = await RoleModel.findOne({
       priority,
+      tenantId,
     }).lean();
 
     if (existingPriority) {
@@ -121,8 +127,9 @@ const addRole = async (req, res) => {
       });
     }
 
-    // create role
+    // create role scoped to tenant
     const newRole = await RoleModel.create({
+      tenantId,
       roleName,
       permissions: uniquePermissions,
       priority,
@@ -173,8 +180,10 @@ const updateRole = async (req, res) => {
 
     const uniquePermissions = [...new Set(permissions)];
 
-    // Check if role exists
-    const existingRole = await RoleModel.findOne({ _id: roleId });
+    const tenantId = req.tenantId || req.user?.tenantId;
+
+    // Check if role exists within this tenant
+    const existingRole = await RoleModel.findOne({ _id: roleId, tenantId });
 
     if (!existingRole) {
       return res.status(404).json({
@@ -183,9 +192,10 @@ const updateRole = async (req, res) => {
       });
     }
 
-    // Duplicate role name inside same company
+    // Duplicate role name inside same tenant
     const duplicateName = await RoleModel.findOne({
       roleName,
+      tenantId,
       _id: { $ne: roleId },
     }).lean();
 
@@ -199,9 +209,10 @@ const updateRole = async (req, res) => {
     // Handle priority
     let priority = existingRole.priority;
 
-    // same company → keep same priority
+    // same tenant → keep same priority
     const duplicatePriority = await RoleModel.findOne({
       priority: priority,
+      tenantId,
       _id: { $ne: roleId },
     }).lean();
 
@@ -213,7 +224,7 @@ const updateRole = async (req, res) => {
     }
 
     const updatedRole = await RoleModel.findOneAndUpdate(
-      { _id: roleId },
+      { _id: roleId, tenantId },
       {
         $set: {
           roleName,
@@ -241,7 +252,8 @@ const getRoleList = async (req, res) => {
   try {
     let { search = "" } = req.query;
 
-    let filter = {};
+    const tenantId = req.tenantId || req.user?.tenantId;
+    let filter = { tenantId: new mongoose.Types.ObjectId(tenantId) };
 
     if (search && search.trim() !== "") {
       filter.$or = [{ roleName: { $regex: search, $options: "i" } }];
@@ -293,9 +305,10 @@ const getRoleList = async (req, res) => {
 const deleteRole = async (req, res) => {
   try {
     const { roleId } = req.body;
+    const tenantId = req.tenantId || req.user?.tenantId;
 
-    //check thit role have user or not
-    const userCount = await UserModel.countDocuments({ roleId: roleId });
+    //check this role has users or not (within tenant)
+    const userCount = await UserModel.countDocuments({ roleId: roleId, tenantId });
     if (userCount > 0) {
       return res.status(400).json({
         message: `Can not delete. This role have ${userCount} users.`,
@@ -303,7 +316,7 @@ const deleteRole = async (req, res) => {
       });
     }
 
-    const isDelete = await RoleModel.deleteOne({ _id: roleId });
+    const isDelete = await RoleModel.deleteOne({ _id: roleId, tenantId });
     if (isDelete.deletedCount === 0) {
       return res
         .status(400)
@@ -312,7 +325,7 @@ const deleteRole = async (req, res) => {
 
     return res
       .status(200)
-      .json({ message: "Successfully delete role.", success: false });
+      .json({ message: "Successfully delete role.", success: true });
   } catch (error) {
     return res.status(500).json({ message: error.message, success: false });
   }
@@ -795,10 +808,11 @@ const getUserDropdown = async (req, res) => {
   try {
     const { roleName } = req.query;
 
-    let filter = { status: "Active" };
+    const tenantId = req.tenantId || req.user?.tenantId;
+    let filter = { status: "Active", tenantId };
 
     if (roleName) {
-      const role = await RoleModel.findOne({ roleName });
+      const role = await RoleModel.findOne({ roleName, tenantId });
 
       if (!role) {
         return res
