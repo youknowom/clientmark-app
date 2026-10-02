@@ -937,7 +937,7 @@ const updateSelfProfile = async (req, res) => {
 const sendMailOtp = async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email && email?.trim() === "") {
+    if (!email || email?.trim() === "") {
       return res
         .status(400)
         .json({ message: "Mail is missing.", success: false });
@@ -1010,7 +1010,7 @@ const verityEmailOtp = async (req, res) => {
       return res.status(400).json({ message: "Invalid otp", success: false });
     }
 
-    if (!email && email?.trim() === "") {
+    if (!email || email?.trim() === "") {
       return res
         .status(400)
         .json({ message: "Mail is missing.", success: false });
@@ -1042,10 +1042,15 @@ const verityEmailOtp = async (req, res) => {
     //delete final
     await OTPModel.deleteMany({ userName: email });
 
-    //create token
+    //create token with 15m expiration and tenantId
     const token = jwt.sign(
-      { userId: userDtl._id, role: userDtl.roleId.roleName },
+      {
+        userId: userDtl._id,
+        role: userDtl.roleId?.roleName,
+        tenantId: userDtl.tenantId,
+      },
       process.env.JWT_SECRET,
+      { expiresIn: "15m" },
     );
 
     return res.status(200).json({
