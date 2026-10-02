@@ -189,9 +189,13 @@ const getBranches = async (req, res) => {
 const deleteBranch = async (req, res) => {
   try {
     let { branchId } = req.body;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
-    //check thit banch have user or not
-    const userCount = await UserModel.countDocuments({ branchId: branchId });
+    //check this branch has users or not (scoped to tenant)
+    const userCount = await UserModel.countDocuments({
+      branchId: branchId,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (userCount > 0) {
       return res.status(400).json({
         message: `Can not delete. This branch have ${userCount} users.`,
@@ -199,7 +203,10 @@ const deleteBranch = async (req, res) => {
       });
     }
 
-    const isDelete = await BranchModel.deleteOne({ _id: branchId });
+    const isDelete = await BranchModel.deleteOne({
+      _id: branchId,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (isDelete.deletedCount === 0) {
       return res
         .status(400)
