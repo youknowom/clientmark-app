@@ -194,7 +194,11 @@ export const getChatHistory = async (req, res) => {
       return res.status(400).json({ success: false, message: "Session ID required" });
     }
 
-    const conversation = await ChatbotConversationModel.findOne({ sessionId });
+    const { tenantId } = extractUserContext(req);
+    const conversation = await ChatbotConversationModel.findOne({
+      sessionId,
+      ...(tenantId ? { tenantId } : {}),
+    });
     return res.status(200).json({
       success: true,
       messages: conversation?.messages || [],
@@ -209,7 +213,11 @@ export const clearChatHistory = async (req, res) => {
   try {
     const { sessionId } = req.body;
     if (sessionId) {
-      await ChatbotConversationModel.deleteOne({ sessionId });
+      const { tenantId } = extractUserContext(req);
+      await ChatbotConversationModel.deleteOne({
+        sessionId,
+        ...(tenantId ? { tenantId } : {}),
+      });
     }
     return res.status(200).json({ success: true, message: "Chat cleared." });
   } catch (error) {
