@@ -47,6 +47,8 @@ const getNotification = async (req, res) => {
 const markSingleRead = async (req, res) => {
   try {
     const { notificationId } = req.body;
+    const loginUserId = req.user._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     if (!notificationId) {
       return res
@@ -55,7 +57,11 @@ const markSingleRead = async (req, res) => {
     }
 
     const isUpdate = await NotificationModel.updateOne(
-      { _id: notificationId },
+      {
+        _id: notificationId,
+        userId: loginUserId,
+        ...(tenantId ? { tenantId } : {}),
+      },
       {
         $set: {
           isRead: true,
