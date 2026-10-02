@@ -61,15 +61,23 @@ const createProject = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Client name is required" });
 
-    const user = await UserModel.findOne({ _id: userId, status: "Active" });
+    const tenantId = req.user?.tenantId || req.tenantId;
+
+    const user = await UserModel.findOne({
+      _id: userId,
+      ...(tenantId ? { tenantId } : {}),
+      status: "Active",
+    });
     if (!user)
       return res.status(403).json({ success: false, message: "No permission" });
 
     // Auto generate ProjectId if not provided (robust, avoids duplicates)
     let finalProjectId = ProjectId;
     if (!finalProjectId) {
-      // Find the highest ProjectId number
-      const lastProject = await ProjectModel.findOne({})
+      // Find the highest ProjectId number for this tenant
+      const lastProject = await ProjectModel.findOne(
+        tenantId ? { tenantId } : {},
+      )
         .sort({ createdAt: -1 })
         .select("ProjectId")
         .lean();
@@ -90,8 +98,6 @@ const createProject = async (req, res) => {
       .replace(/[^a-z0-9\s-]/g, "")
       .replace(/\s+/g, "-")
       .replace(/-+/g, "-");
-
-    const tenantId = req.user?.tenantId || req.tenantId;
 
     const project = new ProjectModel({
       tenantId,
@@ -222,8 +228,12 @@ const getProjectById = async (req, res) => {
     const { projectId } = req.query;
     const loginUserRole = req.user?.roleId?.roleName;
     const loginUserId = req.user._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
-    const project = await ProjectModel.findOne({ _id: projectId })
+    const project = await ProjectModel.findOne({
+      _id: projectId,
+      ...(tenantId ? { tenantId } : {}),
+    })
       .populate("AssignedDevelopers", "fullName name email") // Add this line
       .lean();
 
@@ -259,9 +269,13 @@ const getProjectById = async (req, res) => {
 const updateProject = async (req, res) => {
   try {
     const { _id, ...payload } = req.body;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
-    // Fetch current project for status comparison
-    const project = await ProjectModel.findById(_id);
+    // Fetch current project for status comparison (scoped to tenant)
+    const project = await ProjectModel.findOne({
+      _id,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (!project) {
       return res
         .status(404)
@@ -309,6 +323,7 @@ const updateProject = async (req, res) => {
 
     if (addedAssignees.length > 0) {
       let notifications = addedAssignees.map((dev) => ({
+        tenantId: tenantId ? new mongoose.Types.ObjectId(tenantId) : undefined,
         userId: dev,
         notificationType: "project",
         title: "Project assigned",
@@ -340,7 +355,11 @@ const updateProject = async (req, res) => {
 /* ===DELETE PROJECT===*/
 const deleteProject = async (req, res) => {
   try {
-    const deleted = await ProjectModel.findByIdAndDelete(req.params.id);
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const deleted = await ProjectModel.findOneAndDelete({
+      _id: req.params.id,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (!deleted)
       return res
         .status(404)
@@ -359,7 +378,11 @@ const deleteProject = async (req, res) => {
 const deleteManyProjects = async (req, res) => {
   try {
     const { ids } = req.body;
-    const result = await ProjectModel.deleteMany({ _id: { $in: ids } });
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const result = await ProjectModel.deleteMany({
+      _id: { $in: ids },
+      ...(tenantId ? { tenantId } : {}),
+    });
 
     const io = req.app.get("io");
     if (io) io.emit("create-project"); // refresh project lists & dashboards
@@ -377,7 +400,8 @@ const deleteManyProjects = async (req, res) => {
 
 const exportProjects = async (req, res) => {
   try {
-    const data = await ProjectModel.find()
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const data = await ProjectModel.find(tenantId ? { tenantId } : {})
       .populate("AssignedDevelopers", "fullName")
       .sort({ createdAt: -1 })
       .lean();
@@ -430,6 +454,7 @@ const createTimelinePost = async (req, res) => {
   try {
     const { projectId } = req.params;
     const userId = req.user._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
     const { moduleName, description, phase } = req.body;
 
     if (!moduleName?.trim() || !description?.trim() || !phase?.trim()) {
@@ -439,8 +464,11 @@ const createTimelinePost = async (req, res) => {
       });
     }
 
-    // Check if project exists
-    const project = await ProjectModel.findById(projectId);
+    // Check if project exists (scoped to tenant)
+    const project = await ProjectModel.findOne({
+      _id: projectId,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (!project) {
       return res
         .status(404)
@@ -458,6 +486,7 @@ const createTimelinePost = async (req, res) => {
     }
 
     const timeline = new TimelineModel({
+      tenantId,
       addById: userId,
       moduleName,
       phase,
@@ -485,14 +514,21 @@ const createTimelinePost = async (req, res) => {
 const getProjectTimeline = async (req, res) => {
   try {
     const { projectId } = req.params;
-    // Optionally, check if project exists
-    const project = await ProjectModel.findById(projectId);
+    const tenantId = req.user?.tenantId || req.tenantId;
+    // Check if project exists (scoped to tenant)
+    const project = await ProjectModel.findOne({
+      _id: projectId,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (!project) {
       return res
         .status(404)
         .json({ success: false, message: "Project not found" });
     }
-    const timeline = await TimelineModel.find({ projectId })
+    const timeline = await TimelineModel.find({
+      projectId,
+      ...(tenantId ? { tenantId } : {}),
+    })
       .populate({
         path: "addById",
         select: "fullName name email",
@@ -510,6 +546,7 @@ const updateTimelinePost = async (req, res) => {
   try {
     const { projectId, timelineId } = req.params;
     const userId = req.user._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
     const { moduleName, description, attachements = [], phase } = req.body;
 
     if (!moduleName?.trim() || !description?.trim() || !phase?.trim()) {
@@ -522,6 +559,7 @@ const updateTimelinePost = async (req, res) => {
     const timeline = await TimelineModel.findOne({
       _id: timelineId,
       projectId,
+      ...(tenantId ? { tenantId } : {}),
     });
     if (!timeline) {
       return res
@@ -554,9 +592,11 @@ const deleteTimelinePost = async (req, res) => {
   try {
     const { projectId, timelineId } = req.params;
     const userId = req.user._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
     const timeline = await TimelineModel.findOne({
       _id: timelineId,
       projectId,
+      ...(tenantId ? { tenantId } : {}),
     });
     if (!timeline) {
       return res
@@ -568,7 +608,10 @@ const deleteTimelinePost = async (req, res) => {
       return res.status(403).json({ success: false, message: "No permission" });
     }
 
-    const isDelete = await TimelineModel.deleteOne({ _id: timelineId });
+    const isDelete = await TimelineModel.deleteOne({
+      _id: timelineId,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (isDelete.deletedCount === 0) {
       return res
         .status(400)
@@ -646,10 +689,14 @@ const getProjectStatusReport = async (req, res) => {
     const loginUser = req.user;
     const loginUserRole = loginUser.roleId.roleName;
     const loginUserId = loginUser._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     let { fromDate, toDate } = req.query;
 
     let filter = {};
+    if (tenantId) {
+      filter.tenantId = new mongoose.Types.ObjectId(tenantId);
+    }
 
     // Add role-based filtering - only Admin sees all projects
     if (loginUserRole !== "Admin") {
@@ -821,10 +868,14 @@ const exportProjectStatusReport = async (req, res) => {
     const loginUser = req.user;
     const loginUserRole = loginUser.roleId.roleName;
     const loginUserId = loginUser._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     let { fromDate, toDate } = req.query;
 
     let filter = {};
+    if (tenantId) {
+      filter.tenantId = new mongoose.Types.ObjectId(tenantId);
+    }
 
     if (loginUserRole === "Developer") {
       filter.AssignedDevelopers = loginUserId;
@@ -1139,10 +1190,14 @@ const getBudgetTimeline = async (req, res) => {
     const loginUser = req.user;
     const loginUserRole = loginUser.roleId.roleName;
     const loginUserId = loginUser._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     let { fromDate, toDate } = req.query;
 
     let filter = {};
+    if (tenantId) {
+      filter.tenantId = tenantId;
+    }
 
     if (fromDate && toDate) {
       filter.createdAt = {};
@@ -1305,6 +1360,7 @@ function mapStatusToKey(status) {
 const searchClients = async (req, res) => {
   try {
     const { search } = req.query;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     if (!search || search.trim() === "") {
       return res.status(400).json({
@@ -1315,10 +1371,11 @@ const searchClients = async (req, res) => {
 
     const regex = new RegExp(search, "i");
 
-    // Aggregate to get unique clients based on mobileNo
+    // Aggregate to get unique clients based on mobileNo (scoped to tenant)
     const clients = await ProjectModel.aggregate([
       {
         $match: {
+          ...(tenantId ? { tenantId: new mongoose.Types.ObjectId(tenantId) } : {}),
           $or: [{ ClientName: regex }, { mobileNo: regex }, { email: regex }],
         },
       },
@@ -1361,6 +1418,7 @@ const searchClients = async (req, res) => {
 const getClientByMobile = async (req, res) => {
   try {
     const { mobileNo } = req.query;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     if (!mobileNo || mobileNo.trim() === "") {
       return res.status(400).json({
@@ -1369,8 +1427,11 @@ const getClientByMobile = async (req, res) => {
       });
     }
 
-    // Find the most recent project for this client
-    const client = await ProjectModel.findOne({ mobileNo })
+    // Find the most recent project for this client (scoped to tenant)
+    const client = await ProjectModel.findOne({
+      mobileNo,
+      ...(tenantId ? { tenantId } : {}),
+    })
       .sort({ createdAt: -1 })
       .select(
         "ClientName mobileNo whatsappNo email gender country state city address",
@@ -1385,7 +1446,10 @@ const getClientByMobile = async (req, res) => {
     }
 
     // Count total projects for this client
-    const projectCount = await ProjectModel.countDocuments({ mobileNo });
+    const projectCount = await ProjectModel.countDocuments({
+      mobileNo,
+      ...(tenantId ? { tenantId } : {}),
+    });
 
     return res.status(200).json({
       success: true,
