@@ -5,7 +5,8 @@ import { sendWATextServ } from "../services/whatsappService.js";
 // GET WhatsApp Credentials
 const getWhatsappCred = async (req, res) => {
   try {
-    const cred = await WhatsappCredModel.findOne();
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const cred = await WhatsappCredModel.findOne(tenantId ? { tenantId } : {});
 
     if (!cred) {
       // Return 200 with empty fields instead of 400 to avoid crash/error toast on first-time setup
@@ -30,6 +31,7 @@ const getWhatsappCred = async (req, res) => {
 const updateWhatsappCred = async (req, res) => {
   try {
     const { instanceId, token } = req.body;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     if (!instanceId || !token) {
       return res.status(400).json({
@@ -38,10 +40,10 @@ const updateWhatsappCred = async (req, res) => {
       });
     }
 
-    // Support upserting the single global record if no _id exists yet
+    // Support upserting the tenant record
     const cred = await WhatsappCredModel.findOneAndUpdate(
-      {},
-      { instanceId, token },
+      tenantId ? { tenantId } : {},
+      { ...(tenantId ? { tenantId } : {}), instanceId, token },
       { new: true, upsert: true },
     );
 
@@ -59,6 +61,7 @@ const updateWhatsappCred = async (req, res) => {
 const sendLinkToClient = async (req, res) => {
   try {
     const { _id } = req.body;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     if (!_id) {
       return res.status(400).json({
@@ -66,7 +69,7 @@ const sendLinkToClient = async (req, res) => {
         message: "Project ID is required",
       });
     }
-    const project = await ProjectModel.findOne({ _id: _id });
+    const project = await ProjectModel.findOne({ _id: _id, ...(tenantId ? { tenantId } : {}) });
 
     if (!project) {
       return res.status(404).json({
@@ -82,7 +85,7 @@ const sendLinkToClient = async (req, res) => {
         .status(400)
         .json({ message: "Client whatsapp number not found.", success: false });
     }
-    const cred = await WhatsappCredModel.findOne();
+    const cred = await WhatsappCredModel.findOne(tenantId ? { tenantId } : {});
 
     if (!cred) {
       return res.status(404).json({
