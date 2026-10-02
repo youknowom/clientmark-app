@@ -31,6 +31,8 @@ const MOTIVATIONAL_QUOTES = [
     "Dream big, code bigger! Today is your day to ship something amazing. 🌈",
 ];
 
+const PORTAL_URL = process.env.FRONTEND_URL || process.env.DOMAIN_URL || "https://clientmark.app";
+
 // ── Reminder Messages Pool ────────────────────────────────────────────────────
 const REMINDER_MESSAGES = [
     "📌 Don't forget! Please upload today's project progress before you log off.",
@@ -38,22 +40,27 @@ const REMINDER_MESSAGES = [
     "🔔 Hey! Your project update is due. Please add your progress post before the day ends.",
     "📊 Reminder: Make sure to document today's work on your assigned projects. Your team needs it!",
     "✅ End-of-day check: Did you push your updates and log your project progress today?",
-    "📌 Don't forget to upload your latest source update to our portal: https://project.bighostindia.in/",
+    `📌 Don't forget to upload your latest source update to our portal: ${PORTAL_URL}`,
 ];
 
 // ── Helper: pick random item ──────────────────────────────────────────────────
 const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-// ── Helper: get all active Developer user IDs ─────────────────────────────────
-const getDeveloperUserIds = async () => {
+// ── Helper: get all active Developers with tenantId ───────────────────────────
+const getActiveDevelopers = async () => {
     try {
-        const role = await RoleModel.findOne({ roleName: "Developer" }).select("_id").lean();
-        if (!role) return [];
+        const roles = await RoleModel.find({ roleName: "Developer" }).select("_id tenantId").lean();
+        if (!roles.length) return [];
+        const roleIds = roles.map((r) => r._id);
 
-        const developers = await UserModel.find({ status: "Active", roleId: role._id })
-            .select("_id")
+        const developers = await UserModel.find({
+            status: "Active",
+            roleId: { $in: roleIds },
+            tenantId: { $ne: null },
+        })
+            .select("_id tenantId")
             .lean();
-        return developers.map((u) => u._id.toString());
+        return developers;
     } catch (err) {
         console.error("[Notification] Failed to fetch developers:", err.message);
         return [];
@@ -63,10 +70,11 @@ const getDeveloperUserIds = async () => {
 // ── Helper: send bulk notifications to all active developers ──────────────────
 export const sendBulkToDevs = async (title, message, notificationType, redirectUrl = "/dashboard") => {
     try {
-        const devIds = await getDeveloperUserIds();
-        if (devIds.length === 0) return;
-        const notifications = devIds.map((userId) => ({
-            userId,
+        const developers = await getActiveDevelopers();
+        if (developers.length === 0) return;
+        const notifications = developers.map((dev) => ({
+            tenantId: dev.tenantId,
+            userId: dev._id,
             notificationType,
             title,
             message,
