@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import http from "http";
-import app from "./config/app.js";
+import app, { corsOriginChecker } from "./config/app.js";
 import connectDB from "./config/db.js";
 import seedDatabase from "./config/seedDatabase.js";
 import { seedDemoTenant } from "./config/seedDemoTenant.js";
@@ -22,9 +22,7 @@ const server = http.createServer(app);
 // Socket
 const io = new Server(server, {
   cors: {
-    origin: (origin, callback) => {
-      callback(null, true);
-    },
+    origin: corsOriginChecker,
     methods: ["GET", "POST"],
     credentials: true,
   },

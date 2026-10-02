@@ -27,13 +27,38 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
+const defaultOrigins = [
+  "https://clientmark.app",
+  "https://www.clientmark.app",
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://localhost:8080",
+];
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
+  : defaultOrigins;
+
+if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL.trim())) {
+  allowedOrigins.push(process.env.FRONTEND_URL.trim());
+}
+if (process.env.DOMAIN_URL && !allowedOrigins.includes(process.env.DOMAIN_URL.trim())) {
+  allowedOrigins.push(process.env.DOMAIN_URL.trim());
+}
+
+export const corsOriginChecker = (origin, callback) => {
+  // Allow requests with no origin (like mobile apps, curl, or server-to-server calls)
+  if (!origin) return callback(null, true);
+  if (allowedOrigins.includes(origin)) {
+    return callback(null, true);
+  }
+  return callback(new Error("CORS policy does not allow access from this origin."));
+};
+
 //cors setup
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Dynamically reflect origin to allow clientmark.app, www.clientmark.app, and localhost with credentials
-      callback(null, true);
-    },
+    origin: corsOriginChecker,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
