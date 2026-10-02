@@ -626,7 +626,7 @@ const exportLead = async (req, res) => {
         serviceRequirement: item.serviceRequirement || "-",
         remark: item.remark || "-",
         createdAt: formatDateTime(item.createdAt),
-        addById: item.addById.fullName || "-",
+        addById: item.addById?.fullName || "-",
       });
     });
 
