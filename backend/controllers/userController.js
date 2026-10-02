@@ -589,8 +589,12 @@ const getUserList = async (req, res) => {
 const deleteUser = async (req, res) => {
   try {
     const { userId } = req.body;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
-    const isDelete = await UserModel.deleteOne({ _id: userId });
+    const isDelete = await UserModel.deleteOne({
+      _id: userId,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (isDelete.deletedCount === 0) {
       return res
         .status(400)
@@ -609,11 +613,15 @@ const deleteUser = async (req, res) => {
 const exportUserList = async (req, res) => {
   try {
     const userId = req.user._id || "";
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     let { search, roleId, departmentId, branchId, fromDate, toDate } =
       req.query;
 
     let filter = { _id: { $ne: userId } };
+    if (tenantId) {
+      filter.tenantId = tenantId;
+    }
     if (search && search?.trim() !== "") {
       filter.$or = [
         { fullName: { $regex: search, $options: "i" } },
@@ -783,9 +791,11 @@ const updateUser = async (req, res) => {
       updateData.password = await bcrypt.hash(password, 10);
     }
 
+    const tenantId = req.user?.tenantId || req.tenantId;
+
     //save data
     const isUpdate = await UserModel.updateOne(
-      { _id: userId },
+      { _id: userId, ...(tenantId ? { tenantId } : {}) },
       { $set: updateData },
     );
 
@@ -903,8 +913,10 @@ const updateSelfProfile = async (req, res) => {
       updateData.password = await bcrypt.hash(password, 10);
     }
 
+    const tenantId = req.user?.tenantId || req.tenantId;
+
     const isUpdate = await UserModel.updateOne(
-      { _id: loginUserId },
+      { _id: loginUserId, ...(tenantId ? { tenantId } : {}) },
       { $set: updateData },
     );
     if (isUpdate.modifiedCount === 0) {
