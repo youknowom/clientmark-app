@@ -31,8 +31,10 @@ const defaultOrigins = [
   "https://clientmark.app",
   "https://www.clientmark.app",
   "http://localhost:3000",
+  "http://localhost:3001",
   "http://localhost:5173",
   "http://localhost:8080",
+  "http://localhost:8081",
 ];
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -50,6 +52,13 @@ export const corsOriginChecker = (origin, callback) => {
   // Allow requests with no origin (like mobile apps, curl, or server-to-server calls)
   if (!origin) return callback(null, true);
   if (allowedOrigins.includes(origin)) {
+    return callback(null, true);
+  }
+  // Allow any localhost / 127.0.0.1 port in non-production environments
+  if (
+    process.env.NODE_ENV !== "production" &&
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+  ) {
     return callback(null, true);
   }
   return callback(new Error("CORS policy does not allow access from this origin."));
