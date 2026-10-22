@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import Cookies from 'js-cookie'
 import axiosClient from '../../api/axiosClient'
+import { ClientmarkLogo } from '../../components/brand/ClientmarkLogo'
 import '../sidebarCSS/login.css'
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
@@ -78,7 +79,11 @@ const RegisterPage = () => {
       })
 
       if (response.data?.token) {
-        Cookies.set('token', response.data.token, { expires: 365 * 20 })
+        Cookies.set('token', response.data.token, {
+          expires: 7,
+          sameSite: 'Lax',
+          secure: window.location.protocol === 'https:',
+        })
         toast.success(`Welcome to Clientmark, ${formData.companyName}! Setting up workspace...`)
         setTimeout(() => {
           window.location.href = '/dashboard'
@@ -106,10 +111,7 @@ const RegisterPage = () => {
       <div className="auth-left" aria-hidden="true">
         <div className="auth-left-top">
           <Link to="/" className="auth-brand">
-            <div className="auth-brand-mark">
-              <LogoMark size={20} color="white" />
-            </div>
-            <span className="auth-brand-name">Clientmark</span>
+            <ClientmarkLogo size={32} />
           </Link>
 
           <span className="auth-left-eyebrow">Enterprise CRM Workspace</span>
@@ -144,10 +146,7 @@ const RegisterPage = () => {
         <div className="auth-form-box">
           {/* Mobile brand header */}
           <div className="auth-mobile-brand">
-            <div className="auth-mobile-brand-mark">
-              <LogoMark size={20} color="white" />
-            </div>
-            <span className="auth-mobile-brand-name">Clientmark</span>
+            <ClientmarkLogo size={28} />
           </div>
 
           <div className="auth-form-header">

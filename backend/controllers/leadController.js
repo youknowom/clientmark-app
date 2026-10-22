@@ -14,10 +14,27 @@ import NotificationModel from "../models/notificationModel.js";
 import WhatsappTemplateModel from "../models/whatsappTemplateModel.js";
 import WhatsappChatModel from "../models/whatsappChatModel.js";
 import { sendWATextServ } from "../services/whatsappService.js";
+import { emitToTenant } from "../services/realtime.js";
+import { getTenantLimits } from "../middlewares/usageLimitMiddleware.js";
 
 // Create a Lead
 const createLead = async (req, res) => {
   try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+
+    // Race-safe recount limit check
+    const limits = await getTenantLimits(tenantId);
+    if (limits && limits.maxLeads !== -1) {
+      const currentLeads = await LeadModel.countDocuments({ tenantId });
+      if (currentLeads >= limits.maxLeads) {
+        return res.status(403).json({
+          message: `You've reached the maximum of ${limits.maxLeads} leads on your current plan. Please upgrade to add more leads.`,
+          success: false,
+          limitReached: true,
+        });
+      }
+    }
+
     //login user id
     const userId = req.user._id;
     const {
@@ -33,6 +50,12 @@ const createLead = async (req, res) => {
       businessName,
       serviceRequirement,
       remark,
+      callStatus,
+      leadStatus,
+      leadStage,
+      leadSource,
+      followUpDate,
+      allowDuplicate,
     } = req.body;
 
     if (!fullName?.trim()) {
@@ -51,6 +74,23 @@ const createLead = async (req, res) => {
       });
     }
 
+    // Check for duplicate lead within the same tenant unless explicitly bypassed
+    if (!allowDuplicate) {
+      const existingDuplicate = await LeadModel.findOne({
+        tenantId,
+        mobileNo: mobile,
+      }).select("leadNo fullName mobileNo leadStatus leadStage createdAt");
+
+      if (existingDuplicate) {
+        return res.status(409).json({
+          success: false,
+          isDuplicate: true,
+          message: `A lead with mobile number ${mobile} already exists (${existingDuplicate.leadNo} - ${existingDuplicate.fullName}).`,
+          existingLead: existingDuplicate,
+        });
+      }
+    }
+
     //find that user name
     const userDtl = await UserModel.findOne({ _id: userId, status: "Active" });
     if (!userDtl) {
@@ -59,8 +99,6 @@ const createLead = async (req, res) => {
         success: false,
       });
     }
-
-    const tenantId = req.user?.tenantId || req.tenantId;
 
     //find last index number
     const lastRecord = await LeadModel.findOne(
@@ -77,8 +115,8 @@ const createLead = async (req, res) => {
     const newLead = new LeadModel({
       tenantId,
       leadNo,
-      fullName,
-      mobileNo,
+      fullName: fullName.trim(),
+      mobileNo: mobile,
       whatsappNo,
       email,
       gender,
@@ -88,9 +126,11 @@ const createLead = async (req, res) => {
       address,
       businessName,
       serviceRequirement,
-      leadStage: "NEW",
-      callStatus: "PENDING",
-      leadStatus: "NEW",
+      leadStage: leadStage || "NEW",
+      callStatus: callStatus || "PENDING",
+      leadStatus: leadStatus || "NEW",
+      leadSource: leadSource || "Direct",
+      followUpDate: followUpDate ? new Date(followUpDate) : null,
       remark,
       currentIndex,
       addById: userDtl ? userDtl._id : null,
@@ -98,12 +138,12 @@ const createLead = async (req, res) => {
 
     await newLead.save();
 
-    const io = req.app.get("io");
-    io.emit("create-lead");
+    emitToTenant(tenantId, "lead:created", { leadId: newLead._id });
 
     return res.status(201).json({
       success: true,
       message: "Successfully add lead.",
+      lead: newLead,
     });
   } catch (error) {
     return res.status(500).json({
@@ -264,7 +304,7 @@ const updateLead = async (req, res) => {
       remark,
     } = req.body;
 
-    let leadId = req.body._id;
+    let leadId = req.body._id || req.body.leadId;
 
     if (!fullName?.trim()) {
       return res.status(400).json({
@@ -293,34 +333,43 @@ const updateLead = async (req, res) => {
 
     const tenantId = req.user?.tenantId || req.tenantId;
 
+    const updateFields = {
+      fullName: fullName.trim(),
+      mobileNo: mobile,
+      whatsappNo,
+      email,
+      gender,
+      country,
+      state,
+      city,
+      address,
+      businessName,
+      serviceRequirement,
+      remark,
+      updateById: userDtl ? userDtl._id : null,
+    };
+
+    if (req.body.callStatus) updateFields.callStatus = req.body.callStatus;
+    if (req.body.leadStatus) updateFields.leadStatus = req.body.leadStatus;
+    if (req.body.leadStage) updateFields.leadStage = req.body.leadStage;
+    if (req.body.leadSource) updateFields.leadSource = req.body.leadSource;
+    if (req.body.followUpDate !== undefined) {
+      updateFields.followUpDate = req.body.followUpDate ? new Date(req.body.followUpDate) : null;
+    }
+
     const isUpdate = await LeadModel.updateOne(
       { _id: leadId, tenantId },
-      {
-        fullName,
-        mobileNo,
-        whatsappNo,
-        email,
-        gender,
-        country,
-        state,
-        city,
-        address,
-        businessName,
-        serviceRequirement,
-        remark,
-        updateById: userDtl ? userDtl._id : null,
-      },
+      updateFields,
     );
 
-    if (isUpdate.modifiedCount === 0) {
+    if (isUpdate.matchedCount === 0) {
       return res.status(400).json({
         success: false,
-        message: "Failed to update lead",
+        message: "Failed to update lead: lead not found or not authorized.",
       });
     }
 
-    const io = req.app.get("io");
-    io.emit("update-lead");
+    emitToTenant(tenantId, "lead:updated", { leadId });
 
     return res.status(200).json({
       success: true,
@@ -345,8 +394,7 @@ const deleteLead = async (req, res) => {
         .json({ message: "Lead not found", success: false });
     }
 
-    const io = req.app.get("io");
-    io.emit("delete-lead");
+    emitToTenant(tenantId, "lead:deleted", { leadId: req.params.id });
 
     return res
       .status(200)
@@ -386,8 +434,9 @@ const deleteManyLead = async (req, res) => {
       (id) => !deletableIds.includes(id.toString()),
     );
 
-    const io = req.app.get("io");
-    if (deleteResult.deletedCount > 0) io.emit("delete-lead");
+    if (deleteResult.deletedCount > 0) {
+      emitToTenant(tenantId, "lead:deleted", { leadIds: deletableIds });
+    }
 
     return res.status(200).json({
       message: `${deleteResult.deletedCount} lead(s) deleted successfully`,
@@ -460,10 +509,10 @@ const importLead = async (req, res) => {
         remark,
       ] = row.values.slice(1);
 
-      if (email.text) {
+      if (email && email.text) {
         email = email.text;
       } else {
-        email = email;
+        email = email ? String(email) : "";
       }
 
       leads.push({
@@ -489,9 +538,27 @@ const importLead = async (req, res) => {
     });
 
     if (!leads.length) {
+      if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
       return res
         .status(400)
         .json({ message: "No valid data found", success: false });
+    }
+
+    // Bulk Import Limit Check (DECIDED): check if currentLeads + valid rows > plan limit
+    const limits = await getTenantLimits(tenantId);
+    if (limits && limits.maxLeads !== -1) {
+      const currentLeads = await LeadModel.countDocuments({ tenantId });
+      if (currentLeads + leads.length > limits.maxLeads) {
+        if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        return res.status(400).json({
+          success: false,
+          limitReached: true,
+          message: `Bulk import rejected: total leads would exceed your plan limit. Current leads: ${currentLeads}, new rows in file: ${leads.length}, plan limit: ${limits.maxLeads}. Please upgrade your plan or reduce the import batch.`,
+          currentLeads,
+          rows: leads.length,
+          limit: limits.maxLeads,
+        });
+      }
     }
 
     let insertedCount = 0;
@@ -514,8 +581,10 @@ const importLead = async (req, res) => {
       }
     } catch (error) {}
 
-    const io = req.app.get("io");
-    if (insertedCount > 0) io.emit("create-lead");
+    if (insertedCount > 0) {
+      const tenantId = req.user?.tenantId || req.tenantId;
+      emitToTenant(tenantId, "lead:created", { count: insertedCount });
+    }
 
     return res.status(201).json({
       message: `Successfully imported ${insertedCount} leads.`,
@@ -853,8 +922,7 @@ const manyAdminToTelecaller = async (req, res) => {
       result.filter((r) => r.status === "Success").length
     } lead(s) Assigned, ${result.filter((r) => r.status === "Failed").length} lead(s) Failed`;
 
-    const io = req.app.get("io");
-    io.emit("many-admin-to-telecaller");
+    emitToTenant(tenantId, "lead:transferred", { type: "admin-to-telecaller" });
 
     // ===== Send File as Response =====
     res.setHeader(
@@ -1023,8 +1091,7 @@ const manyTelecallerToBde = async (req, res) => {
       });
     });
 
-    const io = req.app.get("io");
-    io.emit("many-telecaller-to-bde");
+    emitToTenant(tenantId, "lead:transferred", { type: "telecaller-to-bde" });
 
     // ===== Send File as Response =====
     res.setHeader(
@@ -1242,8 +1309,7 @@ const manyBdeToAdmin = async (req, res) => {
       });
     });
 
-    const io = req.app.get("io");
-    io.emit("many-bde-to-admin");
+    emitToTenant(tenantId, "lead:transferred", { type: "bde-to-admin" });
 
     // ===== Send File as Response =====
     res.setHeader(
@@ -1318,8 +1384,7 @@ const singleTelecallerToBde = async (req, res) => {
         .json({ message: "Failed to assign lead.", success: false });
     }
 
-    const io = req.app.get("io");
-    io.emit("single-telecaller-to-bde");
+    emitToTenant(tenantId, "lead:transferred", { type: "telecaller-to-bde", leadId });
 
     //create history
     try {
@@ -2303,7 +2368,7 @@ const sendWhatsappToLead = async (req, res) => {
     }
     const lead = await LeadModel.findOne({
       _id: leadId,
-      ...(tenantId ? { tenantId } : {}),
+      tenantId,
     });
     if (!lead) {
       return res
@@ -2317,7 +2382,7 @@ const sendWhatsappToLead = async (req, res) => {
         message: "Lead does not have a WhatsApp or mobile number",
       });
     }
-    const result = await sendWATextServ(whatsappNo, message);
+    const result = await sendWATextServ(whatsappNo, message, tenantId);
     if (!result.success) {
       return res.status(400).json({
         success: false,
@@ -2444,6 +2509,58 @@ const deleteAllWhatsappChats = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+// Check for duplicate lead by mobileNo or email
+const checkDuplicateLead = async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const { mobileNo, email, excludeLeadId } = req.query;
+
+    if (!mobileNo && !email) {
+      return res.status(400).json({
+        success: false,
+        message: "mobileNo or email query parameter is required",
+      });
+    }
+
+    const conditions = [];
+    if (mobileNo && String(mobileNo).trim()) {
+      conditions.push({ mobileNo: String(mobileNo).trim() });
+    }
+    if (email && String(email).trim()) {
+      conditions.push({ email: String(email).trim().toLowerCase() });
+    }
+
+    if (!conditions.length) {
+      return res.status(200).json({ success: true, exists: false });
+    }
+
+    const query = { tenantId, $or: conditions };
+    if (excludeLeadId) {
+      query._id = { $ne: excludeLeadId };
+    }
+
+    const duplicate = await LeadModel.findOne(query)
+      .select("leadNo fullName mobileNo email leadStatus leadStage createdAt")
+      .populate("assignedToTelecaller", "fullName")
+      .populate("assignedToBDE", "fullName");
+
+    if (duplicate) {
+      return res.status(200).json({
+        success: true,
+        exists: true,
+        lead: duplicate,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      exists: false,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export {
   createLead,
   getLeads,
@@ -2472,4 +2589,5 @@ export {
   deleteWhatsappTemplate,
   deleteWhatsappChat,
   deleteAllWhatsappChats,
+  checkDuplicateLead,
 };

@@ -6,6 +6,7 @@ import PlanModel from "../models/planModel.js";
 import SubscriptionModel from "../models/subscriptionModel.js";
 import TenantModel from "../models/tenantModel.js";
 import WebhookEventModel from "../models/webhookEventModel.js";
+import { disconnectTenantSockets } from "../services/realtime.js";
 import {
   createRazorpayOrder,
   verifyPaymentSignature,
@@ -18,7 +19,29 @@ import {
   constructStripeWebhookEvent,
   retrieveCheckoutSession,
   cancelStripeSubscription,
+  createStripeBillingPortalSession,
+  updateStripeSubscriptionPlan,
 } from "../services/stripeService.js";
+import {
+  createDodoCheckoutSession,
+  retrieveDodoCheckoutSession,
+  createDodoCustomerPortalSession,
+  verifyDodoWebhook,
+} from "../services/dodoService.js";
+import { sendTextMail } from "../services/mailService.js";
+
+/**
+ * Authorization helper: allows Admins, users with billing permissions, or the registered tenant owner.
+ */
+export const canManageBilling = (user, tenant) => {
+  if (!user) return false;
+  const roleName = user.roleId?.roleName;
+  if (roleName === "Admin") return true;
+  const permissions = user.roleId?.permissions || [];
+  if (permissions.includes("manage:billing") || permissions.includes("view:billing")) return true;
+  if (tenant?.email && user?.email && tenant.email.toLowerCase() === user.email.toLowerCase()) return true;
+  return false;
+};
 
 // ══════════════════════════════════════════════════════════════
 // GET /subscription/plans — List all available plans (public)
@@ -52,21 +75,67 @@ const getMyPlan = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
+    // Fetch live usage vs limits across categories
+    const [userCount, leadCount, branchCount, projectCount] = await Promise.all([
+      UserModel.countDocuments({ tenantId }),
+      LeadModel.countDocuments({ tenantId }),
+      BranchModel.countDocuments({ tenantId }),
+      ProjectModel.countDocuments({ tenantId }),
+    ]);
+
+    const tenantDoc = await TenantModel.findById(tenantId).populate("planId").lean();
+
+    const limits = subscription?.planId?.limits || tenantDoc?.planId?.limits || {
+      maxUsers: 3,
+      maxLeads: 100,
+      maxBranches: 1,
+      maxProjects: 5,
+    };
+
+    const usageVsLimits = {
+      users: { current: userCount, max: limits.maxUsers },
+      leads: { current: leadCount, max: limits.maxLeads },
+      branches: { current: branchCount, max: limits.maxBranches },
+      projects: { current: projectCount, max: limits.maxProjects },
+    };
+
+    const graceDays = parseInt(process.env.GRACE_DAYS || "5", 10);
+    const isPastDue = tenantDoc?.status === "PastDue" || subscription?.status === "past_due";
+    let graceWarning = null;
+    let daysLeft = null;
+    let reason = null;
+
+    if (isPastDue) {
+      const graceStart = subscription?.gracePeriodStartedAt || tenantDoc?.gracePeriodStartedAt || subscription?.currentPeriodEnd || tenantDoc?.subscriptionEnd || tenantDoc?.updatedAt;
+      const daysPast = graceStart ? Math.floor((Date.now() - new Date(graceStart).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+      daysLeft = Math.max(0, graceDays - daysPast);
+      reason = "Your latest subscription payment is past due. Full CRM access continues during your grace period. Please update your payment method to avoid automatic downgrade to the Free plan.";
+      graceWarning = {
+        isPastDue: true,
+        isGracePeriod: daysLeft > 0,
+        daysLeft,
+        reason,
+      };
+    }
+
     if (!subscription) {
       // Fallback: lookup tenant plan directly if subscription record hasn't been created yet
-      const tenant = await TenantModel.findById(tenantId).populate("planId").lean();
       return res.status(200).json({
         message: "Fetched tenant plan.",
         success: true,
-        data: tenant?.planId
+        data: tenantDoc?.planId
           ? {
               tenantId,
-              planId: tenant.planId,
-              status: tenant.isTrialActive ? "trial" : "active",
+              planId: tenantDoc.planId,
+              status: tenantDoc.isTrialActive ? "trial" : "active",
               billingCycle: "monthly",
-              currentPeriodStart: tenant.subscriptionStart || tenant.createdAt,
-              currentPeriodEnd: tenant.subscriptionEnd || tenant.trialEndsAt,
+              currentPeriodStart: tenantDoc.subscriptionStart || tenantDoc.createdAt,
+              currentPeriodEnd: tenantDoc.subscriptionEnd || tenantDoc.trialEndsAt,
               paymentHistory: [],
+              usageVsLimits,
+              graceWarning,
+              daysLeft,
+              reason,
             }
           : null,
       });
@@ -75,7 +144,13 @@ const getMyPlan = async (req, res) => {
     return res.status(200).json({
       message: "Successfully fetched subscription.",
       success: true,
-      data: subscription,
+      data: {
+        ...subscription,
+        usageVsLimits,
+        graceWarning,
+        daysLeft,
+        reason,
+      },
     });
   } catch (error) {
     return res.status(500).json({ message: error.message, success: false });
@@ -156,10 +231,10 @@ const createOrder = async (req, res) => {
     const tenantId = req.tenantId;
     const roleName = req.user?.roleId?.roleName;
 
-    if (roleName !== "Admin") {
+    if (!canManageBilling(req.user, req.tenant)) {
       return res.status(403).json({
         success: false,
-        message: "Only workspace Administrators can manage billing and subscriptions.",
+        message: "Only workspace Administrators or billing managers can manage billing and subscriptions.",
       });
     }
 
@@ -268,10 +343,10 @@ const verifyPayment = async (req, res) => {
     const tenantId = req.tenantId;
     const roleName = req.user?.roleId?.roleName;
 
-    if (roleName !== "Admin") {
+    if (!canManageBilling(req.user, req.tenant)) {
       return res.status(403).json({
         success: false,
-        message: "Only workspace Administrators can activate subscriptions.",
+        message: "Only workspace Administrators or billing managers can activate subscriptions.",
       });
     }
 
@@ -390,10 +465,10 @@ const cancelSubscription = async (req, res) => {
     const tenantId = req.tenantId;
     const roleName = req.user?.roleId?.roleName;
 
-    if (roleName !== "Admin") {
+    if (!canManageBilling(req.user, req.tenant)) {
       return res.status(403).json({
         success: false,
-        message: "Only workspace Administrators can cancel subscriptions.",
+        message: "Only workspace Administrators or billing managers can cancel subscriptions.",
       });
     }
 
@@ -443,8 +518,15 @@ const handleWebhook = async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing webhook signature" });
     }
 
-    // Verify HMAC signature using raw request body
-    const isValid = verifyWebhookSignature(req.rawBody, signature);
+    // Verify HMAC signature using raw request body — fail closed (400) on any error
+    let isValid = false;
+    try {
+      isValid = verifyWebhookSignature(req.rawBody, signature);
+    } catch (sigErr) {
+      console.warn("🚨 Rejected Razorpay webhook:", sigErr.message);
+      return res.status(400).json({ success: false, message: "Invalid webhook signature" });
+    }
+
     if (!isValid) {
       console.warn("🚨 Rejected Razorpay webhook: invalid signature");
       return res.status(400).json({ success: false, message: "Invalid webhook signature" });
@@ -538,6 +620,13 @@ const handleWebhook = async (req, res) => {
                   },
                 ],
               });
+              sub.gracePeriodStartedAt = null;
+              await sub.save();
+            } else {
+              sub.status = "active";
+              sub.gracePeriodStartedAt = null;
+              sub.currentPeriodStart = currentPeriodStart;
+              sub.currentPeriodEnd = currentPeriodEnd;
               await sub.save();
             }
 
@@ -547,6 +636,7 @@ const handleWebhook = async (req, res) => {
               subscriptionEnd: currentPeriodEnd,
               isTrialActive: false,
               status: "Active",
+              gracePeriodStartedAt: null,
             });
           }
         }
@@ -555,6 +645,7 @@ const handleWebhook = async (req, res) => {
 
       case "payment.failed": {
         if (tenantId) {
+          const now = new Date();
           // Record failed payment in subscription history without destructive data loss
           const activeSub = await SubscriptionModel.findOne({
             tenantId,
@@ -566,14 +657,36 @@ const handleWebhook = async (req, res) => {
               amount: (paymentEntity?.amount || 0) / 100,
               currency: paymentEntity?.currency || "INR",
               status: "failed",
-              paidAt: new Date(),
+              paidAt: now,
               transactionId: paymentEntity?.id || "",
               orderId: paymentEntity?.order_id || "",
               method: paymentEntity?.method || "razorpay",
               errorReason: paymentEntity?.error_description || "Payment failed",
             });
             activeSub.status = "past_due";
+            if (!activeSub.gracePeriodStartedAt) {
+              activeSub.gracePeriodStartedAt = now;
+            }
             await activeSub.save();
+          }
+
+          // Move tenant to PastDue status and record grace start timestamp
+          const tenantUpdate = { status: "PastDue" };
+          const existingTenant = await TenantModel.findById(tenantId).select("gracePeriodStartedAt").lean();
+          if (!existingTenant?.gracePeriodStartedAt) {
+            tenantUpdate.gracePeriodStartedAt = now;
+          }
+          await TenantModel.findByIdAndUpdate(tenantId, tenantUpdate);
+
+          // Dispatch payment failed notification email
+          const tenantDoc = await TenantModel.findById(tenantId).select("email companyName").lean();
+          if (tenantDoc?.email) {
+            sendTextMail({
+              toEmails: tenantDoc.email,
+              subject: "Payment Failed - Action Required",
+              textMessage: `Hello,\n\nYour subscription renewal payment of ${(paymentEntity?.amount || 0) / 100} ${paymentEntity?.currency || "INR"} could not be completed (${paymentEntity?.error_description || "Payment declined"}).\n\nPlease log in to your account and update your payment method to avoid service interruption.\n\nThank you.`,
+              isPlatform: true,
+            }).catch((err) => console.warn("[Webhook] Failed to send payment failure email:", err.message));
           }
         }
         break;
@@ -604,10 +717,10 @@ const createStripeSession = async (req, res) => {
     const tenantId = req.tenantId;
     const roleName = req.user?.roleId?.roleName;
 
-    if (roleName !== "Admin") {
+    if (!canManageBilling(req.user, req.tenant)) {
       return res.status(403).json({
         success: false,
-        message: "Only workspace Administrators can manage billing and subscriptions.",
+        message: "Only workspace Administrators or billing managers can manage billing and subscriptions.",
       });
     }
 
@@ -625,6 +738,22 @@ const createStripeSession = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Selected plan does not exist or is inactive.",
+      });
+    }
+
+    // Guard: Prevent second active Stripe subscription for one tenant
+    const existingActiveSub = await SubscriptionModel.findOne({
+      tenantId,
+      status: "active",
+      stripeSubscriptionId: { $exists: true, $ne: "" },
+    });
+
+    if (existingActiveSub) {
+      return res.status(400).json({
+        success: false,
+        hasActiveSubscription: true,
+        message:
+          "An active Stripe subscription already exists for this workspace. Please update your plan via the Customer Portal to avoid duplicate subscriptions.",
       });
     }
 
@@ -731,7 +860,14 @@ const verifyStripeSession = async (req, res) => {
       });
     }
 
-    const targetTenantId = session.metadata?.tenantId || tenantId;
+    const targetTenantId = session.metadata?.tenantId;
+    if (!targetTenantId || targetTenantId.toString() !== tenantId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Stripe session does not belong to your authenticated tenant workspace.",
+      });
+    }
+
     const planId = session.metadata?.planId;
     const billingCycle = session.metadata?.billingCycle || "monthly";
 
@@ -819,7 +955,149 @@ const verifyStripeSession = async (req, res) => {
 };
 
 // ══════════════════════════════════════════════════════════════
+// POST /subscription/stripe/create-portal-session (protected)
+// ══════════════════════════════════════════════════════════════
+const createPortalSession = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const roleName = req.user?.roleId?.roleName;
+
+    if (!canManageBilling(req.user, req.tenant)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only workspace Administrators or billing managers can access the billing portal.",
+      });
+    }
+
+    const sub = await SubscriptionModel.findOne({
+      tenantId,
+      stripeCustomerId: { $exists: true, $ne: "" },
+    }).sort({ createdAt: -1 });
+
+    let customerId = sub?.stripeCustomerId;
+
+    if (!customerId) {
+      const tenantDoc = await TenantModel.findById(tenantId).lean();
+      const customer = await getOrCreateStripeCustomer({
+        email: req.user?.email || tenantDoc?.email,
+        name: req.user?.fullName || tenantDoc?.companyName,
+        tenantId,
+      });
+      customerId = customer?.id;
+    }
+
+    if (!customerId) {
+      return res.status(400).json({
+        success: false,
+        message: "No associated Stripe customer found for this workspace.",
+      });
+    }
+
+    const clientUrl = req.headers.origin || process.env.CLIENT_URL || "http://localhost:3000";
+    const returnUrl = `${clientUrl}/billing`;
+
+    const portalSession = await createStripeBillingPortalSession({
+      customerId,
+      returnUrl,
+    });
+
+    return res.status(200).json({
+      success: true,
+      url: portalSession.url,
+    });
+  } catch (error) {
+    console.error("Error creating Stripe Customer Portal session:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to create billing portal session.",
+    });
+  }
+};
+
+// ══════════════════════════════════════════════════════════════
+// POST /subscription/stripe/change-plan (protected)
+// ══════════════════════════════════════════════════════════════
+const changeStripePlan = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const roleName = req.user?.roleId?.roleName;
+
+    if (!canManageBilling(req.user, req.tenant)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only workspace Administrators or billing managers can modify subscription plans.",
+      });
+    }
+
+    const { planId, billingCycle = "monthly" } = req.body;
+    if (!planId) {
+      return res.status(400).json({ success: false, message: "planId is required." });
+    }
+
+    const targetPlan = await PlanModel.findById(planId);
+    if (!targetPlan || !targetPlan.isActive) {
+      return res.status(404).json({ success: false, message: "Target plan not found or inactive." });
+    }
+
+    const activeSub = await SubscriptionModel.findOne({
+      tenantId,
+      status: "active",
+      stripeSubscriptionId: { $exists: true, $ne: "" },
+    }).sort({ createdAt: -1 });
+
+    if (!activeSub) {
+      return res.status(400).json({
+        success: false,
+        message: "No active Stripe subscription found to update. Please start a new checkout.",
+      });
+    }
+
+    const isYearly = billingCycle === "yearly";
+    const newPriceId = isYearly ? targetPlan.stripePriceIdYearly : targetPlan.stripePriceIdMonthly;
+
+    if (!newPriceId) {
+      const clientUrl = req.headers.origin || process.env.CLIENT_URL || "http://localhost:3000";
+      const portalSession = await createStripeBillingPortalSession({
+        customerId: activeSub.stripeCustomerId,
+        returnUrl: `${clientUrl}/billing`,
+      });
+      return res.status(200).json({
+        success: true,
+        usePortal: true,
+        url: portalSession.url,
+        message: "Redirecting to Stripe Billing Portal to complete plan update.",
+      });
+    }
+
+    await updateStripeSubscriptionPlan({
+      subscriptionId: activeSub.stripeSubscriptionId,
+      newPriceId,
+    });
+
+    activeSub.planId = targetPlan._id;
+    activeSub.billingCycle = billingCycle;
+    await activeSub.save();
+
+    await TenantModel.findByIdAndUpdate(tenantId, { planId: targetPlan._id });
+
+    return res.status(200).json({
+      success: true,
+      message: `Plan updated to ${targetPlan.planName} with proration.`,
+      data: activeSub,
+    });
+  } catch (error) {
+    console.error("Error changing Stripe plan:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to update subscription plan.",
+    });
+  }
+};
+
+// ══════════════════════════════════════════════════════════════
 // POST /subscription/stripe/webhook (public, verified)
+// Handled: checkout.session.completed, invoice.paid, invoice.payment_failed,
+//          customer.subscription.updated, customer.subscription.deleted
 // ══════════════════════════════════════════════════════════════
 const handleStripeWebhook = async (req, res) => {
   try {
@@ -851,8 +1129,18 @@ const handleStripeWebhook = async (req, res) => {
     });
 
     switch (event.type) {
+      // 1. Initial checkout completed for a subscription
       case "checkout.session.completed": {
         const session = event.data.object;
+
+        // Guard: Only process subscription mode checkouts. A one-time or failed attempt changes nothing.
+        if (session.mode !== "subscription") {
+          break;
+        }
+        if (session.payment_status !== "paid" && session.status !== "complete") {
+          break;
+        }
+
         const tenantId = session.metadata?.tenantId;
         const planId = session.metadata?.planId;
         const billingCycle = session.metadata?.billingCycle || "monthly";
@@ -861,12 +1149,15 @@ const handleStripeWebhook = async (req, res) => {
           const plan = await PlanModel.findById(planId);
           if (plan) {
             const currentPeriodStart = new Date();
-            const currentPeriodEnd = new Date();
+            let currentPeriodEnd = new Date();
             if (billingCycle === "yearly") {
               currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
             } else {
               currentPeriodEnd.setDate(currentPeriodEnd.getDate() + 30);
             }
+
+            const stripeSubId = typeof session.subscription === "object" ? session.subscription?.id : session.subscription;
+            const stripeCustId = typeof session.customer === "object" ? session.customer?.id : session.customer;
 
             let sub = await SubscriptionModel.findOne({
               tenantId,
@@ -888,11 +1179,12 @@ const handleStripeWebhook = async (req, res) => {
               sub.planId = plan._id;
               sub.billingCycle = billingCycle;
               sub.stripeSessionId = session.id;
-              sub.stripeSubscriptionId = session.subscription || sub.stripeSubscriptionId;
-              sub.stripeCustomerId = session.customer || sub.stripeCustomerId;
+              if (stripeSubId) sub.stripeSubscriptionId = stripeSubId;
+              if (stripeCustId) sub.stripeCustomerId = stripeCustId;
               sub.amount = (session.amount_total || 0) / 100;
               sub.currency = (session.currency || "INR").toUpperCase();
               sub.status = "active";
+              sub.gracePeriodStartedAt = null;
               sub.currentPeriodStart = currentPeriodStart;
               sub.currentPeriodEnd = currentPeriodEnd;
               sub.cancelAtPeriodEnd = false;
@@ -904,11 +1196,12 @@ const handleStripeWebhook = async (req, res) => {
                 planId: plan._id,
                 billingCycle,
                 stripeSessionId: session.id,
-                stripeSubscriptionId: session.subscription || "",
-                stripeCustomerId: session.customer || "",
+                stripeSubscriptionId: stripeSubId || "",
+                stripeCustomerId: stripeCustId || "",
                 amount: (session.amount_total || 0) / 100,
                 currency: (session.currency || "INR").toUpperCase(),
                 status: "active",
+                gracePeriodStartedAt: null,
                 startDate: currentPeriodStart,
                 currentPeriodStart,
                 currentPeriodEnd,
@@ -922,37 +1215,213 @@ const handleStripeWebhook = async (req, res) => {
               subscriptionEnd: currentPeriodEnd,
               isTrialActive: false,
               status: "Active",
+              gracePeriodStartedAt: null,
             });
           }
         }
         break;
       }
 
-      case "customer.subscription.deleted": {
-        const subObject = event.data.object;
-        const tenantId = subObject.metadata?.tenantId;
-        if (tenantId) {
-          await SubscriptionModel.updateMany(
-            { tenantId, stripeSubscriptionId: subObject.id },
-            { $set: { status: "cancelled", cancelledAt: new Date() } }
+      // 2. Renewal or invoice paid: updates subscription period end
+      case "invoice.paid": {
+        const invoice = event.data.object;
+        const stripeSubId = typeof invoice.subscription === "object" ? invoice.subscription?.id : invoice.subscription;
+        const stripeCustId = typeof invoice.customer === "object" ? invoice.customer?.id : invoice.customer;
+
+        let sub = null;
+        if (stripeSubId) {
+          sub = await SubscriptionModel.findOne({ stripeSubscriptionId: stripeSubId }).sort({ createdAt: -1 });
+        }
+        if (!sub && stripeCustId) {
+          sub = await SubscriptionModel.findOne({ stripeCustomerId: stripeCustId }).sort({ createdAt: -1 });
+        }
+
+        if (sub) {
+          const lineItemPeriod = invoice.lines?.data?.[0]?.period;
+          const currentPeriodStart = lineItemPeriod?.start ? new Date(lineItemPeriod.start * 1000) : new Date();
+          const currentPeriodEnd = lineItemPeriod?.end
+            ? new Date(lineItemPeriod.end * 1000)
+            : invoice.period_end
+            ? new Date(invoice.period_end * 1000)
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+          sub.status = "active";
+          sub.gracePeriodStartedAt = null;
+          sub.currentPeriodStart = currentPeriodStart;
+          sub.currentPeriodEnd = currentPeriodEnd;
+
+          const transactionId = invoice.payment_intent || invoice.id;
+          const alreadyRecorded = sub.paymentHistory.some(
+            (p) => p.transactionId === transactionId || p.orderId === invoice.id
           );
+          if (!alreadyRecorded) {
+            sub.paymentHistory.push({
+              amount: (invoice.amount_paid || 0) / 100,
+              currency: (invoice.currency || "INR").toUpperCase(),
+              status: "success",
+              paidAt: new Date(),
+              transactionId,
+              orderId: invoice.id,
+              method: "stripe",
+              receipt: invoice.customer_email || invoice.hosted_invoice_url || "",
+            });
+          }
+
+          await sub.save();
+
+          await TenantModel.findByIdAndUpdate(sub.tenantId, {
+            status: "Active",
+            subscriptionEnd: currentPeriodEnd,
+            gracePeriodStartedAt: null,
+          });
         }
         break;
       }
 
+      // 3. Invoice payment failed: transitions status to past_due, records grace start, notifies tenant
+      case "invoice.payment_failed": {
+        const invoice = event.data.object;
+        const stripeSubId = typeof invoice.subscription === "object" ? invoice.subscription?.id : invoice.subscription;
+        const stripeCustId = typeof invoice.customer === "object" ? invoice.customer?.id : invoice.customer;
+
+        let sub = null;
+        if (stripeSubId) {
+          sub = await SubscriptionModel.findOne({ stripeSubscriptionId: stripeSubId }).sort({ createdAt: -1 });
+        }
+        if (!sub && stripeCustId) {
+          sub = await SubscriptionModel.findOne({ stripeCustomerId: stripeCustId }).sort({ createdAt: -1 });
+        }
+
+        if (sub) {
+          const now = new Date();
+          sub.status = "past_due";
+          if (!sub.gracePeriodStartedAt) {
+            sub.gracePeriodStartedAt = now;
+          }
+
+          const transactionId = invoice.payment_intent || invoice.id;
+          sub.paymentHistory.push({
+            amount: (invoice.amount_due || 0) / 100,
+            currency: (invoice.currency || "INR").toUpperCase(),
+            status: "failed",
+            paidAt: now,
+            transactionId,
+            orderId: invoice.id,
+            method: "stripe",
+            errorReason: "Recurring invoice charge failed",
+          });
+
+          await sub.save();
+
+          const tenantDoc = await TenantModel.findById(sub.tenantId).select("email companyName gracePeriodStartedAt").lean();
+          const tenantUpdate = { status: "PastDue" };
+          if (!tenantDoc?.gracePeriodStartedAt) {
+            tenantUpdate.gracePeriodStartedAt = now;
+          }
+          await TenantModel.findByIdAndUpdate(sub.tenantId, tenantUpdate);
+
+          if (tenantDoc?.email) {
+            sendTextMail({
+              toEmails: tenantDoc.email,
+              subject: "Subscription Renewal Payment Failed - Action Required",
+              textMessage: `Hello,\n\nYour subscription renewal payment of ${(invoice.amount_due || 0) / 100} ${(invoice.currency || "INR").toUpperCase()} could not be processed.\n\nYour account has entered the grace period. Please log in to your account or visit the billing portal to update your payment method.\n\nThank you.`,
+              isPlatform: true,
+            }).catch((err) => console.warn("[Webhook] Failed to send invoice payment failure email:", err.message));
+          }
+        }
+        break;
+      }
+
+      // 4. Subscription status updated in Stripe (active, past_due, unpaid, canceled)
       case "customer.subscription.updated": {
         const subObject = event.data.object;
         const tenantId = subObject.metadata?.tenantId;
-        if (tenantId) {
-          const sub = await SubscriptionModel.findOne({
-            tenantId,
-            stripeSubscriptionId: subObject.id,
-          });
-          if (sub) {
-            sub.cancelAtPeriodEnd = subObject.cancel_at_period_end || false;
-            if (subObject.status === "active") sub.status = "active";
-            if (subObject.status === "past_due") sub.status = "past_due";
-            await sub.save();
+        const stripeSubId = subObject.id;
+
+        let sub = await SubscriptionModel.findOne({ stripeSubscriptionId: stripeSubId });
+        if (!sub && tenantId) {
+          sub = await SubscriptionModel.findOne({ tenantId }).sort({ createdAt: -1 });
+        }
+
+        if (sub) {
+          sub.cancelAtPeriodEnd = subObject.cancel_at_period_end || false;
+          if (subObject.current_period_end) {
+            sub.currentPeriodEnd = new Date(subObject.current_period_end * 1000);
+          }
+          if (subObject.current_period_start) {
+            sub.currentPeriodStart = new Date(subObject.current_period_start * 1000);
+          }
+
+          if (subObject.status === "active") {
+            sub.status = "active";
+            sub.gracePeriodStartedAt = null;
+            await TenantModel.findByIdAndUpdate(sub.tenantId, {
+              status: "Active",
+              subscriptionEnd: sub.currentPeriodEnd,
+              gracePeriodStartedAt: null,
+            });
+          }
+          if (subObject.status === "past_due" || subObject.status === "unpaid") {
+            sub.status = "past_due";
+            const now = new Date();
+            if (!sub.gracePeriodStartedAt) {
+              sub.gracePeriodStartedAt = now;
+            }
+            const tenantDoc = await TenantModel.findById(sub.tenantId).select("gracePeriodStartedAt").lean();
+            const tenantUpdate = { status: "PastDue" };
+            if (!tenantDoc?.gracePeriodStartedAt) {
+              tenantUpdate.gracePeriodStartedAt = now;
+            }
+            await TenantModel.findByIdAndUpdate(sub.tenantId, tenantUpdate);
+            await disconnectTenantSockets(sub.tenantId);
+          }
+          if (subObject.status === "canceled") {
+            sub.status = "cancelled";
+            const freePlan = await PlanModel.findOne({ price: 0, isActive: true });
+            if (freePlan) {
+              await TenantModel.findByIdAndUpdate(sub.tenantId, {
+                planId: freePlan._id,
+                status: "Active",
+                subscriptionEnd: null,
+                gracePeriodStartedAt: null,
+              });
+            } else {
+              await TenantModel.findByIdAndUpdate(sub.tenantId, { status: "Suspended" });
+              await disconnectTenantSockets(sub.tenantId);
+            }
+          }
+          await sub.save();
+        }
+        break;
+      }
+
+      // 5. Subscription deleted / terminated
+      case "customer.subscription.deleted": {
+        const subObject = event.data.object;
+        const tenantId = subObject.metadata?.tenantId;
+        const stripeSubId = subObject.id;
+
+        let sub = await SubscriptionModel.findOne({ stripeSubscriptionId: stripeSubId });
+        if (!sub && tenantId) {
+          sub = await SubscriptionModel.findOne({ tenantId }).sort({ createdAt: -1 });
+        }
+
+        if (sub) {
+          sub.status = "cancelled";
+          sub.cancelledAt = new Date();
+          await sub.save();
+
+          const freePlan = await PlanModel.findOne({ price: 0, isActive: true });
+          if (freePlan) {
+            await TenantModel.findByIdAndUpdate(sub.tenantId, {
+              planId: freePlan._id,
+              status: "Active",
+              subscriptionEnd: null,
+              gracePeriodStartedAt: null,
+            });
+          } else {
+            await TenantModel.findByIdAndUpdate(sub.tenantId, { status: "Cancelled" });
+            await disconnectTenantSockets(sub.tenantId);
           }
         }
         break;
@@ -973,6 +1442,364 @@ const handleStripeWebhook = async (req, res) => {
   }
 };
 
+// ══════════════════════════════════════════════════════════════
+// POST /subscription/dodo/create-checkout-session (protected)
+// ══════════════════════════════════════════════════════════════
+const createDodoSession = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    if (!canManageBilling(req.user, req.tenant)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only workspace Administrators or billing managers can manage subscriptions.",
+      });
+    }
+
+    const { planId, billingCycle = "monthly" } = req.body;
+    if (!planId) {
+      return res.status(400).json({ success: false, message: "Plan ID is required." });
+    }
+
+    const plan = await PlanModel.findById(planId);
+    if (!plan || !plan.isActive) {
+      return res.status(404).json({ success: false, message: "Selected plan does not exist or is inactive." });
+    }
+
+    if (plan.slug === "free" || plan.price === 0) {
+      return res.status(200).json({
+        success: true,
+        isFreePlan: true,
+        message: "Switched to Free plan.",
+      });
+    }
+
+    const clientUrl = req.headers.origin || process.env.CLIENT_URL || "http://localhost:3000";
+
+    const session = await createDodoCheckoutSession({
+      plan,
+      billingCycle,
+      tenant: req.tenant,
+      user: req.user,
+      clientUrl,
+    });
+
+    return res.status(200).json({
+      success: true,
+      sessionId: session.sessionId,
+      url: session.checkoutUrl,
+      isMock: session.isMock,
+      productId: session.productId,
+    });
+  } catch (error) {
+    console.error("Error creating Dodo checkout session:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ══════════════════════════════════════════════════════════════
+// GET /subscription/dodo/verify-session (protected)
+// ══════════════════════════════════════════════════════════════
+const verifyDodoSession = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const { sessionId, planId, billingCycle = "monthly" } = req.query;
+
+    if (!sessionId) {
+      return res.status(400).json({ success: false, message: "sessionId query parameter is required." });
+    }
+
+    const session = await retrieveDodoCheckoutSession(sessionId);
+    if (!session) {
+      return res.status(404).json({ success: false, message: "Dodo checkout session not found." });
+    }
+
+    // Resolve plan
+    const targetPlanId = session.metadata?.planId || planId;
+    const targetCycle = session.metadata?.billingCycle || billingCycle;
+    let plan = null;
+    if (targetPlanId) {
+      plan = await PlanModel.findById(targetPlanId);
+    }
+    if (!plan) {
+      plan = await PlanModel.findOne({ slug: "starter" });
+    }
+
+    const now = new Date();
+    const periodDays = targetCycle === "yearly" ? 365 : 30;
+    const currentPeriodEnd = new Date(now.getTime() + periodDays * 24 * 60 * 60 * 1000);
+
+    const paymentRecord = {
+      amount: plan ? (targetCycle === "yearly" ? plan.yearlyPrice : plan.price) : 0,
+      currency: "INR",
+      status: "success",
+      paidAt: now,
+      transactionId: session.payment_id || sessionId,
+      orderId: sessionId,
+      method: "dodo",
+      receipt: "",
+    };
+
+    let sub = await SubscriptionModel.findOne({ tenantId }).sort({ createdAt: -1 });
+    if (sub) {
+      sub.planId = plan._id;
+      sub.billingCycle = targetCycle;
+      sub.billingProvider = "dodo";
+      sub.dodoCustomerId = session.customer?.id || session.customer_id || sub.dodoCustomerId || "";
+      sub.dodoSubscriptionId = session.subscription_id || sub.dodoSubscriptionId || "";
+      sub.status = "active";
+      sub.amount = paymentRecord.amount;
+      sub.currency = paymentRecord.currency;
+      sub.currentPeriodStart = now;
+      sub.currentPeriodEnd = currentPeriodEnd;
+      sub.gracePeriodStartedAt = null;
+      sub.paymentHistory.push(paymentRecord);
+      await sub.save();
+    } else {
+      sub = await SubscriptionModel.create({
+        tenantId,
+        planId: plan._id,
+        billingCycle: targetCycle,
+        billingProvider: "dodo",
+        dodoCustomerId: session.customer?.id || session.customer_id || "",
+        dodoSubscriptionId: session.subscription_id || "",
+        amount: paymentRecord.amount,
+        currency: paymentRecord.currency,
+        status: "active",
+        currentPeriodStart: now,
+        currentPeriodEnd,
+        gracePeriodStartedAt: null,
+        paymentHistory: [paymentRecord],
+      });
+    }
+
+    await TenantModel.findByIdAndUpdate(tenantId, {
+      planId: plan._id,
+      status: "Active",
+      subscriptionStart: now,
+      subscriptionEnd: currentPeriodEnd,
+      isTrialActive: false,
+      gracePeriodStartedAt: null,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Dodo Payments subscription verified and activated successfully.",
+      data: sub,
+    });
+  } catch (error) {
+    console.error("Error verifying Dodo session:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ══════════════════════════════════════════════════════════════
+// POST /subscription/dodo/create-portal-session (protected)
+// ══════════════════════════════════════════════════════════════
+const createDodoPortalSession = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    if (!canManageBilling(req.user, req.tenant)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only workspace Administrators or billing managers can access the billing portal.",
+      });
+    }
+
+    const sub = await SubscriptionModel.findOne({ tenantId }).sort({ createdAt: -1 });
+    const customerId = sub?.dodoCustomerId;
+
+    const clientUrl = req.headers.origin || process.env.CLIENT_URL || "http://localhost:3000";
+    const returnUrl = `${clientUrl.replace(/\/+$/, "")}/billing`;
+
+    const portalSession = await createDodoCustomerPortalSession({
+      customerId: customerId || "cus_default",
+      returnUrl,
+    });
+
+    return res.status(200).json({
+      success: true,
+      url: portalSession.link,
+      isMock: portalSession.isMock,
+    });
+  } catch (error) {
+    console.error("Error creating Dodo Customer Portal session:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ══════════════════════════════════════════════════════════════
+// POST /subscription/dodo/webhook (public)
+// ══════════════════════════════════════════════════════════════
+const handleDodoWebhook = async (req, res) => {
+  try {
+    const webhookHeaders = {
+      "webhook-id": req.headers["webhook-id"] || req.headers["Webhook-Id"] || req.headers["webhook_id"],
+      "webhook-signature": req.headers["webhook-signature"] || req.headers["Webhook-Signature"] || req.headers["webhook_signature"],
+      "webhook-timestamp": req.headers["webhook-timestamp"] || req.headers["Webhook-Timestamp"] || req.headers["webhook_timestamp"],
+    };
+
+    let event;
+    try {
+      event = verifyDodoWebhook({
+        rawBody: req.rawBody || JSON.stringify(req.body),
+        headers: webhookHeaders,
+      });
+    } catch (verifyErr) {
+      console.warn("⚠️ [Dodo Webhook Signature Verification Failed]:", verifyErr.message);
+      return res.status(400).json({ success: false, message: `Webhook signature verification failed: ${verifyErr.message}` });
+    }
+
+    const eventId = event.event_id || event.id || webhookHeaders["webhook-id"];
+    const eventType = event.type;
+    const eventData = event.data || {};
+
+    if (!eventId) {
+      return res.status(400).json({ success: false, message: "Missing event identifier" });
+    }
+
+    // Idempotency check via WebhookEventModel
+    let webhookRecord;
+    try {
+      webhookRecord = await WebhookEventModel.create({
+        eventId: `dodo_${eventId}`,
+        eventType: eventType || "unknown",
+        status: "received",
+        payload: event,
+      });
+    } catch (dbErr) {
+      if (dbErr.code === 11000) {
+        // Duplicate event already processed
+        return res.status(200).json({ received: true, duplicate: true });
+      }
+      throw dbErr;
+    }
+
+    // Process event types
+    switch (eventType) {
+      case "subscription.active": {
+        const subData = eventData;
+        const tenantId = subData.metadata?.tenantId;
+        const planId = subData.metadata?.planId;
+        const subId = subData.subscription_id || subData.id;
+        const custId = subData.customer?.customer_id || subData.customer?.id;
+
+        if (tenantId) {
+          const now = new Date();
+          const periodEnd = subData.next_billing_date ? new Date(subData.next_billing_date) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+          let sub = await SubscriptionModel.findOne({ tenantId }).sort({ createdAt: -1 });
+          if (sub) {
+            if (planId) sub.planId = planId;
+            sub.billingProvider = "dodo";
+            sub.dodoSubscriptionId = subId;
+            sub.dodoCustomerId = custId || sub.dodoCustomerId;
+            sub.status = "active";
+            sub.currentPeriodStart = now;
+            sub.currentPeriodEnd = periodEnd;
+            sub.gracePeriodStartedAt = null;
+            await sub.save();
+          }
+
+          const tenantUpdate = {
+            status: "Active",
+            subscriptionStart: now,
+            subscriptionEnd: periodEnd,
+            isTrialActive: false,
+            gracePeriodStartedAt: null,
+          };
+          if (planId) tenantUpdate.planId = planId;
+          await TenantModel.findByIdAndUpdate(tenantId, tenantUpdate);
+        }
+        break;
+      }
+
+      case "subscription.renewed":
+      case "payment.succeeded": {
+        const payData = eventData;
+        const subId = payData.subscription_id;
+        const tenantId = payData.metadata?.tenantId;
+
+        let sub = null;
+        if (subId) {
+          sub = await SubscriptionModel.findOne({ dodoSubscriptionId: subId }).sort({ createdAt: -1 });
+        }
+        if (!sub && tenantId) {
+          sub = await SubscriptionModel.findOne({ tenantId }).sort({ createdAt: -1 });
+        }
+
+        if (sub) {
+          const now = new Date();
+          const periodEnd = payData.next_billing_date ? new Date(payData.next_billing_date) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          sub.status = "active";
+          sub.currentPeriodEnd = periodEnd;
+          sub.gracePeriodStartedAt = null;
+          sub.paymentHistory.push({
+            amount: (payData.total_amount || payData.amount || 0) / 100,
+            currency: (payData.currency || "INR").toUpperCase(),
+            status: "success",
+            paidAt: now,
+            transactionId: payData.payment_id || payData.id,
+            orderId: subId || "",
+            method: "dodo",
+          });
+          await sub.save();
+
+          await TenantModel.findByIdAndUpdate(sub.tenantId, {
+            status: "Active",
+            subscriptionEnd: periodEnd,
+            gracePeriodStartedAt: null,
+          });
+        }
+        break;
+      }
+
+      case "subscription.failed":
+      case "subscription.on_hold": {
+        const failData = eventData;
+        const subId = failData.subscription_id || failData.id;
+        let sub = await SubscriptionModel.findOne({ dodoSubscriptionId: subId }).sort({ createdAt: -1 });
+        if (sub) {
+          const now = new Date();
+          sub.status = "past_due";
+          if (!sub.gracePeriodStartedAt) sub.gracePeriodStartedAt = now;
+          await sub.save();
+
+          await TenantModel.findByIdAndUpdate(sub.tenantId, {
+            status: "PastDue",
+            gracePeriodStartedAt: now,
+          });
+        }
+        break;
+      }
+
+      case "subscription.cancelled": {
+        const cancelData = eventData;
+        const subId = cancelData.subscription_id || cancelData.id;
+        let sub = await SubscriptionModel.findOne({ dodoSubscriptionId: subId }).sort({ createdAt: -1 });
+        if (sub) {
+          sub.status = "cancelled";
+          sub.cancelAtPeriodEnd = true;
+          sub.cancelledAt = new Date();
+          await sub.save();
+        }
+        break;
+      }
+
+      default:
+        break;
+    }
+
+    webhookRecord.status = "processed";
+    webhookRecord.processedAt = new Date();
+    await webhookRecord.save();
+
+    return res.status(200).json({ received: true });
+  } catch (err) {
+    console.error("Error processing Dodo webhook:", err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
 export {
   getPlans,
   getMyPlan,
@@ -984,4 +1811,10 @@ export {
   createStripeSession,
   verifyStripeSession,
   handleStripeWebhook,
+  createPortalSession,
+  changeStripePlan,
+  createDodoSession,
+  verifyDodoSession,
+  createDodoPortalSession,
+  handleDodoWebhook,
 };

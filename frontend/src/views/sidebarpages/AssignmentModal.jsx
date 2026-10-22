@@ -1,4 +1,4 @@
-import { Modal, Form, Button } from 'react-bootstrap'
+import { Modal, Form, Button } from '../../components/ui'
 import Select from 'react-select'
 import { useEffect, useState } from 'react'
 import apiClient from '../../api/axiosClient'

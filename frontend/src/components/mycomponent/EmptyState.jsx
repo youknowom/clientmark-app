@@ -1,14 +1,14 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Button } from 'react-bootstrap'
-import { FiInbox } from 'react-icons/fi'
+import { Inbox } from 'lucide-react'
+import { Button } from '../ui/Button'
 
 /**
  * Reusable EmptyState component designed for tables, lists, and dashboards.
- * Aligns with the Sarvam AI editorial visual discipline.
+ * Zero Bootstrap dependencies.
  */
 const EmptyState = ({
-  icon: Icon = FiInbox,
+  icon: Icon = Inbox,
   title = 'No records found',
   description = 'There are no items matching your criteria or currently available in the system.',
   actionLabel,
@@ -19,13 +19,14 @@ const EmptyState = ({
 }) => {
   return (
     <div
-      className={`cm-empty-state text-center py-5 px-3 ${className}`}
+      className={`cm-empty-state ${className}`}
       style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'transparent',
+        textAlign: 'center',
+        padding: '48px 24px',
         minHeight: '220px',
         ...style,
       }}
@@ -34,25 +35,24 @@ const EmptyState = ({
         style={{
           width: '52px',
           height: '52px',
-          borderRadius: '12px',
-          backgroundColor: '#F3F4F6',
-          border: '1px solid rgba(0, 0, 0, 0.06)',
+          borderRadius: 'var(--cm-radius-lg)',
+          backgroundColor: 'var(--cm-bg-subtle)',
+          border: '1px solid var(--cm-border-subtle)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#6B7280',
-          fontSize: '22px',
+          color: 'var(--cm-text-muted)',
           marginBottom: '14px',
         }}
       >
-        <Icon />
+        <Icon size={24} />
       </div>
 
       <h5
         style={{
           fontSize: '15px',
-          fontWeight: 600,
-          color: '#111827',
+          fontWeight: 700,
+          color: 'var(--cm-text-primary)',
           marginBottom: '6px',
           letterSpacing: '-0.01em',
         }}
@@ -63,9 +63,9 @@ const EmptyState = ({
       <p
         style={{
           fontSize: '13px',
-          color: '#6B7280',
+          color: 'var(--cm-text-secondary)',
           maxWidth: '380px',
-          margin: '0 auto 16px auto',
+          margin: '0 auto 18px auto',
           lineHeight: '1.5',
         }}
       >
@@ -75,21 +75,9 @@ const EmptyState = ({
       {actionLabel && onAction && (
         <Button
           onClick={onAction}
-          style={{
-            backgroundColor: '#111827',
-            borderColor: '#111827',
-            color: '#FFFFFF',
-            fontSize: '12.5px',
-            fontWeight: 500,
-            padding: '7px 16px',
-            borderRadius: '8px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
-          }}
+          size="sm"
+          leftIcon={ActionIcon ? <ActionIcon size={14} /> : undefined}
         >
-          {ActionIcon && <ActionIcon size={14} />}
           {actionLabel}
         </Button>
       )}

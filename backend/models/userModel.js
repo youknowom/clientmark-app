@@ -66,8 +66,42 @@ const UserSchema = new mongoose.Schema(
       enum: ["Active", "Inactive"],
       default: "Active",
     },
+
+    passwordChangedAt: {
+      type: Date,
+      default: null,
+    },
+
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+
+    lockUntil: {
+      type: Date,
+      default: null,
+    },
+
+    tokenVersion: {
+      type: Number,
+      default: 1,
+    },
   },
-  { timestamps: true },
+  { timestamps: true, autoIndex: false },
+);
+
+// Unique partial indexes (manually synced via scripts/createUniqueUserIndexes.js)
+UserSchema.index(
+  { userName: 1 },
+  { unique: true, partialFilterExpression: { userName: { $type: "string", $gt: "" } } }
+);
+UserSchema.index(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { email: { $type: "string", $gt: "" } } }
+);
+UserSchema.index(
+  { mobileNo: 1 },
+  { unique: true, partialFilterExpression: { mobileNo: { $type: "string", $gt: "" } } }
 );
 
 const UserModel = mongoose.model("users", UserSchema);

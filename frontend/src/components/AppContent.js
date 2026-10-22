@@ -1,6 +1,5 @@
 import React from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { CContainer } from '@coreui/react'
 import { AnimatePresence } from 'framer-motion'
 
 import ProtectedRoute from '../ProtectedRoute'
@@ -12,7 +11,7 @@ const AppContent = () => {
   const location = useLocation()
 
   return (
-    <CContainer className="px-3 px-sm-4" lg>
+    <div className="cm-app-content-container">
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           {routes.map((route, idx) => {
@@ -37,7 +36,7 @@ const AppContent = () => {
           <Route path="/" element={<Navigate to="dashboard" replace />} />
         </Routes>
       </AnimatePresence>
-    </CContainer>
+    </div>
   )
 }
 

@@ -1,8 +1,12 @@
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 import { v4 as uuidv4 } from "uuid";
 import sharp from "sharp";
+import { validateAndSanitizeFile } from "./fileValidationService.js";
+import storageAdapter from "./storage/index.js";
+import FileModel from "../models/fileModel.js";
 
 const tempDir = "uploads/temp/";
 
@@ -181,45 +185,54 @@ const deleteOldFile = (oldFile) => {
   }
 };
 
-// Process file for attachments (high quality, no resize)
-const processAttachment = async (file, prefix = "attachment") => {
+// Process authenticated private upload (timeline attachments, avatars, etc.)
+const processPrivateUpload = async (
+  file,
+  { tenantId, projectId = null, uploadedBy = null, fileCategory = "timeline" } = {}
+) => {
   if (!file) return null;
 
-  const uploadsDir = {
-    pdfs: path.resolve("uploads/pdfs"),
-    images: path.resolve("uploads/images"),
-  };
-
-  Object.values(uploadsDir).forEach((dir) => {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  });
-
-  let finalPath = null;
-
-  try {
-    if (file.mimetype === "application/pdf") {
-      finalPath = handlePdfSave(file.path, uploadsDir.pdfs, prefix);
-    } else if (
-      ["image/jpeg", "image/jpg", "image/png"].includes(file.mimetype)
-    ) {
-      finalPath = await saveHighQualityImage(
-        file.path,
-        uploadsDir.images,
-        prefix,
-      );
-    } else {
-      throw new Error("Unsupported file type");
-    }
-  } finally {
-    if (fs.existsSync(file.path)) {
-      fs.unlink(file.path, (err) => {
-        if (err) console.error("Temp file delete failed:", err);
-      });
-    }
+  const buffer = file.buffer || (file.path ? await fs.promises.readFile(file.path) : null);
+  if (!buffer) {
+    throw new Error("No file content received.");
   }
 
-  return finalPath;
+  // Validate magic bytes, size limits, and Sharp re-encode (rejects SVG for private)
+  const sanitized = await validateAndSanitizeFile(buffer, file.originalname, {
+    isPrivate: true,
+  });
+
+  const fileId = crypto.randomUUID();
+  const storedFileName = `${fileId}${sanitized.ext}`;
+
+  // Save under uploads/<tenantId>/<fileId>.<ext>
+  const saved = await storageAdapter.saveFile(tenantId, storedFileName, sanitized.buffer);
+
+  // Store metadata in DB
+  const fileDoc = await FileModel.create({
+    fileId,
+    tenantId,
+    projectId,
+    uploadedBy,
+    originalName: file.originalname,
+    storedFileName,
+    storagePath: saved.storagePath,
+    mimeType: sanitized.mimeType,
+    size: sanitized.size,
+    fileCategory,
+    isPublic: false,
+  });
+
+  // Clean up temp file
+  if (file.path && fs.existsSync(file.path)) {
+    fs.unlink(file.path, () => {});
+  }
+
+  return fileDoc;
 };
+
+// Backward compatible alias
+const processAttachment = processPrivateUpload;
 
 export {
   upload,
@@ -227,5 +240,6 @@ export {
   compressImage,
   processFile,
   processAttachment,
+  processPrivateUpload,
   deleteOldFile,
 };

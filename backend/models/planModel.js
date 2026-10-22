@@ -71,6 +71,16 @@ const PlanSchema = new mongoose.Schema(
       default: "",
     },
 
+    dodoProductIdMonthly: {
+      type: String,
+      default: "",
+    },
+
+    dodoProductIdYearly: {
+      type: String,
+      default: "",
+    },
+
     isActive: {
       type: Boolean,
       default: true,

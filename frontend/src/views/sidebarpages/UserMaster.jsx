@@ -1,48 +1,38 @@
 import React, { useContext } from 'react'
-import { Col, Container, Row } from 'react-bootstrap'
-import { PiUsersThree } from 'react-icons/pi'
-import { PiGitBranchBold } from 'react-icons/pi'
-import { FaUserShield } from 'react-icons/fa6'
-
+import { GitBranch, Users, ShieldCheck } from 'lucide-react'
 import { Helmet } from 'react-helmet'
-
-const PageHeader = React.lazy(() => import('../../components/mycomponent/PageHeader'))
-const PageMenus = React.lazy(() => import('../../components/mycomponent/PageMenus'))
-
 import { AuthContext } from '../../AuthContext'
 import { hasPermission } from '../../helpers/hasPermission'
-import '../sidebarCSS/comStyle.css'
+import PageHeader from '../../components/mycomponent/PageHeader'
+import PageMenus from '../../components/mycomponent/PageMenus'
 
 function UserMaster() {
   const { userData } = useContext(AuthContext)
   const pageHeaderData = {
-    // imgPath: userImg,
     title: 'User Master',
-    disc: 'User Management including Registration, Listing, and Reporting',
-    className: 'p-2',
+    disc: 'User Administration including Branches, Staff Accounts, and Granular RBAC Permissions',
   }
 
   const menus = [
     {
-      icon: <PiGitBranchBold size={30} className="text-success" />,
-      label: 'Branch',
+      icon: <GitBranch size={24} color="var(--cm-brand-500)" />,
+      label: 'Branches',
       link: '/all-branch',
-      bg: 'rgba(212, 237, 218, 0.6)',
+      bg: 'var(--cm-brand-50)',
       permission: 'view:branch',
     },
-
     {
-      icon: <PiUsersThree size={30} className="text-success" />,
-      label: 'User Management',
+      icon: <Users size={24} color="var(--cm-success-600)" />,
+      label: 'Staff Users',
       link: '/all-user',
-      bg: 'rgba(212, 237, 218, 0.6)',
+      bg: 'var(--cm-success-50)',
       permission: 'view:user',
     },
     {
-      icon: <FaUserShield size={30} className="text-success" />,
-      label: 'Role & Permission',
+      icon: <ShieldCheck size={24} color="var(--cm-indigo-600, #4F46E5)" />,
+      label: 'Roles & Permissions',
       link: '/all-role',
-      bg: 'rgba(220, 220, 255, 0.6)',
+      bg: 'rgba(99, 102, 241, 0.1)',
       permission: 'view:role',
     },
   ]
@@ -50,22 +40,13 @@ function UserMaster() {
   const filterMenus = menus.filter((menu) => hasPermission(userData, menu.permission))
 
   return (
-    <Container className="p-0 pb-4 container-lg mt-2">
+    <div>
       <Helmet>
         <title>Users — Clientmark</title>
       </Helmet>
-      <Row>
-        <Col>
-          <PageHeader pageHeaderData={pageHeaderData} />
-        </Col>
-      </Row>
-      <Row>
-        <Col>
-          {/* <h6 className="mt-2">Menus</h6> */}
-          <PageMenus menus={filterMenus} />
-        </Col>
-      </Row>
-    </Container>
+      <PageHeader pageHeaderData={pageHeaderData} />
+      <PageMenus menus={filterMenus} />
+    </div>
   )
 }
 

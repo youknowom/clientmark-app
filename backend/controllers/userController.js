@@ -15,13 +15,23 @@ import RoleModel from "../models/roleModel.js";
 import PermissionModel from "../models/permissionModel.js";
 import SoftwareSettingModel from "../models/softwareSettingModel.js";
 import OTPModel from "../models/otpModel.js";
+import PasswordResetTokenModel from "../models/passwordResetTokenModel.js";
+import TenantModel from "../models/tenantModel.js";
+import { generateAndSaveOTP, verifyOTP } from "../services/otpService.js";
+import { disconnectUserSockets } from "../services/realtime.js";
+import { normalizeTokenVersion } from "../middlewares/authMiddleware.js";
+import { getTenantLimits } from "../middlewares/usageLimitMiddleware.js";
 
 //get permission
 const getPermissionList = async (req, res) => {
   try {
     const tenantId = req.tenantId || req.user?.tenantId;
-    const filter = tenantId ? { tenantId } : {};
-    const permissionList = await PermissionModel.find(filter).sort({ index: 1 });
+    if (!tenantId) {
+      return res
+        .status(403)
+        .json({ message: "Tenant information missing. Access denied.", success: false });
+    }
+    const permissionList = await PermissionModel.find({ tenantId }).sort({ index: 1 });
 
     if (!permissionList || permissionList?.length === 0) {
       return res
@@ -338,36 +348,75 @@ const loginByPass = async (req, res) => {
     if (!userName || !password) {
       return res
         .status(400)
-        .json({ message: "Some data is missing.", success: false });
+        .json({ message: "Username and password are required.", success: false });
     }
 
-    //find user
+    const normalizedInput = userName.trim();
+
+    // Find user by mobile, username, or email
     const userDtl = await UserModel.findOne({
-      $or: [{ mobileNo: userName }, { userName: userName }],
+      $or: [
+        { mobileNo: normalizedInput },
+        { userName: normalizedInput },
+        { email: normalizedInput.toLowerCase() },
+      ],
     })
       .populate("roleId")
       .populate("branchId");
-    if (!userDtl) {
-      return res.status(400).json({
-        message: "This mobile number not registered.",
+
+    // If user exists, check lockout
+    if (userDtl && userDtl.lockUntil && userDtl.lockUntil > new Date()) {
+      const remainingMinutes = Math.ceil(
+        (userDtl.lockUntil.getTime() - Date.now()) / (60 * 1000)
+      );
+      return res.status(429).json({
+        message: `Account is temporarily locked due to multiple failed login attempts. Please try again in ${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"}.`,
         success: false,
       });
     }
 
-    //match password
+    // Generic failure handler to avoid account enumeration
+    const handleFailedLogin = async () => {
+      if (userDtl) {
+        const newAttempts = (userDtl.failedLoginAttempts || 0) + 1;
+        const update = { failedLoginAttempts: newAttempts };
+        if (newAttempts >= 5) {
+          update.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+        }
+        await UserModel.updateOne({ _id: userDtl._id }, { $set: update });
+      }
+      return res.status(401).json({
+        message: "Invalid username or password.",
+        success: false,
+      });
+    };
+
+    if (!userDtl || userDtl.status !== "Active") {
+      return handleFailedLogin();
+    }
+
+    // Match password
     const isMatched = await bcrypt.compare(password, userDtl.password);
     if (!isMatched) {
-      return res.status(400).json({
-        message: "Incorrect Password. Please check password.",
-        success: false,
-      });
+      return handleFailedLogin();
     }
 
-    //create token
+    // Password matched: reset failed login attempts and lock
+    await UserModel.updateOne(
+      { _id: userDtl._id },
+      { $set: { failedLoginAttempts: 0, lockUntil: null } }
+    );
+
+    // Create token
     const token = jwt.sign(
-      { userId: userDtl._id, role: userDtl.roleId?.roleName, tenantId: userDtl.tenantId },
+      {
+        userId: userDtl._id,
+        role: userDtl.roleId?.roleName,
+        tenantId: userDtl.tenantId,
+        tokenVersion: normalizeTokenVersion(userDtl),
+      },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" },
+      { expiresIn: "7d" }
     );
 
     const userObj = userDtl.toObject ? userDtl.toObject() : { ...userDtl };
@@ -388,9 +437,10 @@ const loginByPass = async (req, res) => {
 const getLoginUserDetail = async (req, res) => {
   try {
     const { _id } = req.user;
+    const tenantId = req.tenantId || req.user?.tenantId;
 
-    //find user
-    const loginUser = await UserModel.findOne({ _id: _id })
+    //find user strictly scoped to tenant
+    const loginUser = await UserModel.findOne({ _id: _id, tenantId })
       .populate("roleId", "permissions roleName")
       .populate("branchId", "branchName")
       .populate("reportToId", "fullName");
@@ -430,7 +480,8 @@ const createUser = async (req, res) => {
 
     //check validation
     if (
-      fullName?.trim() === "" ||
+      !fullName ||
+      fullName.trim() === "" ||
       !password ||
       !roleId ||
       !userName ||
@@ -442,60 +493,90 @@ const createUser = async (req, res) => {
         .json({ message: "Some data is missing.", success: false });
     }
 
-    //check dublicate username
-    const dublicateUserName = await UserModel.findOne({ userName });
-    if (dublicateUserName) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedUserName = userName.trim();
+    const normalizedMobile = mobileNo.trim();
+
+    // Check duplicate username globally
+    const duplicateUserName = await UserModel.findOne({ userName: normalizedUserName });
+    if (duplicateUserName) {
       return res
         .status(400)
-        .json({ message: "This user name already exist.", success: false });
+        .json({ message: "This username is already taken.", success: false });
     }
 
-    //check dublicate mobile number
-    const dublicateMobile = await UserModel.findOne({ mobileNo });
-    if (dublicateMobile) {
+    // Check duplicate mobile number globally
+    const duplicateMobile = await UserModel.findOne({ mobileNo: normalizedMobile });
+    if (duplicateMobile) {
       return res
         .status(400)
-        .json({ message: "This mobile number already exist.", success: false });
+        .json({ message: "This mobile number is already registered.", success: false });
     }
 
-    //check dublicate email
-    const dublicateEmail = await UserModel.findOne({ email });
-    if (dublicateEmail) {
+    // Check duplicate email globally
+    const duplicateEmail = await UserModel.findOne({ email: normalizedEmail });
+    if (duplicateEmail) {
       return res
         .status(400)
-        .json({ message: "This email already exist.", success: false });
+        .json({ message: "This email is already registered.", success: false });
     }
 
     //hash password
     const hashPassword = await bcrypt.hash(password, 10);
 
-    const tenantId = req.user?.tenantId || req.tenantId || null;
+    // Strictly enforce tenantId from authenticated request (never req.body)
+    const tenantId = req.tenantId || req.user?.tenantId;
+    if (!tenantId) {
+      return res
+        .status(403)
+        .json({ message: "Tenant information missing.", success: false });
+    }
+
+    // Race-safe recount limit check (same pattern as createLead)
+    const limits = await getTenantLimits(tenantId);
+    if (limits && limits.maxUsers !== -1) {
+      const currentUsers = await UserModel.countDocuments({ tenantId });
+      if (currentUsers >= limits.maxUsers) {
+        return res.status(403).json({
+          message: `You've reached the maximum of ${limits.maxUsers} users on your current plan. Please upgrade to add more users.`,
+          success: false,
+          limitReached: true,
+        });
+      }
+    }
 
     //save data
     const newUser = await UserModel.create({
       tenantId,
       branchId: branchId || null,
       departmentId: departmentId || null,
-      email,
-      fullName,
+      email: normalizedEmail,
+      fullName: fullName.trim(),
       gender,
-      mobileNo,
+      mobileNo: normalizedMobile,
       password: hashPassword,
       roleId: roleId,
-      status,
-      userName,
+      status: status || "Active",
+      userName: normalizedUserName,
       reportToId: reportToId || null,
     });
 
     const __dirname = getDirname(import.meta.url);
     const workerPath = path.join(__dirname, "../workers/mailWorker.js");
 
-    let subject = "Your Account Has Been Successfully Created";
-    let toEmail = email;
-    let message = `Dear ${fullName},\n\nYour account has been successfully created.\n\nBelow are your login credentials:\nUsername: ${userName}\nPassword: ${password}\n\nPlease keep these details secure. We recommend changing your password after your first login for security purposes.\n\nWelcome aboard, and we’re glad to have you with us!`;
+    // Option B: Welcome email WITHOUT plaintext password (password set via reset/admin)
+    let subject = "Your Account Has Been Successfully Created - Clientmark";
+    let toEmail = normalizedEmail;
+    let message = `Dear ${fullName},\n\nYour account on Clientmark CRM has been successfully created.\n\nUsername: ${normalizedUserName}\n\nPlease contact your workspace administrator or use the password reset option to set up your password.\n\nWelcome aboard!`;
 
     const child = fork(workerPath);
-    child.send({ subject: subject, toEmail: toEmail, message: message });
+    child.send({
+      subject,
+      toEmail,
+      message,
+      tenantId,
+      isPlatform: true,
+    });
 
     return res
       .status(200)
@@ -600,6 +681,9 @@ const deleteUser = async (req, res) => {
         .status(400)
         .json({ message: "Failed to delete user.", success: false });
     }
+
+    // Immediately terminate any active sockets for the deleted user
+    await disconnectUserSockets(userId);
 
     return res
       .status(200)
@@ -740,9 +824,13 @@ const updateUser = async (req, res) => {
         .json({ message: "Some data is missing.", success: false });
     }
 
-    //check dublicate username
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedUserName = userName.trim();
+    const normalizedMobile = mobileNo.trim();
+
+    //check dublicate username globally (excluding this user)
     const dublicateUserName = await UserModel.findOne({
-      userName,
+      userName: normalizedUserName,
       _id: { $ne: userId },
     });
     if (dublicateUserName) {
@@ -751,9 +839,9 @@ const updateUser = async (req, res) => {
         .json({ message: "This user name already exist.", success: false });
     }
 
-    //check dublicate mobile number
+    //check dublicate mobile number globally (excluding this user)
     const dublicateMobile = await UserModel.findOne({
-      mobileNo,
+      mobileNo: normalizedMobile,
       _id: { $ne: userId },
     });
     if (dublicateMobile) {
@@ -762,9 +850,9 @@ const updateUser = async (req, res) => {
         .json({ message: "This mobile number already exist.", success: false });
     }
 
-    //check dublicate email
+    //check dublicate email globally (excluding this user)
     const dublicateEmail = await UserModel.findOne({
-      email,
+      email: normalizedEmail,
       _id: { $ne: userId },
     });
     if (dublicateEmail) {
@@ -777,32 +865,62 @@ const updateUser = async (req, res) => {
     let updateData = {
       branchId: branchId || null,
       departmentId: departmentId || null,
-      email,
-      fullName,
+      email: normalizedEmail,
+      fullName: fullName.trim(),
       gender,
-      mobileNo,
+      mobileNo: normalizedMobile,
       roleId: roleId,
       status,
-      userName,
+      userName: normalizedUserName,
       reportToId: reportToId || null,
     };
 
-    if (password) {
+    if (password && password.trim() !== "") {
       updateData.password = await bcrypt.hash(password, 10);
+      updateData.passwordChangedAt = new Date();
     }
 
-    const tenantId = req.user?.tenantId || req.tenantId;
+    const tenantId = req.tenantId || req.user?.tenantId;
+    if (!tenantId) {
+      return res.status(403).json({ message: "Tenant information missing.", success: false });
+    }
 
-    //save data
+    const tenant = await TenantModel.findById(tenantId).select("isDemo").lean();
+    if (tenant?.isDemo) {
+      if (password && password.trim() !== "") {
+        return res.status(403).json({
+          message: "Demo account credentials cannot be modified.",
+          success: false,
+        });
+      }
+      if (status && status !== "Active") {
+        return res.status(403).json({
+          message: "Demo accounts cannot be deactivated.",
+          success: false,
+        });
+      }
+    }
+
+    const updateOps = { $set: updateData };
+    if (password && password.trim() !== "") {
+      updateOps.$inc = { tokenVersion: 1 };
+    }
+
+    //save data strictly scoped to tenant
     const isUpdate = await UserModel.updateOne(
-      { _id: userId, ...(tenantId ? { tenantId } : {}) },
-      { $set: updateData },
+      { _id: userId, tenantId },
+      updateOps,
     );
 
-    if (isUpdate.modifiedCount === 0) {
+    if (isUpdate.matchedCount === 0) {
       return res
-        .status(400)
-        .json({ message: "Failed update user..", success: true });
+        .status(404)
+        .json({ message: "User not found or access denied.", success: false });
+    }
+
+    // Immediately disconnect sockets if password changed or account deactivated
+    if ((password && password.trim() !== "") || (status && status !== "Active")) {
+      await disconnectUserSockets(userId);
     }
 
     return res
@@ -880,9 +998,12 @@ const updateSelfProfile = async (req, res) => {
         .json({ message: "Email is missing.", success: false });
     }
 
-    //check mobile already exist or not
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedMobile = mobileNo.trim();
+
+    //check mobile already exist or not globally
     let isMobileExist = await UserModel.findOne({
-      mobileNo,
+      mobileNo: normalizedMobile,
       _id: { $ne: loginUserId },
     });
     if (isMobileExist) {
@@ -891,9 +1012,9 @@ const updateSelfProfile = async (req, res) => {
         .json({ message: "This mobile number already exist.", success: false });
     }
 
-    //check email already exist or not
+    //check email already exist or not globally
     let isEmailExist = await UserModel.findOne({
-      email,
+      email: normalizedEmail,
       _id: { $ne: loginUserId },
     });
     if (isEmailExist) {
@@ -903,26 +1024,48 @@ const updateSelfProfile = async (req, res) => {
     }
 
     let updateData = {
-      fullName,
-      mobileNo,
-      email,
+      fullName: fullName.trim(),
+      mobileNo: normalizedMobile,
+      email: normalizedEmail,
       gender,
     };
 
-    if (password) {
+    if (password && password.trim() !== "") {
       updateData.password = await bcrypt.hash(password, 10);
+      updateData.passwordChangedAt = new Date();
     }
 
-    const tenantId = req.user?.tenantId || req.tenantId;
+    const tenantId = req.tenantId || req.user?.tenantId;
+    if (!tenantId) {
+      return res.status(403).json({ message: "Tenant information missing.", success: false });
+    }
+
+    const tenant = await TenantModel.findById(tenantId).select("isDemo").lean();
+    if (tenant?.isDemo && password && password.trim() !== "") {
+      return res.status(403).json({
+        message: "Password modification is disabled in the demo environment.",
+        success: false,
+      });
+    }
+
+    const updateOps = { $set: updateData };
+    if (password && password.trim() !== "") {
+      updateOps.$inc = { tokenVersion: 1 };
+    }
 
     const isUpdate = await UserModel.updateOne(
-      { _id: loginUserId, ...(tenantId ? { tenantId } : {}) },
-      { $set: updateData },
+      { _id: loginUserId, tenantId },
+      updateOps,
     );
-    if (isUpdate.modifiedCount === 0) {
+    if (isUpdate.matchedCount === 0) {
       return res
-        .status(400)
-        .json({ message: "Failed to update profile.", success: false });
+        .status(404)
+        .json({ message: "User not found or access denied.", success: false });
+    }
+
+    // Immediately disconnect sockets if password changed
+    if (password && password.trim() !== "") {
+      await disconnectUserSockets(loginUserId);
     }
 
     return res
@@ -940,124 +1083,214 @@ const sendMailOtp = async (req, res) => {
     if (!email || email?.trim() === "") {
       return res
         .status(400)
-        .json({ message: "Mail is missing.", success: false });
+        .json({ message: "Email is required.", success: false });
     }
 
-    //check mail is exist or not in system
-    const [isMailExist, softwareSetting] = await Promise.all([
-      UserModel.findOne({ email }),
-      SoftwareSettingModel.findOne(),
-    ]);
-    if (!isMailExist) {
-      return res
-        .status(400)
-        .json({ message: "This mail not registered.", success: false });
-    }
+    const normalizedEmail = email.toLowerCase().trim();
 
-    //check number of attempt
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    let noOfAttempt = await OTPModel.countDocuments({
-      userName: email,
-      createdAt: { $gte: oneHourAgo },
+    // 1. Generate 6-digit OTP and enforce cooldown / hourly cap (tracked on email)
+    const otpResult = await generateAndSaveOTP({
+      subject: normalizedEmail,
+      purpose: "password_reset",
     });
 
-    if (noOfAttempt >= 3) {
+    if (!otpResult.success) {
       return res.status(429).json({
+        message: otpResult.message,
         success: false,
-        message: "Too many OTP requests. Try again after 1 hour.",
       });
     }
 
-    //if all ok - create otp
-    const PROJECT_NAME =
-      softwareSetting?.projectName || process.env.PROJECT_NAME;
-    const otp = crypto.randomInt(1000, 9999).toString();
-    const expiry = Date.now() + 10 * 60 * 1000;
-    let message = `${otp} is your verification code to reset your password on ${PROJECT_NAME}.\nThis code is valid for 10 minutes. Do not share it with anyone.`;
-    let subject = `Password reset verification code - ${PROJECT_NAME}`;
+    // 2. Check if user exists and is active
+    const isMailExist = await UserModel.findOne({
+      email: normalizedEmail,
+      status: "Active",
+    }).select("_id tenantId").lean();
 
-    //send mail subject, toEmails, textMessage, ccEmails = []
-    const isSendMail = await sendTextMail(subject, email, message);
-
-    if (!isSendMail) {
-      return res
-        .status(400)
-        .json({ message: "Failed to send OTP.", success: false });
+    // 3. If user exists, dispatch email asynchronously via Platform SMTP without awaiting it in the request
+    if (isMailExist) {
+      const code = otpResult.plainOtp;
+      setImmediate(async () => {
+        try {
+          await sendTextMail({
+            subject: "Password reset verification code - Clientmark",
+            toEmails: normalizedEmail,
+            textMessage: `${code} is your 6-digit verification code to reset your password on Clientmark.\nThis code is valid for 10 minutes. Do not share it with anyone.`,
+            isPlatform: true,
+          });
+        } catch (mailErr) {
+          console.error("Async sendMailOtp failed:", mailErr.message);
+        }
+      });
     }
 
-    //save otp in collection
-    const newOtp = new OTPModel({
-      userName: email,
-      otp,
-      expiry,
+    // 4. Return identical generic response immediately (no timing difference)
+    return res.status(200).json({
+      message: "If that email is registered, a 6-digit verification code has been sent.",
+      success: true,
     });
-
-    await newOtp.save();
-
-    return res
-      .status(200)
-      .json({ message: "OTP send to mail.", success: true });
   } catch (error) {
     return res.status(500).json({ message: error.message, success: false });
   }
 };
 
-// verity email otp
-const verityEmailOtp = async (req, res) => {
+// verify email otp
+const verifyEmailOtp = async (req, res) => {
   try {
     const { otp, email } = req.body;
-    if (!otp || otp.length != 4) {
-      return res.status(400).json({ message: "Invalid otp", success: false });
+    if (!otp || typeof otp !== "string" || otp.trim().length !== 6) {
+      return res.status(400).json({ message: "Please provide a valid 6-digit verification code.", success: false });
     }
 
     if (!email || email?.trim() === "") {
       return res
         .status(400)
-        .json({ message: "Mail is missing.", success: false });
+        .json({ message: "Email is required.", success: false });
     }
 
-    //verity otp
-    const record = await OTPModel.findOne({ userName: email, otp: otp });
-    if (!record) {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Verify 6-digit OTP using otpService
+    const verifyResult = await verifyOTP({
+      subject: normalizedEmail,
+      purpose: "password_reset",
+      otp: otp.trim(),
+    });
+
+    if (!verifyResult.success) {
+      return res.status(400).json({
+        message: verifyResult.message,
+        locked: verifyResult.locked || false,
+        success: false,
+      });
+    }
+
+    // Find active user
+    const userDtl = await UserModel.findOne({
+      email: normalizedEmail,
+      status: "Active",
+    }).select("_id tenantId");
+
+    if (!userDtl) {
       return res
         .status(400)
-        .json({ message: "Incorrect OTP. Please check OTP.", success: false });
+        .json({ message: "Invalid request.", success: false });
     }
 
-    //check expire or not
-    if (record.expiry < Date.now()) {
-      await OTPModel.deleteOne({ _id: record._id });
-      return res.status(400).json({ message: "OTP expired.", success: false });
-    }
+    // Issue a single-use 32-byte cryptographically random reset token (do NOT issue login JWT)
+    const rawResetToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawResetToken).digest("hex");
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    //find user details - already exist or not in system
-    const userDtl = await UserModel.findOne({ email }).populate("roleId");
-    if (!userDtl) {
-      await OTPModel.deleteMany({ userName: email });
-      return res
-        .status(200)
-        .json({ message: "OTP Verified.", success: true, isRegistered: false });
-    }
-
-    //delete final
-    await OTPModel.deleteMany({ userName: email });
-
-    //create token with 15m expiration and tenantId
-    const token = jwt.sign(
-      {
-        userId: userDtl._id,
-        role: userDtl.roleId?.roleName,
-        tenantId: userDtl.tenantId,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "15m" },
-    );
+    await PasswordResetTokenModel.create({
+      tokenHash,
+      userId: userDtl._id,
+      tenantId: userDtl.tenantId,
+      expiresAt,
+      used: false,
+    });
 
     return res.status(200).json({
       message: "OTP Verified",
       success: true,
-      token: token,
-      userDtl: userDtl,
+      resetToken: rawResetToken,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message, success: false });
+  }
+};
+
+// Legacy alias
+const verityEmailOtp = verifyEmailOtp;
+
+// reset password
+const resetPassword = async (req, res) => {
+  try {
+    const { resetToken, newPassword } = req.body;
+
+    if (!resetToken || typeof resetToken !== "string" || !newPassword) {
+      return res.status(400).json({
+        message: "Reset token and new password are required.",
+        success: false,
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        message: "Password must be at least 8 characters long.",
+        success: false,
+      });
+    }
+
+    const commonPasswords = [
+      "password",
+      "password123",
+      "admin123",
+      "12345678",
+      "qwerty123",
+      "clientmark123",
+      "welcome123",
+    ];
+    if (commonPasswords.includes(newPassword.toLowerCase().trim())) {
+      return res.status(400).json({
+        message: "Please choose a stronger, less common password.",
+        success: false,
+      });
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(resetToken.trim()).digest("hex");
+
+    // Atomically find and mark token as used
+    const tokenDoc = await PasswordResetTokenModel.findOneAndUpdate(
+      {
+        tokenHash,
+        used: false,
+        expiresAt: { $gt: new Date() },
+      },
+      {
+        $set: { used: true },
+      },
+      { new: true }
+    );
+
+    if (!tokenDoc) {
+      return res.status(400).json({
+        message: "Invalid or expired password reset link. Please request a new code.",
+        success: false,
+      });
+    }
+
+    if (tokenDoc.tenantId) {
+      const tenant = await TenantModel.findById(tokenDoc.tenantId).select("isDemo").lean();
+      if (tenant?.isDemo) {
+        return res.status(403).json({
+          message: "Password reset is disabled for demo accounts.",
+          success: false,
+        });
+      }
+    }
+
+    // Hash new password and update user with passwordChangedAt to invalidate old sessions
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await UserModel.updateOne(
+      { _id: tokenDoc.userId },
+      {
+        $set: {
+          password: hashedPassword,
+          passwordChangedAt: new Date(),
+          failedLoginAttempts: 0,
+          lockUntil: null,
+        },
+        $inc: { tokenVersion: 1 },
+      }
+    );
+
+    // Immediately disconnect all existing sessions/sockets for the user
+    await disconnectUserSockets(tokenDoc.userId);
+
+    return res.status(200).json({
+      message: "Password updated successfully. Please log in with your new password.",
+      success: true,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message, success: false });
@@ -1080,5 +1313,7 @@ export {
   getUserDropdown,
   updateSelfProfile,
   sendMailOtp,
+  verifyEmailOtp,
   verityEmailOtp,
+  resetPassword,
 };

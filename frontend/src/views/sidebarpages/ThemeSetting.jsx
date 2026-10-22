@@ -13,6 +13,14 @@ import '../sidebarCSS/table.css'
 
 const PRESETS = [
   {
+    name: 'Clientmark Obsidian Studio',
+    desc: 'Pure obsidian black (#060709) with cyber amber-orange accent (#E05E3A)',
+    primaryColor: '#060709',
+    secondaryColor: '#E05E3A',
+    backgroundColor: '#060709',
+    textColor: '#F8FAFC',
+  },
+  {
     name: 'Sarvam Editorial',
     desc: 'Editorial obsidian, warm stone base & terracotta accent',
     primaryColor: '#111827',
@@ -182,11 +190,11 @@ const ThemeSetting = () => {
                       <div
                         onClick={() => handleApplyPreset(preset)}
                         style={{
-                          border: isActive ? '2px solid #111827' : '1px solid #E8E8E5',
+                          border: isActive ? '2px solid var(--cm-brand-500, #E05E3A)' : '1px solid var(--cm-border-default, #E8E8E5)',
                           borderRadius: '12px',
                           padding: '14px',
                           cursor: 'pointer',
-                          backgroundColor: isActive ? '#FAFAF9' : '#FFFFFF',
+                          backgroundColor: isActive ? 'var(--cm-bg-subtle, #FAFAF9)' : 'var(--cm-bg-card, #FFFFFF)',
                           transition: 'all 0.15s ease',
                           position: 'relative',
                         }}
@@ -240,8 +248,8 @@ const ThemeSetting = () => {
                             }}
                           />
                         </div>
-                        <div className="fw-semibold text-dark small">{preset.name}</div>
-                        <div className="text-muted" style={{ fontSize: '11px', marginTop: '2px' }}>
+                        <div className="fw-semibold small" style={{ color: 'var(--cm-text-primary, #111827)' }}>{preset.name}</div>
+                        <div style={{ color: 'var(--cm-text-muted, #6B7280)', fontSize: '11px', marginTop: '2px' }}>
                           {preset.desc}
                         </div>
                       </div>
@@ -253,17 +261,17 @@ const ThemeSetting = () => {
           </Card>
 
           {/* Detailed Color Pickers */}
-          <Card className="shadow-sm border-0" style={{ borderRadius: '14px' }}>
-            <Card.Header className="bg-white py-3 border-bottom">
-              <span className="fw-bold text-dark d-block">Custom Palette Tuning</span>
-              <span className="text-muted small">Fine-tune each individual token</span>
+          <Card className="shadow-sm border-0" style={{ borderRadius: '14px', backgroundColor: 'var(--cm-bg-card, #FFFFFF)' }}>
+            <Card.Header className="py-3 border-bottom" style={{ backgroundColor: 'transparent' }}>
+              <span className="fw-bold d-block" style={{ color: 'var(--cm-text-primary, #111827)' }}>Custom Palette Tuning</span>
+              <span className="small" style={{ color: 'var(--cm-text-muted, #6B7280)' }}>Fine-tune each individual token</span>
             </Card.Header>
             <Card.Body className="p-3">
               <Row className="g-3">
                 {/* Primary Color */}
                 <Col xs={12} sm={6}>
                   <Form.Group>
-                    <Form.Label className="small fw-semibold text-dark mb-1">
+                    <Form.Label className="small fw-semibold mb-1" style={{ color: 'var(--cm-text-primary, #111827)' }}>
                       Primary Brand Color
                     </Form.Label>
                     <div className="d-flex align-items-center gap-2">
@@ -295,7 +303,7 @@ const ThemeSetting = () => {
                 {/* Secondary Color */}
                 <Col xs={12} sm={6}>
                   <Form.Group>
-                    <Form.Label className="small fw-semibold text-dark mb-1">
+                    <Form.Label className="small fw-semibold mb-1" style={{ color: 'var(--cm-text-primary, #111827)' }}>
                       Accent / Secondary Color
                     </Form.Label>
                     <div className="d-flex align-items-center gap-2">
@@ -327,7 +335,7 @@ const ThemeSetting = () => {
                 {/* Background Color */}
                 <Col xs={12} sm={6}>
                   <Form.Group>
-                    <Form.Label className="small fw-semibold text-dark mb-1">
+                    <Form.Label className="small fw-semibold mb-1" style={{ color: 'var(--cm-text-primary, #111827)' }}>
                       Workspace Background
                     </Form.Label>
                     <div className="d-flex align-items-center gap-2">
@@ -359,7 +367,7 @@ const ThemeSetting = () => {
                 {/* Text Color */}
                 <Col xs={12} sm={6}>
                   <Form.Group>
-                    <Form.Label className="small fw-semibold text-dark mb-1">
+                    <Form.Label className="small fw-semibold mb-1" style={{ color: 'var(--cm-text-primary, #111827)' }}>
                       Primary Typography Color
                     </Form.Label>
                     <div className="d-flex align-items-center gap-2">

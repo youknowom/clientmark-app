@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import apiClient, { BASE_URL } from '../../api/axiosClient'
+import { Link, useNavigate } from 'react-router-dom'
+import apiClient from '../../api/axiosClient'
 import toast from 'react-hot-toast'
-import Cookies from 'js-cookie'
 import '../sidebarCSS/login.css'
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
@@ -18,17 +17,26 @@ const CheckIcon = () => (
   </svg>
 )
 
-const RESEND_TIMER = 30
+const RESEND_TIMER = 60
 
 const ForgotPass = () => {
-  const [step, setStep] = useState('email')
+  const navigate = useNavigate()
+  const [step, setStep] = useState('email') // 'email' | 'otp' | 'newPassword'
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const [otp, setOtp] = useState(['', '', '', ''])
+  // 6-digit OTP
+  const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [otpError, setOtpError] = useState('')
   const [verifyLoading, setVerifyLoading] = useState(false)
+  const [resetToken, setResetToken] = useState('')
+
+  // New password state
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passError, setPassError] = useState('')
+  const [passLoading, setPassLoading] = useState(false)
 
   const [timer, setTimer] = useState(RESEND_TIMER)
   const [canResend, setCanResend] = useState(false)
@@ -57,7 +65,7 @@ const ForgotPass = () => {
 
   useEffect(() => () => clearInterval(timerRef.current), [])
 
-  // ─── Send OTP ────────────────────────────────────────────────────────────────
+  // ─── Step 1: Send OTP ────────────────────────────────────────────────────────
   const handleSendOtp = async (e) => {
     e.preventDefault()
     const trimmed = email.trim()
@@ -68,26 +76,28 @@ const ForgotPass = () => {
     setError('')
     try {
       const res = await apiClient.post('/user/send-mail-otp', { email: trimmed })
-      toast.success(res.data.message || 'OTP sent successfully')
+      toast.success(res.data.message || 'Verification code sent')
       setStep('otp')
       startTimer()
       setTimeout(() => inputRefs.current[0]?.focus(), 100)
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Something went wrong')
+      const msg = err?.response?.data?.message || 'Something went wrong'
+      toast.error(msg)
+      setError(msg)
     } finally {
       setLoading(false)
     }
   }
 
-  // ─── OTP Input ───────────────────────────────────────────────────────────────
+  // ─── Step 2: OTP Input & Verification ────────────────────────────────────────
   const handleOtpChange = (index, value) => {
     if (!/^\d*$/.test(value)) return
     const updated = [...otp]
     updated[index] = value.slice(-1)
     setOtp(updated)
     setOtpError('')
-    if (value && index < 3) inputRefs.current[index + 1]?.focus()
-    if (updated.join('').length === 4) handleVerifyOtp(updated.join(''))
+    if (value && index < 5) inputRefs.current[index + 1]?.focus()
+    if (updated.join('').length === 6) handleVerifyOtp(updated.join(''))
   }
 
   const handleOtpKeyDown = (index, e) => {
@@ -97,45 +107,47 @@ const ForgotPass = () => {
   }
 
   const handlePaste = (e) => {
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4)
-    if (pasted.length === 4) {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    if (pasted.length === 6) {
       const split = pasted.split('')
       setOtp(split)
-      inputRefs.current[3]?.focus()
+      inputRefs.current[5]?.focus()
       handleVerifyOtp(pasted)
     }
     e.preventDefault()
   }
 
-  // ─── Verify OTP ──────────────────────────────────────────────────────────────
   const handleVerifyOtp = async (otpValueParam) => {
     const otpValue = otpValueParam || otp.join('')
-    if (otpValue.length < 4) return setOtpError('Please enter all 4 digits')
+    if (otpValue.length < 6) return setOtpError('Please enter all 6 digits')
 
     setVerifyLoading(true)
     try {
-      const res = await apiClient.post('/user/verity-email-otp', {
+      const res = await apiClient.post('/user/verify-email-otp', {
         email: email.trim(),
         otp: otpValue,
       })
-      toast.success(res.data.message || 'OTP verified')
-      Cookies.set('token', res.data.token, { expires: 365 * 20 })
-      setTimeout(() => { window.location.href = '/dashboard' }, 900)
+      toast.success(res.data.message || 'Code verified')
+      if (res.data.resetToken) {
+        setResetToken(res.data.resetToken)
+        setStep('newPassword')
+      } else {
+        setOtpError('Reset token missing. Please try again.')
+      }
     } catch (err) {
-      setOtpError(err?.response?.data?.message || 'Invalid OTP')
+      setOtpError(err?.response?.data?.message || 'Invalid or expired verification code')
     } finally {
       setVerifyLoading(false)
     }
   }
 
-  // ─── Resend ──────────────────────────────────────────────────────────────────
   const handleResend = async () => {
     if (!canResend) return
     setLoading(true)
     try {
       const res = await apiClient.post('/user/send-mail-otp', { email: email.trim() })
-      toast.success(res.data.message || 'OTP resent')
-      setOtp(['', '', '', ''])
+      toast.success(res.data.message || 'Verification code resent')
+      setOtp(['', '', '', '', '', ''])
       setOtpError('')
       startTimer()
       setTimeout(() => inputRefs.current[0]?.focus(), 100)
@@ -149,9 +161,38 @@ const ForgotPass = () => {
   const handleChangeEmail = () => {
     clearInterval(timerRef.current)
     setStep('email')
-    setOtp(['', '', '', ''])
+    setOtp(['', '', '', '', '', ''])
     setOtpError('')
     setTimer(RESEND_TIMER)
+  }
+
+  // ─── Step 3: Reset Password ──────────────────────────────────────────────────
+  const handleResetPassword = async (e) => {
+    e.preventDefault()
+    setPassError('')
+
+    if (!newPassword || newPassword.length < 8) {
+      return setPassError('Password must be at least 8 characters long.')
+    }
+    if (newPassword !== confirmPassword) {
+      return setPassError('Passwords do not match.')
+    }
+
+    setPassLoading(true)
+    try {
+      const res = await apiClient.post('/user/reset-password', {
+        resetToken,
+        newPassword,
+      })
+      toast.success(res.data.message || 'Password successfully updated!')
+      setTimeout(() => {
+        navigate('/login')
+      }, 1000)
+    } catch (err) {
+      setPassError(err?.response?.data?.message || 'Failed to update password.')
+    } finally {
+      setPassLoading(false)
+    }
   }
 
   return (
@@ -169,35 +210,34 @@ const ForgotPass = () => {
           <h2 className="auth-left-headline">
             Reset your account password
           </h2>
-          <p className="auth-left-sub">
-            A verification code will be sent to your registered email address.
+          <p className="auth-left-desc">
+            Complete the secure 3-step verification to set a new password and protect your workspace.
           </p>
 
-          <ul className="auth-features-list">
-            {[
-              'Verification code sent to your email',
-              'Valid for password recovery',
-              'Account access restored immediately',
-            ].map((feat) => (
-              <li key={feat} className="auth-feature-item">
-                <span className="auth-feature-dot"><CheckIcon /></span>
-                <span className="auth-feature-text">{feat}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="auth-features">
+            <div className="auth-feature-row">
+              <div className="auth-feature-check"><CheckIcon /></div>
+              <span>Platform-verified 6-digit cryptographic security</span>
+            </div>
+            <div className="auth-feature-row">
+              <div className="auth-feature-check"><CheckIcon /></div>
+              <span>Single-use purpose-bound authorization</span>
+            </div>
+            <div className="auth-feature-row">
+              <div className="auth-feature-check"><CheckIcon /></div>
+              <span>Instant session invalidation for stale logins</span>
+            </div>
+          </div>
         </div>
 
-        <div className="auth-left-bottom">
-          <p className="auth-quote">
-            If you no longer have access to your email, contact your organization admin.
-          </p>
+        <div className="auth-left-footer">
+          <span>&copy; {new Date().getFullYear()} Clientmark. Enterprise grade multi-tenant CRM.</span>
         </div>
       </div>
 
       {/* ── Right Form Panel ──────────────────────────────────────────────── */}
       <div className="auth-right">
-        <div className="auth-form-box">
-          {/* Mobile brand */}
+        <div className="auth-form-card">
           <div className="auth-mobile-brand">
             <div className="auth-mobile-brand-mark">
               <LogoMark />
@@ -205,11 +245,11 @@ const ForgotPass = () => {
             <span className="auth-mobile-brand-name">Clientmark</span>
           </div>
 
-          {step === 'email' ? (
+          {step === 'email' && (
             <>
               <div className="auth-form-header">
                 <h1 className="auth-form-title">Reset password</h1>
-                <p className="auth-form-sub">Enter your registered email to receive a verification code</p>
+                <p className="auth-form-sub">Enter your registered email to receive a 6-digit verification code</p>
               </div>
 
               <form onSubmit={handleSendOtp} noValidate>
@@ -238,16 +278,18 @@ const ForgotPass = () => {
                 <Link to="/login">← Back to sign in</Link>
               </div>
             </>
-          ) : (
+          )}
+
+          {step === 'otp' && (
             <>
               <div className="auth-form-header">
                 <h1 className="auth-form-title">Enter verification code</h1>
                 <p className="auth-form-sub">
-                  We sent a 4-digit code to <strong>{email}</strong>
+                  Enter the 6-digit code sent to <strong>{email}</strong>
                 </p>
               </div>
 
-              <div className="auth-otp-row" role="group" aria-label="OTP input">
+              <div className="auth-otp-row" role="group" aria-label="OTP input" style={{ gap: '8px' }}>
                 {otp.map((digit, index) => (
                   <input
                     key={index}
@@ -261,6 +303,7 @@ const ForgotPass = () => {
                     onPaste={index === 0 ? handlePaste : undefined}
                     className={`auth-otp-input ${otpError ? 'otp-error' : ''}`}
                     aria-label={`OTP digit ${index + 1}`}
+                    style={{ width: '42px', height: '48px', fontSize: '18px' }}
                   />
                 ))}
               </div>
@@ -309,6 +352,48 @@ const ForgotPass = () => {
                   ← Use a different email
                 </button>
               </div>
+            </>
+          )}
+
+          {step === 'newPassword' && (
+            <>
+              <div className="auth-form-header">
+                <h1 className="auth-form-title">Set new password</h1>
+                <p className="auth-form-sub">Please create a strong password with at least 8 characters</p>
+              </div>
+
+              <form onSubmit={handleResetPassword} noValidate>
+                <div className="auth-field">
+                  <label className="auth-label" htmlFor="new-pass">New Password</label>
+                  <input
+                    id="new-pass"
+                    type="password"
+                    className={`auth-input ${passError ? 'error' : ''}`}
+                    placeholder="Enter new password (min. 8 characters)"
+                    value={newPassword}
+                    onChange={(e) => { setNewPassword(e.target.value); setPassError('') }}
+                  />
+                </div>
+
+                <div className="auth-field">
+                  <label className="auth-label" htmlFor="confirm-pass">Confirm New Password</label>
+                  <input
+                    id="confirm-pass"
+                    type="password"
+                    className={`auth-input ${passError ? 'error' : ''}`}
+                    placeholder="Re-enter new password"
+                    value={confirmPassword}
+                    onChange={(e) => { setConfirmPassword(e.target.value); setPassError('') }}
+                  />
+                  {passError && <p className="auth-error-msg">{passError}</p>}
+                </div>
+
+                <button type="submit" className="auth-submit" disabled={passLoading} aria-busy={passLoading}>
+                  {passLoading ? (
+                    <><span className="auth-spinner" aria-hidden="true" /> Updating password...</>
+                  ) : 'Set new password & sign in'}
+                </button>
+              </form>
             </>
           )}
         </div>

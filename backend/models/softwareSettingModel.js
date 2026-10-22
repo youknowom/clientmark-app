@@ -48,6 +48,15 @@ const SoftwareSettingSchema = new mongoose.Schema(
     favicon: {
       type: String,
     },
+
+    geminiApiKey: {
+      type: String,
+    },
+
+    smtpNeedsReentry: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true },
 );

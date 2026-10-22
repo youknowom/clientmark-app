@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Container, Card, Form, Button, Spinner, Table, Row, Col, Collapse } from 'react-bootstrap'
+import { Container, Card, Form, Button, Spinner, Table, Row, Col } from '../../components/ui'
+import { Collapse } from 'react-bootstrap'
 
 import { FaRegEye } from 'react-icons/fa'
 import { FaFileExcel, FaTrashAlt } from 'react-icons/fa'
@@ -267,7 +268,7 @@ function AllProject() {
   useEffect(() => {
     if (!socket) return
 
-    const events = ['create-project']
+    const events = ['project:created', 'project:updated', 'project:deleted']
 
     events.forEach((event) => socket.on(event, getProjects))
 

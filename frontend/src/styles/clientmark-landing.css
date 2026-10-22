@@ -1,0 +1,491 @@
+/**
+ * Clientmark Landing Page Design Tokens & Aesthetic Directives
+ * Studio Design System for Clientmark SaaS.
+ * Off-White Canvas: #F5F5F7, Deep Obsidian Ink: #161722, Muted: #6B6A66 / #8D8D96,
+ * Surfaces: Pure #FFFFFF with hairline borders rgba(0, 0, 0, 0.08) & soft elevation.
+ */
+
+/* ─── Smooth Typography & Root Rendering ─── */
+body {
+  font-family: var(--cm-font, 'Poppins', sans-serif);
+  background-color: #F5F5F7;
+  color: #161722;
+  overflow-x: hidden;
+  letter-spacing: -0.015em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
+/* ─── Floating Pill Navbar (Frosted Glass) ─── */
+.cm-nav-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  padding: 18px 24px;
+  pointer-events: none;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cm-nav-wrapper.scrolled {
+  padding: 12px 24px;
+}
+
+.cm-nav-container {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 1280px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: relative;
+}
+
+/* Central floating pill */
+.cm-pill-menu {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 9999px;
+  box-shadow: 0 4px 24px -2px rgba(22, 23, 34, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.cm-pill-link {
+  font-family: var(--cm-font, 'Poppins', sans-serif);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #6B6A66;
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.cm-pill-link:hover {
+  color: #161722;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.cm-pill-link.active {
+  color: #161722;
+  background: rgba(0, 0, 0, 0.08);
+  font-weight: 600;
+}
+
+/* ─── Action Button with Arrow Disc (Primary Black Action) ─── */
+.cm-btn-action {
+  font-family: var(--cm-font, 'Poppins', sans-serif);
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #161722;
+  color: #FFFFFF;
+  padding: 6px 6px 6px 18px;
+  border-radius: 9999px;
+  border: 1px solid rgba(22, 23, 34, 0.1);
+  box-shadow: 0 8px 24px -8px rgba(22, 23, 34, 0.45);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1),
+              box-shadow 0.4s cubic-bezier(0.32, 0.72, 0, 1),
+              background 0.3s ease;
+  flex-shrink: 0;
+}
+
+.cm-btn-action:hover {
+  transform: translateY(-2px);
+  background: #252738;
+  box-shadow: 0 14px 30px -8px rgba(22, 23, 34, 0.55);
+}
+
+.cm-btn-action:active {
+  transform: scale(0.98);
+}
+
+.cm-btn-action .arrow-disc {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1),
+              background 0.3s ease;
+}
+
+.cm-btn-action:hover .arrow-disc {
+  transform: translate(2px, -2px) scale(1.06);
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* ─── White Pill Button ─── */
+.cm-btn-white {
+  background: #FFFFFF;
+  color: #161722;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 0 22px;
+  height: 44px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 9999px;
+  box-shadow: 0 2px 8px rgba(22, 23, 34, 0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.cm-btn-white:hover {
+  background: #F8F8FA;
+  border-color: rgba(0, 0, 0, 0.18);
+  box-shadow: 0 6px 16px rgba(22, 23, 34, 0.08);
+  transform: translateY(-2px);
+}
+
+.cm-btn-white:active {
+  transform: scale(0.98);
+}
+
+/* ─── Hero Kinetic Word Reveal ─── */
+.cm-hero-title {
+  font-family: var(--cm-font-heading, 'Poppins', sans-serif);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+  color: #161722;
+  margin: 0 auto;
+}
+
+.cm-hero-word-light {
+  color: #6B6A66;
+  font-weight: 400;
+}
+
+.cm-hero-dynamic-word {
+  display: inline-block;
+  color: #161722;
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Radial Background Grid Texture */
+.cm-grid-texture {
+  background-image: linear-gradient(to right, rgba(22, 23, 34, 0.05) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(22, 23, 34, 0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(circle at center, #000 40%, transparent 75%);
+  -webkit-mask-image: radial-gradient(circle at center, #000 40%, transparent 75%);
+}
+
+/* ─── Studio Cards (Crisp White with Subtle Ring & Soft Elevation) ─── */
+.cm-card-3d {
+  position: relative;
+  border-radius: 20px;
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 30px -4px rgba(22, 23, 34, 0.05),
+              0 2px 6px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1),
+              border-color 0.4s cubic-bezier(0.32, 0.72, 0, 1),
+              box-shadow 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.cm-card-3d:hover {
+  transform: translateY(-5px);
+  border-color: rgba(224, 94, 58, 0.4);
+  box-shadow: 0 20px 40px -8px rgba(22, 23, 34, 0.1),
+              0 0 24px rgba(224, 94, 58, 0.12);
+}
+
+/* 3D Periodic Card Flipping Physics */
+.cm-periodic-card-wrap {
+  perspective: 900px;
+}
+
+.cm-periodic-tile {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cm-periodic-card-wrap:hover .cm-periodic-tile {
+  transform: rotateY(180deg);
+}
+
+.cm-periodic-front,
+.cm-periodic-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.cm-periodic-front {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(22, 23, 34, 0.04);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.cm-periodic-back {
+  transform: rotateY(180deg);
+  background: #161722;
+  border: 1px solid #E05E3A;
+  box-shadow: 0 10px 30px rgba(224, 94, 58, 0.25);
+  color: #FFFFFF;
+}
+
+/* ─── Brand Logos Monogram Strip ─── */
+.cm-brand-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 28px 40px;
+  align-items: center;
+  justify-items: center;
+  transition: opacity 0.5s ease;
+}
+
+@media (max-width: 768px) {
+  .cm-brand-strip {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+}
+
+.cm-brand-item {
+  color: #161722;
+  opacity: 0.78;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.cm-brand-item:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+/* ─── Interactive Work Accordion Slider ─── */
+.cm-work-item {
+  position: relative;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.cm-work-btn {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 18px 0;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+}
+
+.cm-work-num {
+  font-family: var(--cm-font-mono, monospace);
+  font-size: 13px;
+  color: #8D8D96;
+  width: 24px;
+}
+
+.cm-work-name {
+  font-family: var(--cm-font-heading, 'Poppins', sans-serif);
+  font-size: 20px;
+  font-weight: 500;
+  color: #6B6A66;
+  transition: color 0.3s ease;
+}
+
+.cm-work-btn:hover .cm-work-name,
+.cm-work-item.active .cm-work-name {
+  color: #161722;
+}
+
+.cm-work-item.active .cm-work-num {
+  color: #E05E3A;
+}
+
+.cm-work-tag {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #8D8D96;
+  margin-left: auto;
+}
+
+.cm-work-item.active .cm-work-tag {
+  color: #161722;
+  font-weight: 600;
+}
+
+/* ─── Browser Frame Mockup (Clean Light Canvas with Chrome Bar) ─── */
+.cm-browser-frame {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 24px 60px -12px rgba(22, 23, 34, 0.14),
+              0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.cm-browser-header {
+  height: 46px;
+  background: #F0F0F3;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+}
+
+.cm-browser-dots {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.cm-browser-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.cm-browser-url {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  padding: 4px 16px;
+  font-size: 11.5px;
+  color: #6B6A66;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+/* ─── Numbers / Craft Section ─── */
+.cm-stat-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 0 8px 30px -4px rgba(22, 23, 34, 0.05);
+  transition: all 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.cm-stat-card:hover {
+  border-color: rgba(22, 23, 34, 0.2);
+  transform: translateY(-4px);
+  box-shadow: 0 16px 36px -6px rgba(22, 23, 34, 0.1);
+}
+
+.cm-stat-number {
+  font-family: var(--cm-font-heading, 'Poppins', sans-serif);
+  font-size: clamp(2.5rem, 4vw, 3.6rem);
+  font-weight: 600;
+  line-height: 1;
+  color: #161722;
+  letter-spacing: -0.04em;
+}
+
+/* ─── Principles Bento Scroll ─── */
+.cm-principle-card {
+  width: 360px;
+  max-width: 80vw;
+  border-radius: 24px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 28px -4px rgba(22, 23, 34, 0.06);
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.cm-principle-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 40px -8px rgba(22, 23, 34, 0.12);
+}
+
+/* ─── Floating Interactive Copilot Bot ─── */
+.cm-floating-bot {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 50;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #161722;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 12px 36px rgba(22, 23, 34, 0.35),
+              0 0 20px rgba(224, 94, 58, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.cm-floating-bot:hover {
+  transform: scale(1.08);
+  border-color: #E05E3A;
+  box-shadow: 0 16px 44px rgba(22, 23, 34, 0.45),
+              0 0 30px rgba(224, 94, 58, 0.4);
+}
+
+.cm-bot-eyes {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cm-bot-eye {
+  width: 7px;
+  height: 20px;
+  background: #FFFFFF;
+  border-radius: 4px;
+  animation: cm-bot-blink 4s infinite;
+}
+
+@keyframes cm-bot-blink {
+  0%, 96%, 100% {
+    transform: scaleY(1);
+  }
+  98% {
+    transform: scaleY(0.1);
+  }
+}

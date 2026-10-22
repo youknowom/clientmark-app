@@ -5,11 +5,20 @@ import { sendTextMail } from "../services/mailService.js";
 
 process.on("message", async (data) => {
   try {
-    const { subject, toEmail, message } = data;
-    const result = await sendTextMail(subject, toEmail, message);
+    const { subject, toEmail, message, tenantId, isPlatform } = data;
+    const result = await sendTextMail({
+      subject,
+      toEmails: toEmail,
+      textMessage: message,
+      tenantId: tenantId || null,
+      isPlatform: Boolean(isPlatform),
+    });
 
-    if (!result) {
-      process.send({ message: "Failed to send mail.", success: false });
+    if (!result || !result.success) {
+      process.send({
+        message: result?.message || "Failed to send mail.",
+        success: false,
+      });
       process.exit(0);
     }
 

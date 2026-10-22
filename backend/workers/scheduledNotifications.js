@@ -49,7 +49,12 @@ const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 // ── Helper: get all active Developers with tenantId ───────────────────────────
 const getActiveDevelopers = async () => {
     try {
-        const roles = await RoleModel.find({ roleName: "Developer" }).select("_id tenantId").lean();
+        const roles = await RoleModel.find({
+            $or: [
+                { roleName: { $regex: /developer|dev|engineer|programmer/i } },
+                { permissions: { $in: ["view:project", "update:timeline"] } },
+            ],
+        }).select("_id tenantId").lean();
         if (!roles.length) return [];
         const roleIds = roles.map((r) => r._id);
 
@@ -67,42 +72,85 @@ const getActiveDevelopers = async () => {
     }
 };
 
-// ── Helper: send bulk notifications to all active developers ──────────────────
-export const sendBulkToDevs = async (title, message, notificationType, redirectUrl = "/dashboard") => {
+import { emitToUser } from "../services/realtime.js";
+import { withLock } from "../services/lockService.js";
+
+// ── Helper: send bulk notifications to all active developers (Idempotent per user+job+day) ──
+export const sendBulkToDevs = async (
+    title,
+    message,
+    notificationType,
+    redirectUrl = "/dashboard",
+    jobName = "scheduled_notification"
+) => {
     try {
         const developers = await getActiveDevelopers();
-        if (developers.length === 0) return;
-        const notifications = developers.map((dev) => ({
-            tenantId: dev.tenantId,
-            userId: dev._id,
-            notificationType,
-            title,
-            message,
-            redirectUrl,
-            isRead: false,
-        }));
-        await NotificationModel.insertMany(notifications);
+        if (developers.length === 0) return [];
+        const todayStr = new Date().toISOString().slice(0, 10);
+
+        const created = [];
+        for (const dev of developers) {
+            const idempotencyKey = `${dev._id}:${jobName}:${todayStr}`;
+            try {
+                const notif = await NotificationModel.create({
+                    tenantId: dev.tenantId,
+                    userId: dev._id,
+                    notificationType,
+                    title,
+                    message,
+                    redirectUrl,
+                    isRead: false,
+                    jobName,
+                    idempotencyKey,
+                });
+                created.push(notif);
+
+                // Targeted notification emissions strictly to the notified developers
+                emitToUser(dev._id, "notification:new", {
+                    notificationId: notif._id,
+                    title: notif.title,
+                    message: notif.message,
+                    notificationType: notif.notificationType,
+                    redirectUrl: notif.redirectUrl,
+                });
+            } catch (dupErr) {
+                // Duplicate key (idempotency triggered) — skip gracefully
+                if (dupErr.code !== 11000) {
+                    console.error("[Notification] Insert error:", dupErr.message);
+                }
+            }
+        }
+        return created;
     } catch (err) {
         console.error("[Notification] Failed to send bulk:", err.message);
+        return [];
     }
 };
 
 const PRODUCT_NAME = process.env.PRODUCT_NAME || "CRM System";
 
-// ── Initialize all Scheduled Cron Jobs ───────────────────────────────────────
-const initScheduledNotifications = (io) => {
+// 11:59 PM — Auto-cleanup function: Delete ONLY this job's notifications (leaving user/system notifs intact)
+export const cleanupScheduledNotifications = async () => {
+    return await NotificationModel.deleteMany({
+        jobName: { $in: ["morning_quote", "afternoon_quote", "eod_reminder"] },
+    });
+};
 
+// ── Initialize all Scheduled Cron Jobs with Distributed Locks ───────────────
+const initScheduledNotifications = () => {
     // 10:00 AM — Morning Motivational Quote
     cron.schedule(
         "0 10 * * *",
         async () => {
-            await sendBulkToDevs(
-                `${PRODUCT_NAME} ✅`,
-                `Good Morning! ${pickRandom(MOTIVATIONAL_QUOTES)}`,
-                "motivational",
-                "/dashboard"
-            );
-            if (io) io.emit("get-project");
+            await withLock("cron_morning_quote", 120, async () => {
+                await sendBulkToDevs(
+                    `${PRODUCT_NAME} ✅`,
+                    `Good Morning! ${pickRandom(MOTIVATIONAL_QUOTES)}`,
+                    "motivational",
+                    "/dashboard",
+                    "morning_quote"
+                );
+            });
         },
         { timezone: "Asia/Kolkata" }
     );
@@ -111,13 +159,15 @@ const initScheduledNotifications = (io) => {
     cron.schedule(
         "0 15 * * *",
         async () => {
-            await sendBulkToDevs(
-                `${PRODUCT_NAME} ✅`,
-                `☀️ Good Afternoon! ${pickRandom(MOTIVATIONAL_QUOTES)}`,
-                "motivational",
-                "/dashboard"
-            );
-            if (io) io.emit("get-project");
+            await withLock("cron_afternoon_quote", 120, async () => {
+                await sendBulkToDevs(
+                    `${PRODUCT_NAME} ✅`,
+                    `☀️ Good Afternoon! ${pickRandom(MOTIVATIONAL_QUOTES)}`,
+                    "motivational",
+                    "/dashboard",
+                    "afternoon_quote"
+                );
+            });
         },
         { timezone: "Asia/Kolkata" }
     );
@@ -126,28 +176,30 @@ const initScheduledNotifications = (io) => {
     cron.schedule(
         "0 17 * * *",
         async () => {
-            await sendBulkToDevs(
-                `${PRODUCT_NAME} ✅`,
-                pickRandom(REMINDER_MESSAGES),
-                "reminder",
-                "/all-project"
-            );
-            if (io) io.emit("get-project");
+            await withLock("cron_eod_reminder", 120, async () => {
+                await sendBulkToDevs(
+                    `${PRODUCT_NAME} ✅`,
+                    pickRandom(REMINDER_MESSAGES),
+                    "reminder",
+                    "/all-project",
+                    "eod_reminder"
+                );
+            });
         },
         { timezone: "Asia/Kolkata" }
     );
 
-    // 11:59 PM — Auto-cleanup: Delete all motivational & reminder notifications from DB
+    // 11:59 PM — Auto-cleanup: Delete ONLY this job's notifications (leaving user/system notifs intact)
     cron.schedule(
         "59 23 * * *",
         async () => {
-            try {
-                await NotificationModel.deleteMany({
-                    notificationType: { $in: ["motivational", "reminder"] },
-                });
-            } catch (err) {
-                console.error("[Notification] Cleanup failed:", err.message);
-            }
+            await withLock("cron_cleanup_notifications", 120, async () => {
+                try {
+                    await cleanupScheduledNotifications();
+                } catch (err) {
+                    console.error("[Notification] Cleanup failed:", err.message);
+                }
+            });
         },
         { timezone: "Asia/Kolkata" }
     );

@@ -1,4 +1,5 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 import {
   createProject,
   getProjects,
@@ -20,9 +21,13 @@ import {
   getBudgetTimeline,
   searchClients,
   getClientByMobile,
+  lookupPortalProject,
+  regeneratePortalLink,
 } from "../controllers/projectController.js";
 
 import { authUser, authAccess } from "../middlewares/authMiddleware.js";
+import tenantMiddleware from "../middlewares/tenantMiddleware.js";
+import { verifyPortalSession } from "../middlewares/portalAuthMiddleware.js";
 import { checkProjectLimit } from "../middlewares/usageLimitMiddleware.js";
 import {
   getWhatsappCred,
@@ -30,86 +35,83 @@ import {
   updateWhatsappCred,
 } from "../controllers/whatsappCredController.js";
 import { upload } from "../services/fileUploadService.js";
-import { sendBulkToDevs } from "../workers/scheduledNotifications.js";
 
 const projectRouter = express.Router();
 
-projectRouter.get("/export-projects", authUser, exportProjects); // Export projects to excel
+const portalOtpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many OTP requests from this IP. Please try again later." },
+});
 
-projectRouter.delete("/delete-many-projects", authUser, deleteManyProjects); // Delete many projects
+const portalVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many verification requests from this IP. Please try again later." },
+});
 
-projectRouter.post("/create-project", authUser, checkProjectLimit, createProject); // Create new project
+// ── Public Routes (Client Portal Lookup & OTP Verification) ──
+projectRouter.get("/lookup-portal", lookupPortalProject);
+projectRouter.post("/send-whatsapp-otp", portalOtpLimiter, sendWhatsappOtp);
+projectRouter.post("/verify-whatsapp-otp", portalVerifyLimiter, verifyWhatsappOtp);
 
-projectRouter.get(
-  "/get-projects",
-  authUser,
-  authAccess("view:project"),
-  getProjects,
-); // Get all projects (with pagination, search, filters)
+// ── Portal Access Protected Routes (Requires valid portal token OR staff session) ──
+projectRouter.get("/get-project-by-slug", verifyPortalSession, getProjectBySlug);
+projectRouter.get("/get-timeline-by-slug", verifyPortalSession, getTimelineBySlug);
 
-projectRouter.get("/get-project", authUser, getProjectById); // Get single project by ID (expects ID as query param)
+// ── Protected Routes (Strictly Tenant Isolated) ──
+projectRouter.use(authUser, tenantMiddleware);
 
-projectRouter.put("/update-project", authUser, updateProject); // Update project
+projectRouter.post("/regenerate-portal-key", regeneratePortalLink);
 
-projectRouter.delete("/delete-project/:id", authUser, deleteProject); // Delete project
+projectRouter.get("/export-projects", exportProjects);
+projectRouter.delete("/delete-many-projects", deleteManyProjects);
+projectRouter.post("/create-project", checkProjectLimit, createProject);
+projectRouter.get("/get-projects", authAccess("view:project"), getProjects);
+projectRouter.get("/get-project", getProjectById);
+projectRouter.put("/update-project", updateProject);
+projectRouter.delete("/delete-project/:id", deleteProject);
 
 // Timeline (progress post) routes for a project
 projectRouter.post(
   "/:projectId/timeline",
-  authUser,
   upload.array("attachments", 2),
   createTimelinePost,
 );
-projectRouter.get("/:projectId/timeline", authUser, getProjectTimeline);
-projectRouter.put(
-  "/:projectId/timeline/:timelineId",
-  authUser,
-  updateTimelinePost,
-);
-projectRouter.delete(
-  "/:projectId/timeline/:timelineId",
-  authUser,
-  deleteTimelinePost,
-);
-
-projectRouter.get("/get-project-by-slug", getProjectBySlug); //get project by slug
-
-projectRouter.get("/get-timeline-by-slug", getTimelineBySlug); //get time line by slug
+projectRouter.get("/:projectId/timeline", getProjectTimeline);
+projectRouter.put("/:projectId/timeline/:timelineId", updateTimelinePost);
+projectRouter.delete("/:projectId/timeline/:timelineId", deleteTimelinePost);
 
 projectRouter.get(
   "/get-project-status-report",
-  authUser,
   authAccess("view:project-status-report"),
   getProjectStatusReport,
-); //get project status report
-
+);
 projectRouter.get(
   "/export-project-status-report",
-  authUser,
   authAccess("view:project-status-report"),
   exportProjectStatusReport,
-); //export project status report
+);
+projectRouter.get("/get-budget-timeline", getBudgetTimeline);
 
-projectRouter.post("/send-whatsapp-otp", sendWhatsappOtp); //send whatsapp otp to view project detail
-
-projectRouter.post("/verify-whatsapp-otp", verifyWhatsappOtp); //verify otp for view details
-
-// WhatsApp
+// WhatsApp settings and messaging
 projectRouter.get(
   "/get-whatsapp-cred",
-  authUser,
   authAccess("view:whatsapp-setting"),
   getWhatsappCred,
 );
 projectRouter.put(
   "/update-whatsapp-cred",
-  authUser,
   authAccess("view:whatsapp-setting"),
   updateWhatsappCred,
 );
-projectRouter.post("/send-link-to-client", authUser, sendLinkToClient);
+projectRouter.post("/send-link-to-client", sendLinkToClient);
 
-projectRouter.get("/search-clients", authUser, searchClients);
-projectRouter.get("/get-client-by-mobile", authUser, getClientByMobile);
+projectRouter.get("/search-clients", searchClients);
+projectRouter.get("/get-client-by-mobile", getClientByMobile);
 
 export default projectRouter;

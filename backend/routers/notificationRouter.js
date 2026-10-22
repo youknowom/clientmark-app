@@ -1,11 +1,14 @@
 import express from 'express';
-import {authUser} from '../middlewares/authMiddleware.js';
-import {getNotification,markSingleRead} from '../controllers/notificationController.js';
+import { authUser } from '../middlewares/authMiddleware.js';
+import tenantMiddleware from '../middlewares/tenantMiddleware.js';
+import { getNotification, markSingleRead } from '../controllers/notificationController.js';
 
 const notificationRouter = express.Router();
 
-notificationRouter.get('/get-notification',authUser,getNotification);//get notification
+// ── Protected Routes (Strictly Tenant Isolated) ──
+notificationRouter.use(authUser, tenantMiddleware);
 
-notificationRouter.put('/mark-single-read',authUser,markSingleRead);//mark notification as read
+notificationRouter.get('/get-notification', getNotification);
+notificationRouter.put('/mark-single-read', markSingleRead);
 
 export default notificationRouter;

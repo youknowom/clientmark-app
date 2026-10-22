@@ -95,17 +95,10 @@ const NotificationPanel = () => {
     setOpen(false)
   }
 
-  // Socket: listen to all relevant events including get-project
+  // Socket: sound and bell pulse ONLY on notification:new; silent refresh on other domain events
   useEffect(() => {
     if (!socket) return
-    const events = [
-      'get-project',
-      'create-project',
-      'many-telecaller-to-bde',
-      'many-admin-to-telecaller',
-      'single-telecaller-to-bde',
-      'many-bde-to-admin',
-    ]
+
     const handleNewNotification = () => {
       playSound()
       fetchNotifications().then(() => {
@@ -113,8 +106,20 @@ const NotificationPanel = () => {
         setTimeout(() => setBellPulse(false), 2000)
       })
     }
-    events.forEach((e) => socket.on(e, handleNewNotification))
-    return () => events.forEach((e) => socket.off(e, handleNewNotification))
+
+    const handleSilentRefresh = () => {
+      fetchNotifications()
+    }
+
+    socket.on('notification:new', handleNewNotification)
+    socket.on('project:created', handleSilentRefresh)
+    socket.on('lead:transferred', handleSilentRefresh)
+
+    return () => {
+      socket.off('notification:new', handleNewNotification)
+      socket.off('project:created', handleSilentRefresh)
+      socket.off('lead:transferred', handleSilentRefresh)
+    }
   }, [socket, fetchNotifications])
 
   useEffect(() => {
@@ -160,12 +165,12 @@ const NotificationPanel = () => {
         /* ── Panel ── */
         .np-panel {
           position: absolute; top: calc(100% + 12px); right: 0;
-          width: 360px; background: #fff;
+          width: 360px; background: #0D0F14;
           border-radius: 16px;
-          box-shadow: 0 12px 40px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.06);
+          box-shadow: 0 16px 48px rgba(0,0,0,0.8), 0 0 1px 1px rgba(255,255,255,0.08);
           z-index: 1050; overflow: hidden;
           animation: np-fade-in 0.18s ease;
-          border: 1px solid #e8edf3;
+          border: 1px solid rgba(255,255,255,0.1);
         }
         @keyframes np-fade-in {
           from { opacity: 0; transform: translateY(-8px); }
@@ -176,12 +181,12 @@ const NotificationPanel = () => {
         .np-header {
           display: flex; align-items: center; justify-content: space-between;
           padding: 14px 16px 12px;
-          background: #fff;
-          border-bottom: 1.5px solid #f0f4f8;
+          background: #12151D;
+          border-bottom: 1px solid rgba(255,255,255,0.08);
         }
-        .np-header-title { font-size: 15px; font-weight: 700; color: #0f172a; margin: 0; }
+        .np-header-title { font-size: 14px; font-weight: 700; color: #FFFFFF; margin: 0; font-family: var(--cm-font-heading, sans-serif); }
         .np-header-count {
-          font-size: 11px; background: #eff6ff; color: #2563eb;
+          font-size: 11px; background: rgba(224, 94, 58, 0.15); color: #F59E0B;
           font-weight: 600; padding: 2px 9px; border-radius: 999px; margin-left: 8px;
         }
 
@@ -189,7 +194,7 @@ const NotificationPanel = () => {
         .np-list { max-height: 430px; overflow-y: auto; }
         .np-list::-webkit-scrollbar { width: 3px; }
         .np-list::-webkit-scrollbar-track { background: transparent; }
-        .np-list::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 99px; }
+        .np-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 99px; }
 
         /* ── Item ── */
         .np-item {
@@ -197,13 +202,13 @@ const NotificationPanel = () => {
           padding: 12px 16px 10px;
           cursor: pointer;
           transition: background 0.15s;
-          border-bottom: 1px solid #eff3f4;
+          border-bottom: 1px solid rgba(255,255,255,0.06);
           position: relative;
         }
         .np-item:last-child { border-bottom: none; }
-        .np-item:hover { background: #f8fafc; }
-        .np-item.unread { background: #f0f7ff; }
-        .np-item.unread:hover { background: #e8f1fd; }
+        .np-item:hover { background: rgba(255,255,255,0.04); }
+        .np-item.unread { background: rgba(224,94,58,0.06); }
+        .np-item.unread:hover { background: rgba(224,94,58,0.1); }
 
         /* ── Top row ── */
         .np-row-top {
@@ -211,18 +216,18 @@ const NotificationPanel = () => {
           justify-content: space-between; gap: 10px;
         }
         .np-title {
-          font-size: 13px; font-weight: 600; color: #1e293b;
+          font-size: 13px; font-weight: 600; color: #FFFFFF;
           margin: 0; line-height: 1.45; flex: 1; word-break: break-word;
         }
-        .np-item:not(.unread) .np-title { font-weight: 500; color: #475569; }
+        .np-item:not(.unread) .np-title { font-weight: 500; color: #94A3B8; }
 
         /* Message text */
         .np-message {
-          font-size: 12px; color: #64748b;
+          font-size: 12px; color: #8D8D96;
           margin: 4px 0 0; line-height: 1.5;
           word-break: break-word;
         }
-        .np-item.unread .np-message { color: #334155; }
+        .np-item.unread .np-message { color: #CBD5E1; }
 
         /* ── Bottom row ── */
         .np-row-bottom {

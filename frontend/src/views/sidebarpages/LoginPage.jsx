@@ -4,9 +4,9 @@ import { FaEyeSlash, FaEye } from 'react-icons/fa'
 import Cookies from 'js-cookie'
 import apiClient, { BASE_URL } from '../../api/axiosClient'
 import { syncFaviconFromSettings } from '../../helpers/dynamicFavicon'
+import { ClientmarkLogo } from '../../components/brand/ClientmarkLogo'
 import toast from 'react-hot-toast'
 import '../sidebarCSS/login.css'
-
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 const LogoMark = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
@@ -83,7 +83,11 @@ const LoginPage = () => {
     setLoading(true)
     try {
       const response = await apiClient.post('/user/login-by-pass', user)
-      Cookies.set('token', response.data.token, { expires: 365 * 20 })
+      Cookies.set('token', response.data.token, {
+        expires: 7,
+        sameSite: 'Lax',
+        secure: window.location.protocol === 'https:',
+      })
       toast.success(response.data.message || 'Login successful')
       setTimeout(() => {
         window.location.href = '/dashboard'
@@ -123,12 +127,7 @@ const LoginPage = () => {
                 style={{ height: '32px', maxWidth: '160px', objectFit: 'contain' }}
               />
             ) : (
-              <>
-                <div className="auth-brand-mark">
-                  <LogoMark />
-                </div>
-                <span className="auth-brand-name">{siteSetting?.projectName || 'Clientmark'}</span>
-              </>
+              <ClientmarkLogo size={32} />
             )}
           </Link>
 
@@ -171,12 +170,7 @@ const LoginPage = () => {
                 style={{ height: '28px', maxWidth: '140px', objectFit: 'contain' }}
               />
             ) : (
-              <>
-                <div className="auth-mobile-brand-mark">
-                  <LogoMark />
-                </div>
-                <span className="auth-mobile-brand-name">{siteSetting?.projectName || 'Clientmark'}</span>
-              </>
+              <ClientmarkLogo size={28} />
             )}
           </div>
 

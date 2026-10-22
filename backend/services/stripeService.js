@@ -1,11 +1,20 @@
 import Stripe from "stripe";
 
-const getStripeInstance = () => {
+let customStripeInstance = null;
+
+export const setStripeInstance = (instance) => {
+  customStripeInstance = instance;
+};
+
+export const getStripeInstance = () => {
+  if (customStripeInstance) return customStripeInstance;
   const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
   if (!secretKey) {
     throw new Error("STRIPE_SECRET_KEY is not configured in environment variables.");
   }
-  return new Stripe(secretKey);
+  return new Stripe(secretKey, {
+    apiVersion: "2026-08-26.dahlia",
+  });
 };
 
 /**
@@ -35,7 +44,7 @@ export const getOrCreateStripeCustomer = async ({ email, name, tenantId }) => {
 };
 
 /**
- * Create a Stripe Checkout Session for subscription upgrade
+ * Create a Stripe Checkout Session for subscription (strictly mode: "subscription")
  */
 export const createStripeCheckoutSession = async ({
   customerId,
@@ -81,7 +90,7 @@ export const createStripeCheckoutSession = async ({
 
   const sessionParams = {
     payment_method_types: ["card"],
-    mode: "subscription",
+    mode: "subscription", // Strictly "subscription" mode
     line_items: [lineItem],
     metadata: {
       tenantId: tenantId?.toString() || "",
@@ -140,5 +149,39 @@ export const cancelStripeSubscription = async (subscriptionId) => {
   const stripe = getStripeInstance();
   return await stripe.subscriptions.update(subscriptionId, {
     cancel_at_period_end: true,
+  });
+};
+
+/**
+ * Create a Stripe Customer Billing Portal Session
+ */
+export const createStripeBillingPortalSession = async ({ customerId, returnUrl }) => {
+  const stripe = getStripeInstance();
+  return await stripe.billingPortal.sessions.create({
+    customer: customerId,
+    return_url: returnUrl,
+  });
+};
+
+/**
+ * Update an existing Stripe subscription's plan with proration
+ */
+export const updateStripeSubscriptionPlan = async ({ subscriptionId, newPriceId }) => {
+  const stripe = getStripeInstance();
+  const sub = await stripe.subscriptions.retrieve(subscriptionId);
+  const itemId = sub.items?.data?.[0]?.id;
+
+  if (!itemId) {
+    throw new Error("No subscription item found to update.");
+  }
+
+  return await stripe.subscriptions.update(subscriptionId, {
+    items: [
+      {
+        id: itemId,
+        price: newPriceId,
+      },
+    ],
+    proration_behavior: "create_prorations",
   });
 };

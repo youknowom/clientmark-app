@@ -1,23 +1,43 @@
 import React from 'react'
-import { Card, Col, Row, Image } from 'react-bootstrap'
-import '../../views/sidebarCSS/comStyle.css'
 
 function PageHeader({ pageHeaderData }) {
-  const { title, disc, imgPath } = pageHeaderData
+  const { title, disc } = pageHeaderData || {}
   return (
-    <Card className="text-white department-header-card mainBGColor my-3">
-      <Card.Body className="p-2">
-        <Row className="align-items-center">
-          <Col xs="auto"  className="ms-1 my-1 p-0">
-            {/* <Image src={imgPath} roundedCircle width={75} height={75} alt="Department Logo" /> */}
-          </Col>
-          <Col>
-            <h6 className="mb-0 fw-bold">{title}</h6>
-            {/* <small>{disc}</small> */}
-          </Col>
-        </Row>
-      </Card.Body>
-    </Card>
+    <div
+      className="cm-card"
+      style={{
+        padding: '16px 20px',
+        margin: '16px 0 20px',
+        border: '1px solid var(--cm-border-subtle)',
+        boxShadow: 'var(--cm-shadow-xs)',
+      }}
+    >
+      <div className="cm-flex cm-items-center cm-justify-between">
+        <div>
+          <h2
+            style={{
+              fontSize: '17px',
+              fontWeight: 700,
+              margin: 0,
+              color: 'var(--cm-text-primary)',
+            }}
+          >
+            {title}
+          </h2>
+          {disc && (
+            <p
+              style={{
+                fontSize: '12.5px',
+                color: 'var(--cm-text-secondary)',
+                margin: '4px 0 0',
+              }}
+            >
+              {disc}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 

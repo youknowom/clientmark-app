@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import BranchModel from "../models/branchModel.js";
 import UserModel from "../models/userModel.js";
+import { getTenantLimits } from "../middlewares/usageLimitMiddleware.js";
 
 //add branch
 const addBranch = async (req, res) => {
@@ -31,17 +32,21 @@ const addBranch = async (req, res) => {
         .json({ message: "This branch code already exist.", success: false });
     }
 
-    //check how many branches already added
-    const noOfAlreadyAdded = await BranchModel.countDocuments(
-      tenantId ? { tenantId } : {}
-    );
-    const branchLimit = process.env.BRANCH_LIMIT || 5;
+    // Race-safe recount limit check using plan limits (same pattern as createLead/createUser)
+    const limits = await getTenantLimits(tenantId);
+    const maxBranches = limits?.maxBranches ?? parseInt(process.env.BRANCH_LIMIT || "5", 10);
 
-    if (noOfAlreadyAdded >= branchLimit) {
-      return res.status(400).json({
-        message: `Branch limit exceed. Your limit is ${branchLimit}.`,
-        success: false,
-      });
+    if (maxBranches !== -1) {
+      const currentCount = await BranchModel.countDocuments(
+        tenantId ? { tenantId } : {}
+      );
+      if (currentCount >= maxBranches) {
+        return res.status(403).json({
+          message: `You've reached the maximum of ${maxBranches} branches on your current plan. Please upgrade to add more branches.`,
+          success: false,
+          limitReached: true,
+        });
+      }
     }
 
     const newBranch = await BranchModel.create({

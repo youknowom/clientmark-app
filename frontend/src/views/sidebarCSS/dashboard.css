@@ -1,59 +1,60 @@
 /* Dashboard.css */
 
-/* ─── Modern SaaS Metric Tile (Sarvam AI discipline) ─────────────────────── */
+/* ─── Modern SaaS Metric Tile (Clientmark Studio Discipline) ─── */
 .dashboard-kpi-card {
-  background: #FFFFFF !important;
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
-  border-radius: 12px !important;
-  padding: 18px 20px !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
-  transition: all 0.15s ease-in-out;
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: var(--radius, 12px) !important;
+  padding: 20px 22px !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+  transition: box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 104px;
+  min-height: 110px;
 }
 
 .dashboard-kpi-card:hover {
-  border-color: rgba(0, 0, 0, 0.16) !important;
-  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.06) !important;
-  transform: translateY(-1px);
+  border-color: hsl(var(--primary) / 0.5) !important;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.12) !important;
+  transform: translateY(-2px);
 }
 
 .dashboard-kpi-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .dashboard-kpi-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748B !important;
-  letter-spacing: 0.01em;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: hsl(var(--muted-foreground)) !important;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .dashboard-kpi-icon-wrap {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
-  background-color: #F4F4F1;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background-color: hsl(var(--primary) / 0.1) !important;
+  border: 1px solid hsl(var(--primary) / 0.2) !important;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary-color, #111827);
+  color: hsl(var(--primary)) !important;
   flex-shrink: 0;
 }
 
 .dashboard-kpi-value {
-  font-size: 26px;
-  font-weight: 700;
-  color: #111827 !important;
-  letter-spacing: -0.025em;
+  font-size: 28px;
+  font-weight: 800;
+  color: hsl(var(--foreground)) !important;
+  letter-spacing: -0.03em;
   line-height: 1.1;
+  font-family: inherit;
 }
 
 .dashboard-container {
@@ -204,15 +205,16 @@
 
 
 .card {
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  border-radius: var(--cm-radius-xl, 14px) !important;
+  background-color: var(--cm-bg-card, #0D0F14) !important;
+  border: 1px solid var(--cm-border-subtle, rgba(255, 255, 255, 0.08)) !important;
+  box-shadow: var(--cm-shadow-card, 0 4px 16px rgba(0, 0, 0, 0.5)) !important;
+  color: var(--cm-text-primary, #F8FAFC) !important;
 }
-
 
 .banner-container {
   margin-bottom: 15px;
 }
-
 
 .dash-nav {
   width: 100%;
@@ -229,29 +231,30 @@
 }
 
 .service-nav-icon {
-  color: #6e3cc1;
+  color: var(--cm-brand-400, #F59E0B);
 }
 
 .service-nav-text {
-  color: #6e3cc1;
+  color: var(--cm-text-secondary, #94A3B8);
   font-size: 10px;
 }
 
 .btn-custom {
-  background-color: #28a745;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 15px;
-}
-
-.service-img {
-  width: 80px;
-  height: 80px;
+  background-color: #161722 !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 9999px !important;
+  padding: 8px 18px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
 }
 
 .btn-custom:hover {
-  background-color: #218838;
+  background-color: #202230 !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  transform: translateY(-1px);
 }
 
 
@@ -281,41 +284,43 @@
 }
 
 .dashboard-list-item {
-  background-color: #FFFFFF;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 8px;
-  padding: 10px 14px;
+  background-color: var(--cm-bg-card, #0D0F14);
+  border: 1px solid var(--cm-border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: var(--cm-radius-md, 10px);
+  padding: 12px 16px;
   margin-bottom: 8px;
-  transition: background-color 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .dashboard-list-item:hover {
-  background-color: #FAFAF8;
+  background-color: var(--cm-bg-hover, rgba(255, 255, 255, 0.04));
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .dashboard-list-item span {
   margin-left: 8px;
   font-size: 13px;
-  color: #374151;
+  color: var(--cm-text-primary, #F8FAFC);
 }
 
 /* ─── Buttons ────────────────────────────────────────────────────────────── */
 .btn-custom {
-  background-color: #111827;
+  background-color: #161722;
   color: #FFFFFF;
-  border: 1px solid #111827;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 9999px;
-  padding: 7px 18px;
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  transition: all 0.15s ease;
+  padding: 8px 20px;
+  font-size: 13.5px;
+  font-weight: 500;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  transition: all 0.25s ease;
   cursor: pointer;
 }
 
 .btn-custom:hover {
-  background-color: #1F2937;
-  border-color: #1F2937;
+  background-color: #202230;
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
   color: #FFFFFF;
 }
 

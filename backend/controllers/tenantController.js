@@ -8,6 +8,8 @@ import RoleModel from "../models/roleModel.js";
 import PermissionModel from "../models/permissionModel.js";
 import ThemeModel from "../models/themeModel.js";
 import SoftwareSettingModel from "../models/softwareSettingModel.js";
+import { disconnectTenantSockets } from "../services/realtime.js";
+import { normalizeTokenVersion } from "../middlewares/authMiddleware.js";
 
 // ── Permission data (same as seedDatabase) ──
 const PERMISSIONS_DATA = [
@@ -256,8 +258,12 @@ const registerTenant = async (req, res) => {
       });
     }
 
-    // Check duplicate email
-    const existingTenant = await TenantModel.findOne({ email: email.toLowerCase() });
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedUserName = userName.trim();
+    const normalizedPhone = phone ? phone.trim() : "";
+
+    // Check duplicate email in tenants
+    const existingTenant = await TenantModel.findOne({ email: normalizedEmail });
     if (existingTenant) {
       return res.status(409).json({
         message: "An account with this email already exists.",
@@ -265,11 +271,18 @@ const registerTenant = async (req, res) => {
       });
     }
 
-    // Check duplicate username globally
-    const existingUser = await UserModel.findOne({ userName });
+    // Check duplicate admin username, email, or mobile in UserModel (deliberate global uniqueness rule)
+    const existingUser = await UserModel.findOne({
+      $or: [
+        { userName: normalizedUserName },
+        { email: normalizedEmail },
+        ...(normalizedPhone ? [{ mobileNo: normalizedPhone }] : []),
+      ],
+    });
+
     if (existingUser) {
       return res.status(409).json({
-        message: "This username is already taken.",
+        message: "A user with this username, email, or mobile number already exists.",
         success: false,
       });
     }
@@ -330,6 +343,7 @@ const registerTenant = async (req, res) => {
         userId: adminUser._id,
         role: "Admin",
         tenantId: tenant._id,
+        tokenVersion: normalizeTokenVersion(adminUser),
       },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
@@ -397,18 +411,23 @@ const getMyTenant = async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 const updateTenant = async (req, res) => {
   try {
-    const { companyName, phone, settings } = req.body;
+    const { companyName, phone, settings, status } = req.body;
 
     const updateData = {};
     if (companyName) updateData.companyName = companyName.trim();
     if (phone) updateData.phone = phone;
     if (settings) updateData.settings = settings;
+    if (status) updateData.status = status;
 
     const tenant = await TenantModel.findByIdAndUpdate(
       req.tenantId,
       { $set: updateData },
       { new: true }
     );
+
+    if (status && status !== "Active") {
+      await disconnectTenantSockets(req.tenantId);
+    }
 
     return res.status(200).json({
       message: "Tenant updated successfully.",
@@ -455,6 +474,7 @@ const getDemoSession = async (req, res) => {
         userId: demoUser._id,
         role: "Admin",
         tenantId: demoTenant._id,
+        tokenVersion: normalizeTokenVersion(demoUser),
         isDemo: true,
       },
       process.env.JWT_SECRET,

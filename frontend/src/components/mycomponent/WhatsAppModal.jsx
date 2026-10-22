@@ -1,5 +1,20 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { Modal, Spinner } from 'react-bootstrap'
+import { Dialog } from '../ui/Dialog'
+
+const InlineSpinner = ({ size = 14, color = 'currentColor' }) => (
+  <span
+    style={{
+      width: `${size}px`,
+      height: `${size}px`,
+      border: '2px solid currentColor',
+      borderTopColor: 'transparent',
+      borderRadius: '50%',
+      display: 'inline-block',
+      animation: 'cm-spin 0.6s linear infinite',
+      color: color === 'success' ? '#16A34A' : color,
+    }}
+  />
+)
 import {
   FaWhatsapp,
   FaPaperPlane,
@@ -147,17 +162,19 @@ export default function WhatsAppModal({ show, onHide, lead, onSend }) {
   const selectedTemplate = templates.find((t) => t._id === selectedTpl)
 
   return (
-    <Modal
-      show={show}
-      onHide={() => !isSending && (onHide(), reset())}
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open && !isSending) {
+          onHide()
+          reset()
+        }
+      }}
       size="md"
-      centered
-      backdrop={isSending ? 'static' : true}
-      keyboard={!isSending}
       className="whatsapp-modal"
     >
       {/* ─── COMPACT HEADER ─── */}
-      <Modal.Header closeButton={!isSending} style={{ padding: '10px 16px' }}>
+      <div style={{ padding: '12px 18px', background: 'linear-gradient(135deg,#128c7e,#075e54)', color: 'white', borderRadius: '14px 14px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div className="d-flex align-items-center gap-2">
           <div
             style={{
@@ -185,10 +202,10 @@ export default function WhatsAppModal({ show, onHide, lead, onSend }) {
             )}
           </div>
         </div>
-      </Modal.Header>
+      </div>
 
       {/* ─── BODY ─── */}
-      <Modal.Body style={{ padding: '16px 20px', position: 'relative' }}>
+      <div style={{ padding: '16px 20px', position: 'relative' }}>
         {/* SUCCESS OVERLAY */}
         {sendSuccess && (
           <div className="success-overlay">
@@ -223,7 +240,7 @@ export default function WhatsAppModal({ show, onHide, lead, onSend }) {
                 <div style={{ flex: 1, position: 'relative' }} ref={dropdownRef}>
                   {loading ? (
                     <div className="d-flex align-items-center gap-2" style={{ height: 34 }}>
-                      <Spinner animation="border" size="sm" variant="success" />
+                      <InlineSpinner size={14} color="success" />
                       <span style={{ fontSize: 12, color: '#6c757d' }}>Loading…</span>
                     </div>
                   ) : (
@@ -551,7 +568,7 @@ export default function WhatsAppModal({ show, onHide, lead, onSend }) {
               >
                 {saving ? (
                   <>
-                    <Spinner animation="border" size="sm" /> Saving…
+                    <InlineSpinner size={14} /> Saving…
                   </>
                 ) : (
                   <>
@@ -583,11 +600,11 @@ export default function WhatsAppModal({ show, onHide, lead, onSend }) {
             </div>
           </div>
         )}
-      </Modal.Body>
+      </div>
 
       {/* ─── FOOTER ─── */}
       {!isAdding && (
-        <Modal.Footer style={{ padding: '10px 20px', background: '#f8f9fa', gap: 8 }}>
+        <div style={{ padding: '10px 20px', background: 'var(--cm-bg-subtle, #f8f9fa)', gap: 8, display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--cm-border-subtle, #dee2e6)', borderRadius: '0 0 14px 14px' }}>
           <button
             onClick={() => !isSending && (onHide(), reset())}
             disabled={isSending}
@@ -627,7 +644,7 @@ export default function WhatsAppModal({ show, onHide, lead, onSend }) {
           >
             {isSending ? (
               <>
-                <Spinner animation="border" size="sm" /> Sending…
+                <InlineSpinner size={14} /> Sending…
               </>
             ) : (
               <>
@@ -635,8 +652,8 @@ export default function WhatsAppModal({ show, onHide, lead, onSend }) {
               </>
             )}
           </button>
-        </Modal.Footer>
+        </div>
       )}
-    </Modal>
+    </Dialog>
   )
 }

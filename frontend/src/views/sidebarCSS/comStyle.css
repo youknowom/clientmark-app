@@ -1,7 +1,12 @@
 .mainBGColor {
-  background-color: var(--primary-color);
-  padding-top: 4px;
-  padding-bottom: 4px;
+  background-color: var(--cm-bg-card, #0D0F14) !important;
+  color: var(--cm-text-primary, #F8FAFC) !important;
+  border-bottom: 1px solid var(--cm-border-subtle, rgba(255, 255, 255, 0.08)) !important;
+  padding: 14px 20px !important;
+  font-family: var(--cm-font-heading, 'Poppins', sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 /* ── Timeline UI (ProjectDetails) ──────────────────────────────── */

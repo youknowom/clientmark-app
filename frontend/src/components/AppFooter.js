@@ -1,13 +1,28 @@
 import React from 'react'
-import { CFooter } from '@coreui/react'
 
-const AppFooter = () => {
+export const AppFooter = () => {
   return (
-    <CFooter className="px-4">
+    <footer
+      style={{
+        padding: '16px 24px',
+        borderTop: '1px solid var(--cm-border-subtle)',
+        backgroundColor: 'var(--cm-bg-card)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        fontSize: '12px',
+        color: 'var(--cm-text-muted)',
+      }}
+    >
       <div>
-       
+        <span>Clientmark CRM</span>
+        <span style={{ margin: '0 8px' }}>•</span>
+        <span>Version 2.0</span>
       </div>
-    </CFooter>
+      <div>
+        <span>All systems operational</span>
+      </div>
+    </footer>
   )
 }
 
