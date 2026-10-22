@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Doughnut, Bar } from 'react-chartjs-2'
 import apiClient from '../../api/axiosClient'
-import { Container, Row, Col, Card, Table, Button } from 'react-bootstrap'
+import { Container, Row, Col, Card, Table, Button } from '../../components/ui'
 import {
   HiOutlineUsers,
   HiOutlinePhone,
@@ -272,7 +272,7 @@ const TeleCallerDashboard = () => {
 
   useEffect(() => {
     if (!socket) return
-    const events = ['create-lead', 'update-lead', 'delete-lead', 'many-admin-to-telecaller', 'single-telecaller-to-bde']
+    const events = ['lead:created', 'lead:updated', 'lead:deleted', 'lead:transferred']
     const handler = () => getTeleCallerDashboardData()
     events.forEach((event) => socket.on(event, handler))
     return () => events.forEach((event) => socket.off(event, handler))

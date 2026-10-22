@@ -154,7 +154,7 @@ const SiteSetting = () => {
       if (digits.length === 0 || digits === dialCodeDigits) {
         return null
       }
-      if (digits.length < 7 || digits > 15) {
+      if (digits.length < 7 || digits.length > 15) {
         return `Please enter a valid ${label} (7-15 digits)`
       }
       return null

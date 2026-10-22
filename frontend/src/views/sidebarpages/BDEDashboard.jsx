@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Doughnut, Bar } from 'react-chartjs-2'
 import apiClient from '../../api/axiosClient'
-import { Container, Row, Col, Card, Table, Button } from 'react-bootstrap'
+import { Container, Row, Col, Card, Table, Button } from '../../components/ui'
 import {
   HiOutlineUsers,
   HiOutlineCheckBadge,
@@ -273,7 +273,7 @@ const BDEDashboard = () => {
 
   useEffect(() => {
     if (!socket) return
-    const events = ['create-lead', 'update-lead', 'delete-lead', 'many-telecaller-to-bde', 'single-telecaller-to-bde', 'many-bde-to-admin']
+    const events = ['lead:created', 'lead:updated', 'lead:deleted', 'lead:transferred']
     const handler = () => getBDEDashboardData()
     events.forEach((event) => socket.on(event, handler))
     return () => events.forEach((event) => socket.off(event, handler))

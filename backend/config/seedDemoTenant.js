@@ -10,6 +10,8 @@ import ProjectModel from "../models/projectModel.js";
 import TimelineModel from "../models/timelineModel.js";
 import ThemeModel from "../models/themeModel.js";
 import SoftwareSettingModel from "../models/softwareSettingModel.js";
+import NotificationModel from "../models/notificationModel.js";
+import FileModel from "../models/fileModel.js";
 
 const DEMO_SLUG = "demo-workspace";
 
@@ -292,12 +294,26 @@ export const seedDemoTenant = async () => {
       });
     }
 
-    // 7. Seed Diverse Realistic Leads
+    // 7. Seed Diverse Realistic Leads, Projects, and Timelines
+    await seedDemoRecords(tenantId, adminUser, bdeUser, telecallerUser, devUser);
+
+    console.log("✅ Acme Digital Agency (Demo Workspace) seeded successfully!");
+    return tenant;
+  } catch (error) {
+    console.error("❌ Failed to seed demo workspace:", error);
+  }
+};
+
+/**
+ * Seed or re-seed dynamic demo records (leads, projects, timelines).
+ */
+export const seedDemoRecords = async (tenantId, adminUser, bdeUser, telecallerUser, devUser) => {
+  try {
     const demoLeads = [
-      // NEW Stage
-      {
-        tenantId,
-        leadNo: "LD-1001",
+    // NEW Stage
+    {
+      tenantId,
+      leadNo: "LD-1001",
         fullName: "Rohan Verma",
         mobileNo: "9820112233",
         email: "rohan@fintechcorp.in",
@@ -450,6 +466,8 @@ export const seedDemoTenant = async () => {
         tenantId,
         ProjectId: "PRJ-2001",
         ProjectName: "FinTech NeoBank Mobile App",
+        slug: "demo-neobank-mobile-app",
+        portalKey: "pk_demo_neobank_2001",
         ClientName: "Rajesh Singhania",
         email: "rajesh@singhaniagroup.com",
         mobileNo: "9911001122",
@@ -467,6 +485,8 @@ export const seedDemoTenant = async () => {
         tenantId,
         ProjectId: "PRJ-2002",
         ProjectName: "Shopify Omnichannel Headless Store",
+        slug: "demo-shopify-headless-store",
+        portalKey: "pk_demo_shopify_2002",
         ClientName: "Kavita Rao",
         email: "kavita@raofashions.in",
         mobileNo: "9922112233",
@@ -484,6 +504,8 @@ export const seedDemoTenant = async () => {
         tenantId,
         ProjectId: "PRJ-2003",
         ProjectName: "Healthcare Diagnostic Patient Portal",
+        slug: "demo-healthcare-portal",
+        portalKey: "pk_demo_health_2003",
         ClientName: "Meera Desai",
         email: "meera@healthplus.org",
         mobileNo: "9850445566",
@@ -529,10 +551,70 @@ export const seedDemoTenant = async () => {
         description: "Built edge-cached cart mutation middleware with optimistic UI updates.",
       },
     ]);
+  } catch (err) {
+    console.error("Error populating demo records:", err);
+  }
+};
 
-    console.log("✅ Acme Digital Agency (Demo Workspace) seeded successfully!");
-    return tenant;
+/**
+ * Reset demo workspace to fresh sample state.
+ * Cleans out user-created leads, projects, timelines, files, notifications,
+ * and resets demo users to Active status with default password.
+ */
+export const resetDemoData = async (targetTenantId = null) => {
+  try {
+    const query = targetTenantId ? { _id: targetTenantId } : { slug: DEMO_SLUG };
+    const tenant = await TenantModel.findOne(query);
+    if (!tenant) {
+      if (targetTenantId) {
+        throw new Error("Target tenant not found");
+      }
+      return await seedDemoTenant();
+    }
+
+    // Safety constraint: Refuse to run unless target tenant has isDemo: true AND slug: DEMO_SLUG
+    if (tenant.isDemo !== true || tenant.slug !== DEMO_SLUG) {
+      throw new Error(`Refusing to reset: tenant must have isDemo: true and slug: "${DEMO_SLUG}"`);
+    }
+
+    // Skip reset if a demo session was active in the last 10 minutes
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    if (tenant.lastActiveAt && new Date(tenant.lastActiveAt) > tenMinutesAgo) {
+      console.log(`[DemoResetJob] Skipping demo reset: active demo session detected at ${tenant.lastActiveAt} (< 10 minutes ago).`);
+      return { skipped: true, reason: "Demo session was active in the last 10 minutes" };
+    }
+
+    const tenantId = tenant._id;
+    console.log(`[DemoResetJob] Resetting demo workspace ${DEMO_SLUG} (${tenantId})...`);
+
+    // 1. Clear dynamic records
+    await LeadModel.deleteMany({ tenantId });
+    await ProjectModel.deleteMany({ tenantId });
+    await TimelineModel.deleteMany({ tenantId });
+    await NotificationModel.deleteMany({ tenantId });
+    await FileModel.deleteMany({ tenantId });
+
+    // 2. Reset demo user passwords and status
+    const hashedPassword = await bcrypt.hash("ClientmarkDemo2026!", 10);
+    await UserModel.updateMany(
+      { tenantId },
+      { $set: { status: "Active", password: hashedPassword } }
+    );
+
+    // 3. Find demo users to assign sample entities
+    const adminUser = await UserModel.findOne({ tenantId, userName: "demo_admin" });
+    const bdeUser = await UserModel.findOne({ tenantId, userName: "vikram_bde" });
+    const telecallerUser = await UserModel.findOne({ tenantId, userName: "priya_tc" });
+    const devUser = await UserModel.findOne({ tenantId, userName: "arjun_dev" });
+
+    if (adminUser && bdeUser && telecallerUser && devUser) {
+      await seedDemoRecords(tenantId, adminUser, bdeUser, telecallerUser, devUser);
+    }
+
+    console.log("✅ Demo workspace reset completed successfully!");
+    return { success: true, message: "Demo workspace reset successfully" };
   } catch (error) {
-    console.error("❌ Failed to seed demo workspace:", error);
+    console.error("❌ Failed to reset demo workspace:", error);
+    throw error;
   }
 };

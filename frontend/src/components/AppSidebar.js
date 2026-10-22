@@ -1,45 +1,20 @@
 import React, { useContext, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-import { CCloseButton, CSidebar, CSidebarBrand, CSidebarHeader } from '@coreui/react'
-import { AppSidebarNav } from './AppSidebarNav'
+import { NavLink, Link } from 'react-router-dom'
+import { X } from 'lucide-react'
 import apiClient, { BASE_URL } from '../api/axiosClient'
 import { AuthContext } from '../AuthContext'
 import { socket } from '../socket/socket'
 import useNavItems from '../_nav'
 import { syncFaviconFromSettings } from '../helpers/dynamicFavicon'
+import { ClientmarkLogo } from './brand/ClientmarkLogo'
+import { cn } from '../lib/utils'
 
-// ─── Fallback brand mark when no custom logo is set ───────────────────────────
-const ClientmarkBrand = () => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 16px' }}>
-    <div style={{
-      width: '28px', height: '28px',
-      background: '#E05E3A',
-      borderRadius: '7px',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flexShrink: 0,
-    }}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-        <path d="M12 2L2 7l10 5 10-5-10-5zm0 7L2 14l10 5 10-5-10-5z" />
-      </svg>
-    </div>
-    <span style={{
-      fontSize: '15px',
-      fontWeight: '700',
-      color: '#0F0F0F',
-      letterSpacing: '-0.02em',
-      fontFamily: 'Inter, sans-serif',
-    }}>
-      Clientmark
-    </span>
-  </div>
-)
-
-const AppSidebar = () => {
-  const { siteSetting, setSiteSetting, userData } = useContext(AuthContext)
+export const AppSidebar = () => {
+  const { siteSetting, setSiteSetting } = useContext(AuthContext)
   const dispatch = useDispatch()
-  const unfoldable = useSelector((state) => state.sidebarUnfoldable)
   const sidebarShow = useSelector((state) => state.sidebarShow)
-  const filteredNavItems = useNavItems()
+  const navItems = useNavItems()
 
   const mainLogoUrl = siteSetting?.mainLogo ? `${BASE_URL}${siteSetting.mainLogo}` : null
 
@@ -54,7 +29,6 @@ const AppSidebar = () => {
         mainLogo: respData?.mainLogo,
         favicon: respData?.favicon,
       })
-      // Dynamically sync browser tab favicon with buyer/tenant's favicon or logo
       syncFaviconFromSettings(respData)
     } catch (error) {
       console.error('Failed to load site setting:', error)
@@ -65,69 +39,118 @@ const AppSidebar = () => {
     getSiteSetting()
   }, [])
 
-  const currentTenantId = userData?.tenantId?._id || userData?.tenantId
-
   useEffect(() => {
     if (!socket) return
-    const handleUpdate = (payload) => {
-      if (payload?.tenantId && currentTenantId && payload.tenantId !== currentTenantId.toString()) {
-        return
-      }
+    const handleUpdate = () => {
       getSiteSetting()
     }
-    socket.on('updateSiteSetting', handleUpdate)
-    return () => socket.off('updateSiteSetting', handleUpdate)
-  }, [socket, currentTenantId])
+    socket.on('site-setting:updated', handleUpdate)
+    return () => socket.off('site-setting:updated', handleUpdate)
+  }, [socket])
+
+  const closeSidebar = () => {
+    dispatch({ type: 'set', sidebarShow: false })
+  }
 
   return (
-    <CSidebar
-      className="border-end-0"
-      colorScheme="light"
-      position="fixed"
-      unfoldable={unfoldable}
-      visible={sidebarShow}
-      onVisibleChange={(visible) => dispatch({ type: 'set', sidebarShow: visible })}
-      style={{
-        borderRight: '1px solid #E8E8E5',
-        backgroundColor: '#FFFFFF',
-      }}
-    >
-      <CSidebarHeader
-        className="p-0 d-flex align-items-center justify-content-between"
-        style={{
-          borderBottom: '1px solid #F0F0ED',
-          height: '57px',
-          backgroundColor: '#FFFFFF',
-        }}
+    <>
+      {/* Mobile Backdrop Overlay */}
+      <div
+        className={cn(
+          'fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity lg:hidden',
+          sidebarShow ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        )}
+        onClick={closeSidebar}
+        aria-hidden="true"
+      />
+
+      {/* Main Sidebar Shell */}
+      <aside
+        className={cn(
+          'fixed top-0 bottom-0 left-0 z-40 w-64 flex flex-col bg-card border-r border-border/80 shadow-sm transition-transform duration-200 ease-in-out',
+          sidebarShow ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        )}
+        aria-label="Application Sidebar"
       >
-        <CSidebarBrand to="/" className="m-0 p-0 d-flex align-items-center" style={{ flex: 1 }}>
-          {mainLogoUrl ? (
-            <img
-              src={mainLogoUrl}
-              alt="Clientmark"
-              style={{
-                objectFit: 'contain',
-                height: '40px',
-                maxWidth: '160px',
-                display: 'block',
-                marginLeft: '16px',
+        {/* Header / Brand Logo */}
+        <div className="h-16 px-5 flex items-center justify-between border-b border-border/60 bg-card/60 backdrop-blur-sm flex-shrink-0">
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-2.5 overflow-hidden no-underline focus:outline-none"
+          >
+            {mainLogoUrl ? (
+              <img
+                src={mainLogoUrl}
+                alt={siteSetting?.projectName || 'Clientmark'}
+                className="h-8 max-w-[160px] object-contain block"
+              />
+            ) : (
+              <ClientmarkLogo size={28} />
+            )}
+          </Link>
+
+          {/* Close button on mobile */}
+          <button
+            type="button"
+            onClick={closeSidebar}
+            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden transition-colors"
+            aria-label="Close sidebar"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Navigation Items List */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5">
+          <div className="px-3 pb-2 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+            Platform Menu
+          </div>
+          {navItems.map((item, index) => (
+            <NavLink
+              key={item.to || index}
+              to={item.to}
+              onClick={() => {
+                if (window.innerWidth <= 991) {
+                  closeSidebar()
+                }
               }}
-            />
-          ) : (
-            <ClientmarkBrand />
-          )}
-        </CSidebarBrand>
+              className={({ isActive }) =>
+                cn(
+                  'group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 no-underline',
+                  isActive
+                    ? 'bg-primary/10 text-primary font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={cn(
+                      'flex items-center justify-center transition-colors',
+                      isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
+                    )}
+                  >
+                    {item.icon}
+                  </span>
+                  <span className="truncate">{item.name}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
+        </nav>
 
-        <CCloseButton
-          className="d-lg-none me-2"
-          dark
-          onClick={() => dispatch({ type: 'set', sidebarShow: false })}
-          aria-label="Close sidebar"
-        />
-      </CSidebarHeader>
-
-      <AppSidebarNav items={filteredNavItems} />
-    </CSidebar>
+        {/* Footer info badge */}
+        <div className="p-3.5 border-t border-border/60 bg-muted/20">
+          <div className="flex items-center justify-between px-2 py-1 text-xs text-muted-foreground">
+            <span>Workspace CRM</span>
+            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-semibold">
+              v2.4
+            </span>
+          </div>
+        </div>
+      </aside>
+    </>
   )
 }
 

@@ -1,39 +1,22 @@
 import express from "express";
 import { authUser, authAccess } from "../middlewares/authMiddleware.js";
+import tenantMiddleware from "../middlewares/tenantMiddleware.js";
 import { checkBranchLimit } from "../middlewares/usageLimitMiddleware.js";
 import {
   addBranch,
   updateBranch,
   getBranches,
   deleteBranch,
-
 } from "../controllers/branchController.js";
 
 const branchRouter = express.Router();
 
-branchRouter.post("/add-branch", authUser, authAccess("add:branch"), checkBranchLimit, addBranch); //add branch
+// ── Protected Routes (Strictly Tenant Isolated) ──
+branchRouter.use(authUser, tenantMiddleware);
 
-branchRouter.put(
-  "/update-branch",
-  authUser,
-  authAccess("update:branch"),
-  updateBranch
-); //update branch
-
-branchRouter.get(
-  "/get-branches",
-  authUser,
-  authAccess("view:branch"),
-  getBranches
-); //get branch list
-
-branchRouter.delete(
-  "/delete-branch",
-  authUser,
-  authAccess("delete:branch"),
-  deleteBranch
-); //delete branch
-
-
+branchRouter.post("/add-branch", authAccess("add:branch"), checkBranchLimit, addBranch);
+branchRouter.put("/update-branch", authAccess("update:branch"), updateBranch);
+branchRouter.get("/get-branches", authAccess("view:branch"), getBranches);
+branchRouter.delete("/delete-branch", authAccess("delete:branch"), deleteBranch);
 
 export default branchRouter;

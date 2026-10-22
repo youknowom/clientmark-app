@@ -1,8 +1,27 @@
-import React, { useContext, useState, useEffect } from 'react'
+import React, { useContext, useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Doughnut, Bar } from 'react-chartjs-2'
+import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
 import apiClient from '../../api/axiosClient'
-import { Container, Row, Col, Card, Table, Button } from 'react-bootstrap'
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+  Button,
+  Badge,
+} from '../../components/ui'
 import {
   FiUsers,
   FiPhoneCall,
@@ -22,10 +41,7 @@ import { Helmet } from 'react-helmet'
 import ThemeContext from './ThemeContext'
 import toast from 'react-hot-toast'
 import { AuthContext } from '../../AuthContext'
-
-import '../sidebarCSS/dashboard.css'
-import '../sidebarCSS/comStyle.css'
-import '../sidebarCSS/table.css'
+import { cn } from '../../lib/utils'
 import SetupGuide from '../../components/SetupGuide'
 import OnboardingWizard from '../../components/OnboardingWizard'
 
@@ -43,12 +59,54 @@ import { clearListState } from '../../helpers/listStateStorage'
 import { socket } from '../../socket/socket'
 
 ChartJS.register(ArcElement, Tooltip, Legend, Title, CategoryScale, LinearScale, BarElement)
+gsap.registerPlugin(useGSAP)
 
 const AdminDashboard = () => {
   const { theme } = useContext(ThemeContext)
   const navigate = useNavigate()
   const [dashboardView, setDashboardView] = useState(
     () => localStorage.getItem('adminDashboardView') || 'projects',
+  )
+  const [showWizard, setShowWizard] = useState(false)
+  const dashboardRef = useRef(null)
+
+  // GSAP Choreographed Entrance using official useGSAP hook
+  useGSAP(
+    () => {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      if (prefersReducedMotion) return
+
+      gsap.fromTo(
+        '.dashboard-kpi-card',
+        { y: 14, autoAlpha: 0 },
+        {
+          y: 0,
+          autoAlpha: 1,
+          duration: 0.35,
+          stagger: 0.05,
+          ease: 'power2.out',
+          clearProps: 'transform',
+        },
+      )
+      gsap.fromTo(
+        '.dashboard-panel-reveal',
+        { y: 16, autoAlpha: 0 },
+        {
+          y: 0,
+          autoAlpha: 1,
+          duration: 0.4,
+          stagger: 0.06,
+          delay: 0.05,
+          ease: 'power2.out',
+          clearProps: 'transform',
+        },
+      )
+    },
+    {
+      scope: dashboardRef,
+      dependencies: [dashboardView],
+      revertOnUpdate: true,
+    },
   )
 
   const [counts, setCounts] = useState({
@@ -319,12 +377,14 @@ const AdminDashboard = () => {
       count: counts.newLeadsToday || 0,
       label: 'New Leads Today',
       icon: <FiPhoneCall size={17} />,
+      filter: { leadStage: 'NEW' },
       link: '/all-lead',
     },
     {
       count: counts.convertedLeads || 0,
       label: 'Converted Leads',
       icon: <FiCheckCircle size={17} />,
+      filter: { leadStatus: 'WON' },
       link: '/all-lead',
     },
     {
@@ -828,17 +888,15 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (!socket) return
 
-    // Project events — backend emits 'create-project' on both create AND update
-    // Lead events — for when Admin is viewing the Lead tab
     const events = [
-      'create-project',   // project created / updated / deleted
-      'update-leaderboard', // timeline post added / deleted
-      'create-lead',        // lead created / imported
-      'update-lead',        // lead fields updated
-      'delete-lead',        // lead deleted
-      'many-admin-to-telecaller', // lead assigned to TC
-      'many-telecaller-to-bde',   // lead moved to BDE
-      'many-bde-to-admin',        // lead returned to admin
+      'project:created',
+      'project:updated',
+      'project:deleted',
+      'leaderboard:updated',
+      'lead:created',
+      'lead:updated',
+      'lead:deleted',
+      'lead:transferred',
     ]
 
     // Use a stable ref so the handler always reads the latest getDashboardData
@@ -848,17 +906,33 @@ const AdminDashboard = () => {
     return () => events.forEach((event) => socket.off(event, handler))
   }, [socket, dashboardView, dateFilter])
 
-  // ── Setup Guide & Onboarding Wizard ──────────────────────────
-  const [showWizard, setShowWizard] = useState(false)
+  // ── Setup Guide & Onboarding Wizard ───
+  const getLeadBadgeVariant = (status) => {
+    const s = (status || '').toUpperCase()
+    if (s === 'CONVERTED' || s === 'WON' || s === 'INTERESTED') return 'success'
+    if (s === 'NEW') return 'brand'
+    if (s === 'LOST') return 'destructive'
+    if (s.includes('PROGRESS')) return 'warning'
+    return 'secondary'
+  }
+
+  const getProjectBadgeVariant = (status) => {
+    const s = (status || '').toLowerCase()
+    if (s === 'completed') return 'success'
+    if (s === 'not assigned') return 'brand'
+    if (s.includes('hold')) return 'destructive'
+    if (s.includes('progress')) return 'warning'
+    return 'secondary'
+  }
 
   return (
-    <div>
+    <div className="w-full pb-10" ref={dashboardRef}>
       <Helmet>
         <title>Admin Dashboard — Clientmark</title>
       </Helmet>
 
-      <Container className="mt-4 container-lg p-0">
-        {/* ─── HubSpot-Style Setup Guide & Onboarding ─── */}
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 pt-5">
+        {/* ─── Setup Guide & Onboarding ─── */}
         <SetupGuide
           mode="inline"
           onLaunchWizard={() => setShowWizard(true)}
@@ -870,610 +944,535 @@ const AdminDashboard = () => {
           onComplete={() => setShowWizard(false)}
         />
 
-        <Row className="mb-3 align-items-center justify-content-between">
-          <Col xs="12" md="6">
-            <h1
-              style={{
-                fontWeight: 700,
-                fontSize: '1.5rem',
-                color: theme.primaryColor,
-                marginBottom: 0,
-              }}
-            >
-              {dashboardView === 'leads' ? 'Lead Dashboard' : 'Project Dashboard'}
+        {/* ─── Dashboard Header Bar ─── */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              {dashboardView === 'leads' ? 'Lead Pipeline Intelligence' : 'Project Delivery Matrix'}
             </h1>
-          </Col>
-          <Col
-            xs="12"
-            md="6"
-            className="d-flex justify-content-md-end align-items-center mt-2 mt-md-0 gap-2"
-          >
-            {/* Toggle Switch */}
-            <div
-              style={{
-                position: 'relative',
-                backgroundColor: '#F4F4F1',
-                border: '1px solid rgba(0, 0, 0, 0.08)',
-                borderRadius: '20px',
-                padding: '3px',
-                display: 'flex',
-                minWidth: '150px',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '3px',
-                  left: dashboardView === 'leads' ? '3px' : '50%',
-                  width: 'calc(50% - 3px)',
-                  height: 'calc(100% - 6px)',
-                  backgroundColor: 'var(--primary-color, #111827)',
-                  borderRadius: '16px',
-                  transition: 'left 0.2s ease-in-out',
-                }}
-              />
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {dashboardView === 'leads'
+                ? 'Real-time overview of inbound, active, and converted opportunities'
+                : 'Track engineering delivery velocity, project milestones, and developer workloads'}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* View Switcher Tabs */}
+            <div className="inline-flex h-9 items-center rounded-lg bg-muted p-1 text-muted-foreground border border-border/50">
               <button
-                style={{
-                  position: 'relative',
-                  zIndex: 2,
-                  width: '50%',
-                  padding: '5px 12px',
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  color: dashboardView === 'leads' ? '#ffffff' : '#64748B',
-                  fontWeight: '600',
-                  fontSize: '12px',
-                  borderRadius: '16px',
-                  transition: 'all 0.2s ease',
-                  cursor: 'pointer',
-                }}
+                type="button"
                 onClick={() => {
                   setDashboardView('leads')
                   localStorage.setItem('adminDashboardView', 'leads')
                 }}
+                className={cn(
+                  'inline-flex items-center justify-center rounded-md px-3.5 py-1 text-xs font-semibold transition-all cursor-pointer',
+                  dashboardView === 'leads'
+                    ? 'bg-card text-foreground shadow-xs font-bold'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
               >
-                Leads
+                Leads Pipeline
               </button>
               <button
-                style={{
-                  position: 'relative',
-                  zIndex: 2,
-                  width: '50%',
-                  padding: '5px 12px',
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  color: dashboardView === 'projects' ? '#ffffff' : '#64748B',
-                  fontWeight: '600',
-                  fontSize: '12px',
-                  borderRadius: '16px',
-                  transition: 'all 0.2s ease',
-                  cursor: 'pointer',
-                }}
+                type="button"
                 onClick={() => {
                   setDashboardView('projects')
                   localStorage.setItem('adminDashboardView', 'projects')
                 }}
+                className={cn(
+                  'inline-flex items-center justify-center rounded-md px-3.5 py-1 text-xs font-semibold transition-all cursor-pointer',
+                  dashboardView === 'projects'
+                    ? 'bg-card text-foreground shadow-xs font-bold'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
               >
-                Projects
+                Project Delivery
               </button>
             </div>
 
-            <input
-              type="date"
-              className="form-control form-control-sm"
-              value={dateFilter.fromDate}
-              onChange={(e) => setDateFilter({ ...dateFilter, fromDate: e.target.value })}
-              style={{ maxWidth: 140 }}
-            />
-            <input
-              type="date"
-              className="form-control form-control-sm"
-              value={dateFilter.toDate}
-              onChange={(e) => setDateFilter({ ...dateFilter, toDate: e.target.value })}
-              style={{ maxWidth: 140 }}
-            />
-            <Button className="button" onClick={() => getDashboardData()}>
-              Apply
-            </Button>
-          </Col>
-        </Row>
+            {/* Date Filters */}
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                className="h-9 px-2.5 rounded-lg border border-input bg-background text-foreground text-xs shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                value={dateFilter.fromDate}
+                onChange={(e) => setDateFilter({ ...dateFilter, fromDate: e.target.value })}
+              />
+              <span className="text-muted-foreground text-xs">to</span>
+              <input
+                type="date"
+                className="h-9 px-2.5 rounded-lg border border-input bg-background text-foreground text-xs shadow-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                value={dateFilter.toDate}
+                onChange={(e) => setDateFilter({ ...dateFilter, toDate: e.target.value })}
+              />
+              <Button size="sm" onClick={() => getDashboardData()}>
+                Apply
+              </Button>
+            </div>
+          </div>
+        </div>
 
         {dashboardView === 'leads' ? (
           <>
-            {/* LEADS DASHBOARD CONTENT */}
-            <Row className="mb-4">
-              <Col xs={12}>
-                <Row className="g-3">
-                  {cardData.map((item, idx) => (
-                    <Col key={idx} xs={12} sm={6} md={3}>
-                      <div
-                        className="dashboard-kpi-card"
-                        onClick={() => handleCardClick(item)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <div className="dashboard-kpi-top">
-                          <span className="dashboard-kpi-label">{item.label}</span>
-                          <div className="dashboard-kpi-icon-wrap">{item.icon}</div>
-                        </div>
-                        <div className="dashboard-kpi-value">
-                          {typeof item.count === 'number'
-                            ? item.count.toLocaleString()
-                            : item.count}
-                        </div>
-                      </div>
-                    </Col>
-                  ))}
-                </Row>
-              </Col>
-            </Row>
+            {/* ─── LEADS KPI CARDS ─── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              {cardData.map((item, idx) => (
+                <Card
+                  key={idx}
+                  onClick={() => handleCardClick(item)}
+                  interactive
+                  className="dashboard-kpi-card p-5 flex flex-col justify-between group relative overflow-hidden"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      {item.label}
+                    </span>
+                    <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center transition-transform group-hover:scale-105">
+                      {item.icon}
+                    </div>
+                  </div>
+                  <div className="text-3xl font-extrabold tracking-tight text-foreground">
+                    {typeof item.count === 'number' ? item.count.toLocaleString() : item.count}
+                  </div>
+                  <div className="mt-2 flex items-center text-xs text-muted-foreground">
+                    <span className="text-primary font-medium flex items-center gap-1 group-hover:underline">
+                      View details <FiArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
+                    </span>
+                  </div>
+                </Card>
+              ))}
+            </div>
 
-            <Row className="mb-4">
-              <Col xs={12}>
-                <Row className="g-3">
-                  <Col md={6}>
-                    <Card className="p-3 shadow-sm rounded-4" style={{ height: '400px' }}>
-                      <h6 className="fw-bold mb-1">Lead Stage Progress</h6>
-                      <p className="text-muted" style={{ fontSize: '12px' }}>
+            {/* ─── LEADS CHARTS ROW ─── */}
+            <div className="dashboard-panel-reveal grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+              {/* Lead Stage Progress */}
+              <Card className="flex flex-col">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Lead Stage Progress</CardTitle>
+                      <CardDescription>
                         Total:{' '}
                         {(leadStatus.NEW || 0) +
                           (leadStatus.TELECALLING || 0) +
                           (leadStatus.SALES || 0) +
                           (leadStatus.CLOSED || 0)}{' '}
-                        &nbsp;|&nbsp; New: {leadStatus.NEW || 0} &nbsp;|&nbsp; Closed:{' '}
-                        {leadStatus.CLOSED || 0}
-                      </p>
-                      <div
-                        style={{
-                          width: '280px',
-                          height: '280px',
-                          margin: 'auto',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        {(leadStatus.NEW || 0) +
-                          (leadStatus.TELECALLING || 0) +
-                          (leadStatus.SALES || 0) +
-                          (leadStatus.CLOSED || 0) ===
-                        0 ? (
-                          <div className="text-center text-muted small">No lead stage data yet</div>
-                        ) : (
-                          <Doughnut data={doughnutData} options={doughnutOptions} />
-                        )}
-                      </div>
-                    </Card>
-                  </Col>
-                  <Col md={6}>
-                    <Card className="p-3 shadow-sm rounded-4" style={{ height: '400px' }}>
-                      <h6 className="fw-bold mb-1">Lead Status Distribution</h6>
-                      <p className="text-muted" style={{ fontSize: '12px' }}>
-                        Total: {counts.totalLead || 0} &nbsp;|&nbsp; New: {leadStatus.NEW || 0}{' '}
-                        &nbsp;|&nbsp; Closed: {leadStatus.CLOSED || 0}
-                      </p>
-                      <div style={{ width: '100%', height: '320px' }}>
-                        <Bar data={leadStatusBarData} options={leadStatusBarOptions} />
-                      </div>
-                    </Card>
-                  </Col>
-                </Row>
-              </Col>
-            </Row>
+                        · New: {leadStatus.NEW || 0} · Closed: {leadStatus.CLOSED || 0}
+                      </CardDescription>
+                    </div>
+                    <Badge variant="brand">Stage Funnel</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 flex items-center justify-center pt-2 min-h-[300px]">
+                  {(leadStatus.NEW || 0) +
+                    (leadStatus.TELECALLING || 0) +
+                    (leadStatus.SALES || 0) +
+                    (leadStatus.CLOSED || 0) ===
+                  0 ? (
+                    <div className="text-center text-muted-foreground text-sm">No lead stage data yet</div>
+                  ) : (
+                    <div className="w-[280px] h-[280px] flex items-center justify-center">
+                      <Doughnut data={doughnutData} options={doughnutOptions} />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-            <Row className="mb-4">
-              <Col xs={12}>
-                <Row className="g-3">
-                  <Col md={12}>
-                    <Card className="p-3 shadow-sm rounded-4" style={{ height: '250px' }}>
-                      <h6 className="fw-bold mb-3">Recent Leads</h6>
-                      <Table hover responsive className="user-table">
-                        <thead>
-                          <tr>
-                            <th>Lead</th>
-                            <th>Customer</th>
-                            <th>Status</th>
-                            <th>Telecaller</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {!Array.isArray(recentSellerLead) || recentSellerLead?.length === 0 ? (
-                            <tr>
-                              <td colSpan={4} className="text-center text-muted">
-                                No record found
-                              </td>
-                            </tr>
-                          ) : (
-                            recentSellerLead?.slice(0, 5).map((lead, idx) => (
-                              <tr key={lead.leadUuid || idx}>
-                                <td style={{ fontSize: '13px' }}>{lead.leadNo || 'N/A'}</td>
-                                <td style={{ fontSize: '13px', fontWeight: '500' }}>
-                                  {lead.fullName || 'N/A'}
-                                </td>
-                                <td>
-                                  <span
-                                    className="badge"
-                                    style={{
-                                      backgroundColor:
-                                        (lead.leadStatus || '').toUpperCase() === 'INTERESTED' ||
-                                          (lead.leadStatus || '').toUpperCase() === 'CONVERTED' ||
-                                          (lead.leadStatus || '').toUpperCase() === 'WON'
-                                          ? '#28a745'
-                                          : (lead.leadStatus || '').toUpperCase() === 'NEW'
-                                            ? '#007bff'
-                                            : (lead.leadStatus || '').toUpperCase() === 'LOST'
-                                              ? '#dc3545'
-                                              : (lead.leadStatus || '').toUpperCase() ===
-                                                'IN-PROGRESS'
-                                                ? '#ffc107'
-                                                : '#6c757d',
-                                      color: 'white',
-                                      fontSize: '11px',
-                                      padding: '4px 8px',
-                                    }}
-                                  >
-                                    {(lead.leadStatus || 'N/A').toLowerCase()}
-                                  </span>
-                                </td>
-                                <td style={{ fontSize: '13px' }}>
-                                  {lead.assignedTo || lead.assignToName || 'N/A'}
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </Table>
-                    </Card>
-                  </Col>
-                </Row>
-              </Col>
-            </Row>
+              {/* Lead Status Distribution */}
+              <Card className="flex flex-col">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Lead Status Distribution</CardTitle>
+                      <CardDescription>
+                        Total: {counts.totalLead || 0} · Won: {leadNature.WON || 0} · Lost: {leadNature.LOST || 0}
+                      </CardDescription>
+                    </div>
+                    <Badge variant="secondary">Volume</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 pt-2 min-h-[300px]">
+                  <div className="w-full h-[280px]">
+                    <Bar data={leadStatusBarData} options={leadStatusBarOptions} />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-            <Row className="mb-4">
-              <Col xs={12}>
-                <Row className="g-3">
-                  {/* TeleCaller Team Work */}
-                  <Col md={6}>
-                    <Card className="shadow-sm rounded-4 p-3" style={{ height: '300px' }}>
-                      <Card.Header className="py-1 d-flex justify-content-between align-items-center ps-0">
-                        <span style={{ fontWeight: 'bold' }}>TeleCaller Team Work</span>
-                      </Card.Header>
-                      <Table hover responsive className="user-table">
-                        <thead>
-                          <tr>
-                            <th>TeleCaller</th>
-                            <th>Total</th>
-                            <th>Pending</th>
-                            <th>Completed</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {telecallerReport.length === 0 ? (
-                            <tr>
-                              <td colSpan={4} className="text-center text-muted">
-                                No telecaller data found
-                              </td>
-                            </tr>
-                          ) : (
-                            telecallerReport.slice(0, 5).map((caller, idx) => (
-                              <tr key={caller.telecallerId || idx}>
-                                <td>{caller.fullName || 'NA'}</td>
-                                <td>{caller.totalLeads || 0}</td>
-                                <td>{caller.pendingLeads || 0}</td>
-                                <td>{caller.completedLeads || 0}</td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </Table>
-                    </Card>
-                  </Col>
+            {/* ─── RECENT LEADS TABLE ─── */}
+            <Card className="mb-6 overflow-hidden">
+              <CardHeader className="border-b border-border/60 py-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Recent Leads</CardTitle>
+                    <CardDescription>Latest prospect inquiries received in the system</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => navigate('/all-lead')}>
+                    View All Leads
+                  </Button>
+                </div>
+              </CardHeader>
+              <Table responsive={false}>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Lead ID</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Assigned Specialist</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {!Array.isArray(recentSellerLead) || recentSellerLead?.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                        No recent leads found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    recentSellerLead.slice(0, 5).map((lead, idx) => (
+                      <TableRow key={lead.leadUuid || idx}>
+                        <TableCell className="font-mono text-xs">{lead.leadNo || 'N/A'}</TableCell>
+                        <TableCell className="font-semibold">{lead.fullName || 'N/A'}</TableCell>
+                        <TableCell>
+                          <Badge variant={getLeadBadgeVariant(lead.leadStatus)}>
+                            {(lead.leadStatus || 'New').toUpperCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {lead.assignedTo || lead.assignToName || 'Unassigned'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </Card>
 
-                  {/* Call Logs */}
-                  <Col md={6}>
-                    <Card className="shadow-sm rounded-4 p-3" style={{ height: '300px' }}>
-                      <Card.Header className="py-1 d-flex justify-content-between align-items-center ps-0">
-                        <span style={{ fontWeight: 'bold' }}>Call Logs</span>
-                      </Card.Header>
-                      <Table hover responsive className="user-table">
-                        <thead>
-                          <tr>
-                            <th>Lead No</th>
-                            <th>Status</th>
-                            <th>Call By</th>
-                            <th>Call To</th>
-                            <th>Call Time</th>
-                            <th>Duration</th>
-                            <th>Outcome</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {!Array.isArray(callingWork?.callingList) ||
-                            callingWork?.callingList?.length === 0 ? (
-                            <tr>
-                              <td colSpan={7} className="text-center text-muted">
-                                No call logs found
-                              </td>
-                            </tr>
-                          ) : (
-                            callingWork?.callingList?.slice(0, 5).map((call, idx) => (
-                              <tr key={call.callUuid || call.leadUuid || idx}>
-                                <td>{call.leadId || call.leadNo || 'NA'}</td>
-                                <td>
-                                  <span
-                                    className={`badge ${call.callStatus === 'Completed'
-                                      ? 'bg-success'
-                                      : call.callStatus === 'Missed'
-                                        ? 'bg-danger'
-                                        : call.callStatus === 'In Progress'
-                                          ? 'bg-primary'
-                                          : 'bg-secondary'
-                                      }`}
-                                  >
-                                    {call.callStatus || 'NA'}
-                                  </span>
-                                </td>
-                                <td>{call.callerName || call.callBy || 'NA'}</td>
-                                <td>{call.destinationName || call.callTo || 'NA'}</td>
-                                <td>{call.callTime || call.startTime || 'NA'}</td>
-                                <td>{call.duration || 'NA'}</td>
-                                <td>
-                                  <span
-                                    className={`badge ${call.outcome === 'Interested'
-                                      ? 'bg-success'
-                                      : call.outcome === 'Not Interested'
-                                        ? 'bg-danger'
-                                        : call.outcome === 'Follow Up'
-                                          ? 'bg-warning'
-                                          : 'bg-secondary'
-                                      }`}
-                                  >
-                                    {call.outcome || call.callOutcome || 'NA'}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </Table>
-                    </Card>
-                  </Col>
-                </Row>
-              </Col>
-            </Row>
+            {/* ─── TELECALLER TEAM WORK & CALL LOGS ─── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Telecaller Work */}
+              <Card className="overflow-hidden">
+                <CardHeader className="border-b border-border/60 py-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Telecaller Performance</CardTitle>
+                    <Badge variant="brand">Team</Badge>
+                  </div>
+                </CardHeader>
+                <Table responsive={false}>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Telecaller</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Pending</TableHead>
+                      <TableHead>Completed</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {telecallerReport.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
+                          No telecaller activity recorded
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      telecallerReport.slice(0, 5).map((caller, idx) => (
+                        <TableRow key={caller.telecallerId || idx}>
+                          <TableCell className="font-medium">{caller.fullName || 'N/A'}</TableCell>
+                          <TableCell>{caller.totalLeads || 0}</TableCell>
+                          <TableCell>
+                            <Badge variant="warning">{caller.pendingLeads || 0}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="success">{caller.completedLeads || 0}</Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </Card>
+
+              {/* Call Logs */}
+              <Card className="overflow-hidden">
+                <CardHeader className="border-b border-border/60 py-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Call Activity Stream</CardTitle>
+                    <Badge variant="secondary">Logs</Badge>
+                  </div>
+                </CardHeader>
+                <Table responsive={false}>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Lead</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Outcome</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {!Array.isArray(callingWork?.callingList) || callingWork?.callingList?.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
+                          No call records found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      callingWork.callingList.slice(0, 5).map((call, idx) => (
+                        <TableRow key={call.callUuid || call.leadUuid || idx}>
+                          <TableCell className="font-medium">{call.leadId || call.leadNo || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                call.callStatus === 'Completed'
+                                  ? 'success'
+                                  : call.callStatus === 'Missed'
+                                    ? 'destructive'
+                                    : 'secondary'
+                              }
+                            >
+                              {call.callStatus || 'N/A'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs">{call.duration || '00:00'}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                call.outcome === 'Interested'
+                                  ? 'success'
+                                  : call.outcome === 'Not Interested'
+                                    ? 'destructive'
+                                    : 'warning'
+                              }
+                            >
+                              {call.outcome || call.callOutcome || 'Logged'}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </Card>
+            </div>
           </>
         ) : (
           <>
-            {/* PROJECTS DASHBOARD CONTENT */}
-            <Row className="mb-4">
-              <Col xs={12}>
-                <Row className="g-3">
-                  {projectCardData.map((item, idx) => (
-                    <Col key={idx} xs={12} sm={6} md={3}>
-                      <div
-                        className="dashboard-kpi-card"
-                        onClick={() => handleCardClick(item)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <div className="dashboard-kpi-top">
-                          <span className="dashboard-kpi-label">{item.label}</span>
-                          <div className="dashboard-kpi-icon-wrap">{item.icon}</div>
-                        </div>
-                        <div className="dashboard-kpi-value">
-                          {typeof item.count === 'number'
-                            ? item.count.toLocaleString()
-                            : item.count}
-                        </div>
-                      </div>
-                    </Col>
-                  ))}
-                </Row>
-              </Col>
-            </Row>
+            {/* ─── PROJECTS KPI CARDS ─── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              {projectCardData.map((item, idx) => (
+                <Card
+                  key={idx}
+                  onClick={() => handleCardClick(item)}
+                  interactive
+                  className="dashboard-kpi-card p-5 flex flex-col justify-between group relative overflow-hidden"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      {item.label}
+                    </span>
+                    <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center transition-transform group-hover:scale-105">
+                      {item.icon}
+                    </div>
+                  </div>
+                  <div className="text-3xl font-extrabold tracking-tight text-foreground">
+                    {typeof item.count === 'number' ? item.count.toLocaleString() : item.count}
+                  </div>
+                  <div className="mt-2 flex items-center text-xs text-muted-foreground">
+                    <span className="text-primary font-medium flex items-center gap-1 group-hover:underline">
+                      View details <FiArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
+                    </span>
+                  </div>
+                </Card>
+              ))}
+            </div>
 
-            <Row className="mb-4">
-              <Col xs={12}>
-                <Row className="g-3">
-                  <Col md={6}>
-                    <Card className="p-3 shadow-sm rounded-4" style={{ height: '400px' }}>
-                      <h6 className="fw-bold mb-1">Project Status Progress</h6>
-                      <p className="text-muted" style={{ fontSize: '12px' }}>
-                        Total: {projectCounts.totalProjects || 0} &nbsp;|&nbsp; In Progress:{' '}
-                        {projectStatus['In Progress'] || 0} &nbsp;|&nbsp; Completed:{' '}
-                        {projectStatus.Completed || 0}
-                      </p>
-                      <div
-                        style={{
-                          width: '280px',
-                          height: '280px',
-                          margin: 'auto',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        {projectCounts.totalProjects === 0 ? (
-                          <div className="text-center text-muted small">No project status data yet</div>
-                        ) : (
-                          <Doughnut data={projectDoughnutData} options={doughnutOptions} />
-                        )}
-                      </div>
-                    </Card>
-                  </Col>
-                  <Col md={6}>
-                    <Card className="p-3 shadow-sm rounded-4" style={{ height: '400px' }}>
-                      <h6 className="fw-bold mb-3">Developer Activity Leaderboard</h6>
-                      <div style={{ width: '100%', height: '320px', position: 'relative' }}>
-                        <Bar
-                          data={developerLeaderboardData}
-                          options={developerLeaderboardOptions}
-                        />
-                      </div>
-                    </Card>
-                  </Col>
-                </Row>
-              </Col>
-            </Row>
+            {/* ─── PROJECTS CHARTS ROW ─── */}
+            <div className="dashboard-panel-reveal grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+              {/* Project Status Progress */}
+              <Card className="flex flex-col">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Project Status Progress</CardTitle>
+                      <CardDescription>
+                        Total: {projectCounts.totalProjects || 0} · In Progress:{' '}
+                        {projectStatus['In Progress'] || 0} · Completed: {projectStatus.Completed || 0}
+                      </CardDescription>
+                    </div>
+                    <Badge variant="brand">Delivery</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 flex items-center justify-center pt-2 min-h-[300px]">
+                  {projectCounts.totalProjects === 0 ? (
+                    <div className="text-center text-muted-foreground text-sm">No project status data yet</div>
+                  ) : (
+                    <div className="w-[280px] h-[280px] flex items-center justify-center">
+                      <Doughnut data={projectDoughnutData} options={doughnutOptions} />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-            <Row className="mb-4">
-              <Col xs={12}>
-                <Row className="g-3">
-                  <Col md={12}>
-                    <Card className="p-3 shadow-sm rounded-4" style={{ height: '250px' }}>
-                      <h6 className="fw-bold mb-3">Recent Projects</h6>
-                      <Table hover responsive className="user-table">
-                        <thead>
-                          <tr>
-                            <th>Project ID</th>
-                            <th>Project Name</th>
-                            <th>Status</th>
-                            <th>Project Manager</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {!Array.isArray(recentProjects) || recentProjects?.length === 0 ? (
-                            <tr>
-                              <td colSpan={4} className="text-center text-muted">
-                                No record found
-                              </td>
-                            </tr>
-                          ) : (
-                            recentProjects?.slice(0, 5).map((project, idx) => (
-                              <tr key={project._id || idx}>
-                                <td style={{ fontSize: '13px' }}>{project.ProjectId || 'N/A'}</td>
-                                <td style={{ fontSize: '13px', fontWeight: '500' }}>
-                                  {project.ProjectName || 'N/A'}
-                                </td>
-                                <td>
-                                  <span
-                                    className="badge"
-                                    style={{
-                                      backgroundColor:
-                                        (project.ProjectStatus || '').toLowerCase() === 'completed'
-                                          ? '#28a745'
-                                          : (project.ProjectStatus || '').toLowerCase() ===
-                                            'Not assigned'
-                                            ? '#007bff'
-                                            : (project.ProjectStatus || '')
-                                              .toLowerCase()
-                                              .includes('hold')
-                                              ? '#dc3545'
-                                              : (project.ProjectStatus || '')
-                                                .toLowerCase()
-                                                .includes('progress')
-                                                ? '#ffc107'
-                                                : '#6c757d',
-                                      color: 'white',
-                                      fontSize: '11px',
-                                      padding: '4px 8px',
-                                    }}
-                                  >
-                                    {(project.ProjectStatus || 'N/A').toLowerCase()}
-                                  </span>
-                                </td>
-                                <td style={{ fontSize: '13px' }}>
-                                  {project.AssignedProjectManager || 'N/A'}
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </Table>
-                    </Card>
-                  </Col>
-                </Row>
-              </Col>
-            </Row>
+              {/* Developer Leaderboard */}
+              <Card className="flex flex-col">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Developer Activity Leaderboard</CardTitle>
+                      <CardDescription>Sprint commits and milestone deliveries</CardDescription>
+                    </div>
+                    <Badge variant="secondary">Engineering</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 pt-2 min-h-[300px]">
+                  <div className="w-full h-[280px]">
+                    <Bar data={developerLeaderboardData} options={developerLeaderboardOptions} />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-            <Row className="mb-4">
-              <Col xs={12}>
-                <Row className="g-3">
-                  {/* Project Team Work */}
-                  <Col md={6}>
-                    <Card className="shadow-sm rounded-4 p-3" style={{ height: '300px' }}>
-                      <Card.Header className="py-1 d-flex justify-content-between align-items-center ps-0">
-                        <span style={{ fontWeight: 'bold' }}>Project Team Work</span>
-                      </Card.Header>
-                      <Table hover responsive className="user-table">
-                        <thead>
-                          <tr>
-                            <th>Developer</th>
-                            <th>Total</th>
-                            <th>Assigned</th>
-                            <th>Completed</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {projectReport.length === 0 ? (
-                            <tr>
-                              <td colSpan={4} className="text-center text-muted">
-                                No project team data found
-                              </td>
-                            </tr>
-                          ) : (
-                            projectReport.slice(0, 5).map((member, idx) => (
-                              <tr key={member.fullName || idx}>
-                                <td>{member.fullName || 'NA'}</td>
-                                <td>{member.totalProjects || 0}</td>
-                                <td>{member.assignedProjects || 0}</td>
-                                <td>{member.completedProjects || 0}</td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </Table>
-                    </Card>
-                  </Col>
+            {/* ─── RECENT PROJECTS TABLE ─── */}
+            <Card className="mb-6 overflow-hidden">
+              <CardHeader className="border-b border-border/60 py-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Recent Projects</CardTitle>
+                    <CardDescription>Active delivery engagements across client accounts</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => navigate('/all-project')}>
+                    View All Projects
+                  </Button>
+                </div>
+              </CardHeader>
+              <Table responsive={false}>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Project ID</TableHead>
+                    <TableHead>Project Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Project Manager</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {!Array.isArray(recentProjects) || recentProjects?.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                        No recent projects found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    recentProjects.slice(0, 5).map((project, idx) => (
+                      <TableRow key={project._id || idx}>
+                        <TableCell className="font-mono text-xs">{project.ProjectId || 'N/A'}</TableCell>
+                        <TableCell className="font-semibold">{project.ProjectName || 'N/A'}</TableCell>
+                        <TableCell>
+                          <Badge variant={getProjectBadgeVariant(project.ProjectStatus)}>
+                            {(project.ProjectStatus || 'In Progress').toUpperCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {project.AssignedProjectManager || 'Unassigned'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </Card>
 
-                  {/* Project Activities */}
-                  <Col md={6}>
-                    <Card className="shadow-sm rounded-4 p-3" style={{ height: '300px' }}>
-                      <Card.Header className="py-1 d-flex justify-content-between align-items-center ps-0">
-                        <span style={{ fontWeight: 'bold' }}>Project Activities</span>
-                      </Card.Header>
-                      <Table hover responsive className="user-table">
-                        <thead>
-                          <tr>
-                            <th>Project Name</th>
-                            <th>Assigned Manager</th>
-                            <th>Developers</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {!Array.isArray(projectActivities?.activityList) ||
-                            projectActivities?.activityList?.length === 0 ? (
-                            <tr>
-                              <td colSpan={3} className="text-center text-muted">
-                                No project activities found
-                              </td>
-                            </tr>
-                          ) : (
-                            projectActivities.activityList.slice(0, 5).map((activity, idx) => (
-                              <tr key={activity.id || idx}>
-                                <td style={{ fontSize: '13px', fontWeight: '500' }}>
-                                  {activity.projectName.length > 25
-                                    ? activity.projectName.substring(0, 25) + '...'
-                                    : activity.projectName}
-                                </td>
-                                <td style={{ fontSize: '12px' }}>{activity.manager}</td>
-                                <td style={{ fontSize: '12px' }}>
-                                  {activity.developers.length > 40
-                                    ? activity.developers.substring(0, 40) + '...'
-                                    : activity.developers}
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </Table>
-                    </Card>
-                  </Col>
-                </Row>
-              </Col>
-            </Row>
+            {/* ─── PROJECT TEAM WORK & ACTIVITIES ─── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Project Team Work */}
+              <Card className="overflow-hidden">
+                <CardHeader className="border-b border-border/60 py-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Developer Velocity</CardTitle>
+                    <Badge variant="brand">Workload</Badge>
+                  </div>
+                </CardHeader>
+                <Table responsive={false}>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Developer</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Assigned</TableHead>
+                      <TableHead>Completed</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {projectReport.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
+                          No developer workloads recorded
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      projectReport.slice(0, 5).map((member, idx) => (
+                        <TableRow key={member.fullName || idx}>
+                          <TableCell className="font-medium">{member.fullName || 'N/A'}</TableCell>
+                          <TableCell>{member.totalProjects || 0}</TableCell>
+                          <TableCell>
+                            <Badge variant="warning">{member.assignedProjects || 0}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="success">{member.completedProjects || 0}</Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </Card>
+
+              {/* Project Activities */}
+              <Card className="overflow-hidden">
+                <CardHeader className="border-b border-border/60 py-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Project Milestones</CardTitle>
+                    <Badge variant="secondary">Live</Badge>
+                  </div>
+                </CardHeader>
+                <Table responsive={false}>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Project</TableHead>
+                      <TableHead>Manager</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {!Array.isArray(projectActivities?.activityList) ||
+                    projectActivities?.activityList?.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-muted-foreground py-6">
+                          No project activities found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      projectActivities.activityList.slice(0, 5).map((activity, idx) => (
+                        <TableRow key={activity.id || idx}>
+                          <TableCell className="font-semibold truncate max-w-[180px]">
+                            {activity.projectName}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs">{activity.manager}</TableCell>
+                          <TableCell>
+                            <Badge variant={getProjectBadgeVariant(activity.status)}>
+                              {activity.status || 'Active'}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </Card>
+            </div>
           </>
         )}
-      </Container>
+      </div>
     </div>
   )
 }

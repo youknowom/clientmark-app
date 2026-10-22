@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react'
-import { Container, Card, Row, Col, Form, Button, Spinner, Badge } from 'react-bootstrap'
+import { Container, Card, Row, Col, Form, Button, Spinner, Badge } from '../../components/ui'
 import DOMPurify from 'dompurify'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
@@ -18,6 +18,8 @@ import {
   FaTimes,
   FaLayerGroup,
   FaCode,
+  FaCopy,
+  FaSyncAlt,
 } from 'react-icons/fa'
 import { IoEyeOutline } from 'react-icons/io5'
 import { MdModeEdit, MdVerified } from 'react-icons/md'
@@ -480,6 +482,41 @@ const ProjectDetails = () => {
       .filter(Boolean)
   }
 
+  // Copy portal link with portalKey
+  const copyPortalLink = () => {
+    const key = project.portalKey || project.slug
+    if (!key) {
+      toast.error('No portal key available for this project')
+      return
+    }
+    const fullUrl = `${window.location.origin}/project-preview/${key}`
+    navigator.clipboard.writeText(fullUrl)
+    toast.success('Portal link copied to clipboard!')
+  }
+
+  // Regenerate portal key and copy new link
+  const regeneratePortalLink = async () => {
+    if (!window.confirm('Regenerating this link will rotate the portal key and invalidate all existing client portal sessions. Proceed?')) {
+      return
+    }
+    try {
+      toast.loading('Regenerating portal link...')
+      const res = await apiClient.post('/project/regenerate-portal-key', {
+        projectId: project._id,
+      })
+      toast.dismiss()
+      if (res.data?.portalKey) {
+        setProject((prev) => ({ ...prev, portalKey: res.data.portalKey }))
+        const fullUrl = res.data.portalUrl || `${window.location.origin}/project-preview/${res.data.portalKey}`
+        navigator.clipboard.writeText(fullUrl)
+        toast.success('New portal link generated and copied to clipboard!')
+      }
+    } catch (err) {
+      toast.dismiss()
+      toast.error(err?.response?.data?.message || 'Failed to regenerate portal link')
+    }
+  }
+
   //WhatsApp function for share the preview
   const sendWhatsAppToClient = async () => {
     try {
@@ -535,8 +572,9 @@ const ProjectDetails = () => {
                     setHovered={setHoverTab}
                     onClick={() => {
                       setHoverTab(null)
+                      const key = project.portalKey || project.slug
                       setTimeout(() => {
-                        window.open(`/project-preview/${project.slug}`, '_blank')
+                        window.open(`/project-preview/${key}`, '_blank')
                       }, 200)
                     }}
                     icon={
@@ -650,6 +688,52 @@ const ProjectDetails = () => {
                     activeShadow="0 3px 12px rgba(37,211,102,0.40)"
                     textColor="#16a34a"
                     hoverBgColor="#f0fdf4"
+                  />
+                  <div style={{ width: '1px', height: '20px', background: '#e5e7eb' }} />
+                  <PillButton
+                    id="copylink"
+                    active={activeTab === 'copylink'}
+                    hovered={hoverTab}
+                    setHovered={setHoverTab}
+                    onClick={() => {
+                      setActiveTab('copylink')
+                      copyPortalLink()
+                      setTimeout(() => setActiveTab(isEditing ? 'edit' : null), 1000)
+                    }}
+                    icon={
+                      <FaCopy
+                        size={15}
+                        color={activeTab === 'copylink' ? '#fff' : '#6366f1'}
+                      />
+                    }
+                    label="Copy Link"
+                    activeBg="linear-gradient(135deg, #6366f1, #4f46e5)"
+                    activeShadow="0 3px 12px rgba(99,102,241,0.40)"
+                    textColor="#6366f1"
+                    hoverBgColor="#eef2ff"
+                  />
+                  <div style={{ width: '1px', height: '20px', background: '#e5e7eb' }} />
+                  <PillButton
+                    id="regenerate"
+                    active={activeTab === 'regenerate'}
+                    hovered={hoverTab}
+                    setHovered={setHoverTab}
+                    onClick={() => {
+                      setActiveTab('regenerate')
+                      regeneratePortalLink()
+                      setTimeout(() => setActiveTab(isEditing ? 'edit' : null), 1000)
+                    }}
+                    icon={
+                      <FaSyncAlt
+                        size={14}
+                        color={activeTab === 'regenerate' ? '#fff' : '#d97706'}
+                      />
+                    }
+                    label="Regenerate"
+                    activeBg="linear-gradient(135deg, #f59e0b, #d97706)"
+                    activeShadow="0 3px 12px rgba(245,158,11,0.40)"
+                    textColor="#d97706"
+                    hoverBgColor="#fffbeb"
                   />
                 </div>
               </AnimatePresence>

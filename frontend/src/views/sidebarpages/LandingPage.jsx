@@ -240,8 +240,16 @@ export default function LandingPage() {
       toast.dismiss('demo-launch')
 
       if (res.data?.success && res.data?.token) {
-        Cookies.set('token', res.data.token, { expires: 1 })
-        Cookies.set('isDemoMode', 'true', { expires: 1 })
+        Cookies.set('token', res.data.token, {
+          expires: 7,
+          sameSite: 'Lax',
+          secure: window.location.protocol === 'https:',
+        })
+        Cookies.set('isDemoMode', 'true', {
+          expires: 7,
+          sameSite: 'Lax',
+          secure: window.location.protocol === 'https:',
+        })
         sessionStorage.setItem('isDemoMode', 'true')
         toast.success('Welcome to the Live Demo Sandbox!')
         setTimeout(() => {

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import ExcelJS from "exceljs";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 
 import { sendWATextServ } from "../services/whatsappService.js";
 import { formatDateTime } from "../services/dateService.js";
@@ -8,6 +9,7 @@ import {
   deleteOldFile,
   processFile,
   processAttachment,
+  processPrivateUpload,
 } from "../services/fileUploadService.js";
 import { createBulkNotification } from "../utils/notificationUtil.js";
 
@@ -16,6 +18,22 @@ import UserModel from "../models/userModel.js";
 import TimelineModel from "../models/timelineModel.js";
 import SoftwareSettingModel from "../models/softwareSettingModel.js";
 import OTPModel from "../models/otpModel.js";
+import TenantModel from "../models/tenantModel.js";
+import { emitToTenant } from "../services/realtime.js";
+import ThemeModel from "../models/themeModel.js";
+import WhatsappCredModel from "../models/whatsappCredModel.js";
+import { generateAndSaveOTP, verifyOTP } from "../services/otpService.js";
+import { getTenantLimits } from "../middlewares/usageLimitMiddleware.js";
+import { buildPortalUrl } from "../services/portalMessageBuilder.js";
+
+// Helper: Mask phone displaying only the last 2 digits
+const maskPhoneLast2 = (phone) => {
+  if (!phone || typeof phone !== "string") return "********";
+  const digits = phone.trim().replace(/\s+/g, "");
+  if (digits.length <= 2) return "**";
+  const last2 = digits.slice(-2);
+  return "*".repeat(Math.max(digits.length - 2, 6)) + last2;
+};
 
 /* ===CREATE PROJECT===*/
 const createProject = async (req, res) => {
@@ -61,15 +79,36 @@ const createProject = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Client name is required" });
 
-    const user = await UserModel.findOne({ _id: userId, status: "Active" });
+    const tenantId = req.user?.tenantId || req.tenantId;
+
+    const user = await UserModel.findOne({
+      _id: userId,
+      ...(tenantId ? { tenantId } : {}),
+      status: "Active",
+    });
     if (!user)
       return res.status(403).json({ success: false, message: "No permission" });
+
+    // Race-safe recount limit check (same pattern as createLead)
+    const limits = await getTenantLimits(tenantId);
+    if (limits && limits.maxProjects !== -1) {
+      const currentProjects = await ProjectModel.countDocuments({ tenantId });
+      if (currentProjects >= limits.maxProjects) {
+        return res.status(403).json({
+          message: `You've reached the maximum of ${limits.maxProjects} projects on your current plan. Please upgrade to add more projects.`,
+          success: false,
+          limitReached: true,
+        });
+      }
+    }
 
     // Auto generate ProjectId if not provided (robust, avoids duplicates)
     let finalProjectId = ProjectId;
     if (!finalProjectId) {
-      // Find the highest ProjectId number
-      const lastProject = await ProjectModel.findOne({})
+      // Find the highest ProjectId number for this tenant
+      const lastProject = await ProjectModel.findOne(
+        tenantId ? { tenantId } : {},
+      )
         .sort({ createdAt: -1 })
         .select("ProjectId")
         .lean();
@@ -91,7 +130,7 @@ const createProject = async (req, res) => {
       .replace(/\s+/g, "-")
       .replace(/-+/g, "-");
 
-    const tenantId = req.user?.tenantId || req.tenantId;
+    const portalKey = crypto.randomBytes(18).toString("base64url");
 
     const project = new ProjectModel({
       tenantId,
@@ -121,6 +160,8 @@ const createProject = async (req, res) => {
       AssignedProjectManagerId,
       createdBy: userId,
       slug: slug,
+      portalKey: portalKey,
+      portalVersion: 1,
     });
 
     //create notification for assign developer
@@ -139,8 +180,10 @@ const createProject = async (req, res) => {
       } catch (error) {}
     }
 
-    const io = req.app.get("io");
-    io.emit("create-project");
+    emitToTenant(tenantId, "project:created", {
+      projectId: project._id,
+      projectName: project.ProjectName,
+    });
 
     await project.save();
 
@@ -222,8 +265,12 @@ const getProjectById = async (req, res) => {
     const { projectId } = req.query;
     const loginUserRole = req.user?.roleId?.roleName;
     const loginUserId = req.user._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
-    const project = await ProjectModel.findOne({ _id: projectId })
+    const project = await ProjectModel.findOne({
+      _id: projectId,
+      ...(tenantId ? { tenantId } : {}),
+    })
       .populate("AssignedDevelopers", "fullName name email") // Add this line
       .lean();
 
@@ -259,9 +306,13 @@ const getProjectById = async (req, res) => {
 const updateProject = async (req, res) => {
   try {
     const { _id, ...payload } = req.body;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
-    // Fetch current project for status comparison
-    const project = await ProjectModel.findById(_id);
+    // Fetch current project for status comparison (scoped to tenant)
+    const project = await ProjectModel.findOne({
+      _id,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (!project) {
       return res
         .status(404)
@@ -309,6 +360,7 @@ const updateProject = async (req, res) => {
 
     if (addedAssignees.length > 0) {
       let notifications = addedAssignees.map((dev) => ({
+        tenantId: tenantId ? new mongoose.Types.ObjectId(tenantId) : undefined,
         userId: dev,
         notificationType: "project",
         title: "Project assigned",
@@ -321,11 +373,9 @@ const updateProject = async (req, res) => {
       } catch (error) {}
     }
 
-    const io = req.app.get("io");
-    if (io) {
-      io.emit("get-project");
-      io.emit("create-project"); // also refreshes project list
-    }
+    emitToTenant(tenantId, "project:updated", {
+      projectId: project._id,
+    });
 
     // Update project fields
     Object.assign(project, payload, { updatedAt: new Date() });
@@ -340,14 +390,17 @@ const updateProject = async (req, res) => {
 /* ===DELETE PROJECT===*/
 const deleteProject = async (req, res) => {
   try {
-    const deleted = await ProjectModel.findByIdAndDelete(req.params.id);
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const deleted = await ProjectModel.findOneAndDelete({
+      _id: req.params.id,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (!deleted)
       return res
         .status(404)
         .json({ success: false, message: "Project not found" });
 
-    const io = req.app.get("io");
-    if (io) io.emit("create-project"); // refresh project lists & dashboards
+    emitToTenant(tenantId, "project:deleted", { projectId: req.params.id });
 
     res.json({ success: true, message: "Project deleted" });
   } catch (error) {
@@ -359,10 +412,13 @@ const deleteProject = async (req, res) => {
 const deleteManyProjects = async (req, res) => {
   try {
     const { ids } = req.body;
-    const result = await ProjectModel.deleteMany({ _id: { $in: ids } });
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const result = await ProjectModel.deleteMany({
+      _id: { $in: ids },
+      ...(tenantId ? { tenantId } : {}),
+    });
 
-    const io = req.app.get("io");
-    if (io) io.emit("create-project"); // refresh project lists & dashboards
+    emitToTenant(tenantId, "project:deleted", { projectIds: ids });
 
     res.json({
       success: true,
@@ -377,7 +433,8 @@ const deleteManyProjects = async (req, res) => {
 
 const exportProjects = async (req, res) => {
   try {
-    const data = await ProjectModel.find()
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const data = await ProjectModel.find(tenantId ? { tenantId } : {})
       .populate("AssignedDevelopers", "fullName")
       .sort({ createdAt: -1 })
       .lean();
@@ -430,6 +487,7 @@ const createTimelinePost = async (req, res) => {
   try {
     const { projectId } = req.params;
     const userId = req.user._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
     const { moduleName, description, phase } = req.body;
 
     if (!moduleName?.trim() || !description?.trim() || !phase?.trim()) {
@@ -439,8 +497,11 @@ const createTimelinePost = async (req, res) => {
       });
     }
 
-    // Check if project exists
-    const project = await ProjectModel.findById(projectId);
+    // Check if project exists (scoped to tenant)
+    const project = await ProjectModel.findOne({
+      _id: projectId,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (!project) {
       return res
         .status(404)
@@ -452,12 +513,20 @@ const createTimelinePost = async (req, res) => {
 
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
-        const filePath = await processAttachment(file, "timeline");
-        if (filePath) attachments.push(filePath);
+        const fileDoc = await processPrivateUpload(file, {
+          tenantId,
+          projectId,
+          uploadedBy: userId,
+          fileCategory: "timeline",
+        });
+        if (fileDoc) {
+          attachments.push(`/files/${fileDoc.fileId}`);
+        }
       }
     }
 
     const timeline = new TimelineModel({
+      tenantId,
       addById: userId,
       moduleName,
       phase,
@@ -469,8 +538,7 @@ const createTimelinePost = async (req, res) => {
     await timeline.save();
 
     // Notify dashboards so leaderboard refreshes live
-    const io = req.app.get("io");
-    if (io) io.emit("update-leaderboard");
+    emitToTenant(tenantId, "leaderboard:updated", { projectId });
 
     res.status(201).json({
       success: true,
@@ -485,14 +553,21 @@ const createTimelinePost = async (req, res) => {
 const getProjectTimeline = async (req, res) => {
   try {
     const { projectId } = req.params;
-    // Optionally, check if project exists
-    const project = await ProjectModel.findById(projectId);
+    const tenantId = req.user?.tenantId || req.tenantId;
+    // Check if project exists (scoped to tenant)
+    const project = await ProjectModel.findOne({
+      _id: projectId,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (!project) {
       return res
         .status(404)
         .json({ success: false, message: "Project not found" });
     }
-    const timeline = await TimelineModel.find({ projectId })
+    const timeline = await TimelineModel.find({
+      projectId,
+      ...(tenantId ? { tenantId } : {}),
+    })
       .populate({
         path: "addById",
         select: "fullName name email",
@@ -510,6 +585,7 @@ const updateTimelinePost = async (req, res) => {
   try {
     const { projectId, timelineId } = req.params;
     const userId = req.user._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
     const { moduleName, description, attachements = [], phase } = req.body;
 
     if (!moduleName?.trim() || !description?.trim() || !phase?.trim()) {
@@ -522,6 +598,7 @@ const updateTimelinePost = async (req, res) => {
     const timeline = await TimelineModel.findOne({
       _id: timelineId,
       projectId,
+      ...(tenantId ? { tenantId } : {}),
     });
     if (!timeline) {
       return res
@@ -554,9 +631,11 @@ const deleteTimelinePost = async (req, res) => {
   try {
     const { projectId, timelineId } = req.params;
     const userId = req.user._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
     const timeline = await TimelineModel.findOne({
       _id: timelineId,
       projectId,
+      ...(tenantId ? { tenantId } : {}),
     });
     if (!timeline) {
       return res
@@ -568,7 +647,10 @@ const deleteTimelinePost = async (req, res) => {
       return res.status(403).json({ success: false, message: "No permission" });
     }
 
-    const isDelete = await TimelineModel.deleteOne({ _id: timelineId });
+    const isDelete = await TimelineModel.deleteOne({
+      _id: timelineId,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (isDelete.deletedCount === 0) {
       return res
         .status(400)
@@ -584,8 +666,7 @@ const deleteTimelinePost = async (req, res) => {
     }
 
     // Notify dashboards so leaderboard refreshes live
-    const io = req.app.get("io");
-    if (io) io.emit("update-leaderboard");
+    emitToTenant(tenantId, "leaderboard:updated", { projectId });
 
     return res.json({ success: true, message: "Timeline post deleted" });
   } catch (error) {
@@ -593,50 +674,212 @@ const deleteTimelinePost = async (req, res) => {
   }
 };
 
-//get project by slug
-const getProjectBySlug = async (req, res) => {
+// ── Public Project Lookup for Portal (Returns ONLY minimal whitelisted info) ──
+const lookupPortalProject = async (req, res) => {
   try {
-    const { slug } = req.query;
-    const project = await ProjectModel.findOne({ slug: slug })
-      .populate("AssignedDevelopers", "fullName name email") // Add this line
+    const identifier = (
+      req.query?.identifier ||
+      req.query?.slug ||
+      req.query?.portalKey ||
+      ""
+    ).trim();
+
+    if (!identifier) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Project identifier is required." });
+    }
+
+    // Dual-lookup: check portalKey first; if legacy slug, allow only if enabled
+    let project = await ProjectModel.findOne({ portalKey: identifier }).lean();
+    if (!project) {
+      const legacyProject = await ProjectModel.findOne({ slug: identifier }).lean();
+      if (legacyProject && process.env.PORTAL_LEGACY_SLUG_ENABLED === "true") {
+        project = legacyProject;
+      }
+    }
+
+    // Unknown portal key and disabled legacy slug produce identical response
+    if (!project) {
+      return res.status(400).json({
+        success: false,
+        message: "This link is no longer valid. Please ask your agency for a new link.",
+      });
+    }
+
+    const targetPhone = project.whatsappNo?.trim() || project.mobileNo?.trim();
+    if (!targetPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "No contact phone number is registered for this project.",
+      });
+    }
+
+    const tenant = await TenantModel.findById(project.tenantId)
+      .select("companyName settings")
+      .lean();
+    const theme = await ThemeModel.findOne({ tenantId: project.tenantId })
+      .select("mainTheme")
       .lean();
 
-    if (!project)
-      return res
-        .status(404)
-        .json({ success: false, message: "Project not found" });
-
-    res.json({ success: true, data: project });
+    return res.status(200).json({
+      success: true,
+      data: {
+        projectId: project._id,
+        projectName: project.ProjectName,
+        tenant: {
+          companyName: tenant?.settings?.projectName || tenant?.companyName || "Organization",
+          logo: tenant?.settings?.logo || null,
+          primaryColor: theme?.mainTheme?.primaryColor || "#1e3a5f",
+        },
+        maskedPhone: maskPhoneLast2(targetPhone),
+        otpRequired: true,
+        portalKey: project.portalKey || null,
+      },
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-//get timeline by slug
-const getTimelineBySlug = async (req, res) => {
+// ── Get Project By Slug / PortalKey (Whitelisted DTO, Protected by verifyPortalSession) ──
+const getProjectBySlug = async (req, res) => {
   try {
-    const { slug } = req.query;
-    // Optionally, check if project exists
-    const project = await ProjectModel.findOne({ slug: slug });
+    const project =
+      req.project ||
+      (await ProjectModel.findOne({
+        $or: [{ portalKey: req.query?.slug }, { slug: req.query?.slug }],
+      }).lean());
+
     if (!project) {
       return res
         .status(404)
         .json({ success: false, message: "Project not found" });
     }
-    const timeline = await TimelineModel.find({ projectId: project._id })
+
+    const targetPhone = project.whatsappNo?.trim() || project.mobileNo?.trim();
+
+    // Whitelisted DTO: No tenantId, createdBy, updatedBy, statusHistory, staff emails/roles, address, raw phone, ProjectCost, EstimatedHours, or ProjectPriority
+    const projectDTO = {
+      _id: project._id,
+      ProjectId: project.ProjectId,
+      ProjectName: project.ProjectName,
+      ClientName: project.ClientName,
+      ProjectType: project.ProjectType,
+      description: project.ProjectDescription || "", // Canonical name: description
+      ProjectStartDate: project.ProjectStartDate,
+      ProjectEndDate: project.ProjectEndDate,
+      ProjectStatus: project.ProjectStatus,
+      TechnologyStack: project.TechnologyStack,
+      PhaseDetails: (project.PhaseDetails || []).map((p) => ({
+        _id: p._id,
+        PhaseName: p.PhaseName,
+        description: p.PhaseDescription || "", // Canonical name: description
+        PhaseDays: p.PhaseDays,
+        PhaseStatus: p.PhaseStatus,
+        PhaseStartDate: p.PhaseStartDate,
+        PhaseEndDate: p.PhaseEndDate,
+      })),
+      maskedPhone: maskPhoneLast2(targetPhone),
+      portalKey: project.portalKey || null,
+    };
+
+    return res.status(200).json({ success: true, data: projectDTO });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ── Get Timeline By Slug / PortalKey (Whitelisted DTO, Protected by verifyPortalSession) ──
+const getTimelineBySlug = async (req, res) => {
+  try {
+    const project =
+      req.project ||
+      (await ProjectModel.findOne({
+        $or: [{ portalKey: req.query?.slug }, { slug: req.query?.slug }],
+      }));
+
+    if (!project) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Project not found" });
+    }
+
+    const rawTimeline = await TimelineModel.find({ projectId: project._id })
       .populate({
         path: "addById",
-        select: "fullName name email",
-        populate: { path: "roleId", select: "roleName" },
+        select: "fullName",
       })
-      .sort({ createdAt: -1 });
-    return res.json({
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Whitelisted DTO: canonical description, attachments, phase, module, dates, and author fullName only
+    const timelineDTO = rawTimeline.map((item) => {
+      const authorObj = item.addById
+        ? {
+            fullName: item.addById.fullName || "",
+          }
+        : null;
+
+      const attachmentList = item.attachments || item.attachements || [];
+
+      return {
+        _id: item._id,
+        moduleName: item.moduleName || "",
+        phase: item.phase || "",
+        description: item.description || "",
+        attachments: attachmentList,
+        author: authorObj,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      };
+    });
+
+    return res.status(200).json({
       message: "Successfully get timeline",
       success: true,
-      data: timeline,
+      data: timelineDTO,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ── Staff Action: Regenerate Portal Link (Rotates portalKey & increments portalVersion) ──
+const regeneratePortalLink = async (req, res) => {
+  try {
+    const { projectId } = req.body;
+    const tenantId = req.tenantId || req.user?.tenantId;
+
+    if (!projectId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Project ID is required." });
+    }
+
+    const project = await ProjectModel.findOne({ _id: projectId, tenantId });
+    if (!project) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Project not found." });
+    }
+
+    const newPortalKey = crypto.randomBytes(18).toString("base64url");
+    const newVersion = (project.portalVersion || 1) + 1;
+
+    project.portalKey = newPortalKey;
+    project.portalVersion = newVersion;
+    await project.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Portal link successfully regenerated. Previous sessions invalidated.",
+      portalKey: newPortalKey,
+      portalVersion: newVersion,
+      portalUrl: buildPortalUrl(newPortalKey),
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -646,10 +889,14 @@ const getProjectStatusReport = async (req, res) => {
     const loginUser = req.user;
     const loginUserRole = loginUser.roleId.roleName;
     const loginUserId = loginUser._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     let { fromDate, toDate } = req.query;
 
     let filter = {};
+    if (tenantId) {
+      filter.tenantId = new mongoose.Types.ObjectId(tenantId);
+    }
 
     // Add role-based filtering - only Admin sees all projects
     if (loginUserRole !== "Admin") {
@@ -821,10 +1068,14 @@ const exportProjectStatusReport = async (req, res) => {
     const loginUser = req.user;
     const loginUserRole = loginUser.roleId.roleName;
     const loginUserId = loginUser._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     let { fromDate, toDate } = req.query;
 
     let filter = {};
+    if (tenantId) {
+      filter.tenantId = new mongoose.Types.ObjectId(tenantId);
+    }
 
     if (loginUserRole === "Developer") {
       filter.AssignedDevelopers = loginUserId;
@@ -1010,126 +1261,186 @@ const exportProjectStatusReport = async (req, res) => {
   }
 };
 
-//send whatsapp otp for project view
+// ── Send WhatsApp OTP for Portal Access ───────────────────────────────────────
 const sendWhatsappOtp = async (req, res) => {
   try {
-    const { mobileNo, slug } = req.body;
+    const identifier = (
+      req.body?.identifier ||
+      req.body?.slug ||
+      req.body?.portalKey ||
+      ""
+    ).trim();
 
-    if (!mobileNo || mobileNo?.trim() === "") {
+    if (!identifier) {
       return res
         .status(400)
-        .json({ message: "Mobile number is missing.", success: false });
+        .json({ success: false, message: "Project identifier is required." });
     }
 
-    if (!slug || slug?.trim() === "") {
-      return res
-        .status(400)
-        .json({ message: "Slug is missing.", success: false });
+    // Dual-lookup: check portalKey first; if legacy slug, allow only if enabled
+    let project = await ProjectModel.findOne({ portalKey: identifier });
+    if (!project) {
+      const legacyProject = await ProjectModel.findOne({ slug: identifier });
+      if (legacyProject && process.env.PORTAL_LEGACY_SLUG_ENABLED === "true") {
+        project = legacyProject;
+      }
     }
 
-    //check  project detail exist or not
-    const [isExist, softwareSetting] = await Promise.all([
-      ProjectModel.findOne({
-        slug: slug,
-        mobileNo: mobileNo,
-      }),
-      SoftwareSettingModel.findOne(),
-    ]);
-
-    if (!isExist) {
+    // Unknown portal key and disabled legacy slug produce identical response
+    if (!project) {
       return res.status(400).json({
-        message: "Mobile number not linked or project not found.",
         success: false,
+        message: "This link is no longer valid. Please ask your agency for a new link.",
       });
     }
 
-    //check number of attempt
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    let noOfAttempt = await OTPModel.countDocuments({
-      userName: mobileNo,
-      createdAt: { $gte: oneHourAgo },
+    // WhatsApp plan check: confirm the real field name in seedDatabase.js and fail CLOSED (require === true)
+    const tenant = await TenantModel.findById(project.tenantId).populate("planId").lean();
+    if (tenant?.planId?.limits?.whatsappEnabled !== true) {
+      return res.status(403).json({
+        success: false,
+        message: "WhatsApp messaging is not included in the current subscription plan.",
+      });
+    }
+
+    const waCred = await WhatsappCredModel.findOne({ tenantId: project.tenantId }).lean();
+    if (!waCred || !waCred.token || !waCred.instanceId) {
+      return res.status(400).json({
+        success: false,
+        message: "WhatsApp service is not configured for this organization.",
+      });
+    }
+
+    // Determine target phone: whatsappNo takes precedence, fallback to mobileNo
+    const targetPhone = project.whatsappNo?.trim() || project.mobileNo?.trim();
+    if (!targetPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "No contact phone number is registered for this project.",
+      });
+    }
+
+    const subject = `${project._id}:${targetPhone}`;
+    const purpose = "portal_access";
+
+    // Enforce cooldown and hourly/daily send caps via otpService
+    const otpResult = await generateAndSaveOTP({
+      subject,
+      purpose,
+      tenantId: project.tenantId,
     });
 
-    if (noOfAttempt >= 3) {
+    if (!otpResult.success) {
       return res.status(429).json({
         success: false,
-        message: "Too many OTP requests. Try again after 1 hour.",
+        message: otpResult.message,
       });
     }
 
-    const PROJECT_NAME =
-      softwareSetting?.projectName || process.env.PROJECT_NAME;
-    const otp = crypto.randomInt(1000, 9999).toString();
-    const expiry = Date.now() + 10 * 60 * 1000;
-    let message = `${otp} is your OTP for view project detail on ${PROJECT_NAME}.\nOTP valid for 10 Minute. Please do not share`;
+    const softwareSetting = await SoftwareSettingModel.findOne({
+      tenantId: project.tenantId,
+    });
+    const projectName = softwareSetting?.projectName || "Clientmark";
+    const message = `${otpResult.plainOtp} is your verification code to view project details on ${projectName}.\nValid for 10 minutes. Do not share.`;
 
-    //send otp-message to whatsapp
-    const isSendMsg = await sendWATextServ(mobileNo, message);
-    if (isSendMsg.success == false) {
+    // Send OTP to targetPhone using the project's own tenant credentials
+    const sendResult = await sendWATextServ(targetPhone, message, project.tenantId);
+    if (!sendResult || sendResult.success === false) {
       return res.status(400).json({
         success: false,
-        message: "Failed to send OTP.",
+        message:
+          sendResult?.message ||
+          "Failed to send WhatsApp message. Please verify WhatsApp credentials.",
       });
     }
 
-    //save otp in collection
-    const newOtp = new OTPModel({
-      userName: mobileNo,
-      otp,
-      expiry,
+    return res.status(200).json({
+      success: true,
+      message: "Verification code sent to registered WhatsApp number.",
     });
-
-    await newOtp.save();
-
-    return res
-      .status(200)
-      .json({ message: "OTP send to whatsapp.", success: true });
   } catch (error) {
-    return res.status(500).json({ message: error.message, success: false });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-//verify whatsapp otp for project view
+// ── Verify WhatsApp OTP for Portal Access ─────────────────────────────────────
 const verifyWhatsappOtp = async (req, res) => {
   try {
-    const { mobileNo, otp, slug } = req.body;
+    const { otp } = req.body;
+    const identifier = (
+      req.body?.identifier ||
+      req.body?.slug ||
+      req.body?.portalKey ||
+      ""
+    ).trim();
 
-    if (!mobileNo || mobileNo?.trim() === "") {
-      return res
-        .status(400)
-        .json({ message: "Mobile number is missing.", success: false });
+    if (!identifier || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Project identifier and OTP are required.",
+      });
     }
 
-    if (!slug || slug?.trim() === "") {
-      return res
-        .status(400)
-        .json({ message: "Slug is missing.", success: false });
+    let project = await ProjectModel.findOne({ portalKey: identifier });
+    if (!project) {
+      const legacyProject = await ProjectModel.findOne({ slug: identifier });
+      if (legacyProject && process.env.PORTAL_LEGACY_SLUG_ENABLED === "true") {
+        project = legacyProject;
+      }
     }
 
-    if (!otp || otp.length != 4) {
-      return res.status(400).json({ message: "Invalid otp", success: false });
+    // Unknown portal key and disabled legacy slug produce identical response
+    if (!project) {
+      return res.status(400).json({
+        success: false,
+        message: "This link is no longer valid. Please ask your agency for a new link.",
+      });
     }
 
-    //verity otp
-    const record = await OTPModel.findOne({ userName: mobileNo, otp: otp });
-    if (!record) {
-      return res
-        .status(400)
-        .json({ message: "Incorrect OTP. Please check OTP.", success: false });
+    const targetPhone = project.whatsappNo?.trim() || project.mobileNo?.trim();
+    if (!targetPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "No contact phone number registered for this project.",
+      });
     }
 
-    //check expire or not
-    if (record.expiry < Date.now()) {
-      await OTPModel.deleteOne({ _id: record._id });
-      return res.status(400).json({ message: "OTP expired.", success: false });
+    const subject = `${project._id}:${targetPhone}`;
+    const purpose = "portal_access";
+
+    const verifyResult = await verifyOTP({
+      subject,
+      purpose,
+      otp: otp.toString().trim(),
+    });
+
+    if (!verifyResult.success) {
+      return res.status(400).json({
+        success: false,
+        locked: verifyResult.locked || false,
+        message: verifyResult.message,
+      });
     }
 
-    //delete final
-    await OTPModel.deleteMany({ userName: mobileNo });
+    // Issue signed 12-hour portal JWT bound to project and current portalVersion
+    const portalToken = jwt.sign(
+      {
+        purpose: "portal",
+        projectId: project._id,
+        tenantId: project.tenantId,
+        portalVersion: project.portalVersion || 1,
+      },
+      process.env.PORTAL_JWT_SECRET || process.env.JWT_SECRET || "fallback_portal_secret",
+      { expiresIn: "12h" }
+    );
 
-    return res.status(200).json({ message: "OTP Verified.", success: true });
+    return res.status(200).json({
+      success: true,
+      message: "Access granted",
+      portalToken,
+    });
   } catch (error) {
-    return res.status(500).json({ message: error.message, success: false });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -1137,12 +1448,29 @@ const verifyWhatsappOtp = async (req, res) => {
 const getBudgetTimeline = async (req, res) => {
   try {
     const loginUser = req.user;
-    const loginUserRole = loginUser.roleId.roleName;
     const loginUserId = loginUser._id;
+    const tenantId = req.tenantId || req.user?.tenantId;
+
+    if (!tenantId) {
+      return res.status(403).json({ success: false, message: "Tenant information missing." });
+    }
 
     let { fromDate, toDate } = req.query;
 
-    let filter = {};
+    let filter = { tenantId };
+
+    // Decide project visibility by permission code (not hardcoded role name)
+    const permissions = loginUser?.roleId?.permissions || [];
+    const canViewAllProjects =
+      permissions.includes("view:project-master") ||
+      permissions.includes("view:project-status-report");
+
+    if (!canViewAllProjects) {
+      filter.$or = [
+        { AssignedDevelopers: loginUserId },
+        { AssignedProjectManager: loginUserId },
+      ];
+    }
 
     if (fromDate && toDate) {
       filter.createdAt = {};
@@ -1305,6 +1633,7 @@ function mapStatusToKey(status) {
 const searchClients = async (req, res) => {
   try {
     const { search } = req.query;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     if (!search || search.trim() === "") {
       return res.status(400).json({
@@ -1315,10 +1644,11 @@ const searchClients = async (req, res) => {
 
     const regex = new RegExp(search, "i");
 
-    // Aggregate to get unique clients based on mobileNo
+    // Aggregate to get unique clients based on mobileNo (scoped to tenant)
     const clients = await ProjectModel.aggregate([
       {
         $match: {
+          ...(tenantId ? { tenantId: new mongoose.Types.ObjectId(tenantId) } : {}),
           $or: [{ ClientName: regex }, { mobileNo: regex }, { email: regex }],
         },
       },
@@ -1361,6 +1691,7 @@ const searchClients = async (req, res) => {
 const getClientByMobile = async (req, res) => {
   try {
     const { mobileNo } = req.query;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     if (!mobileNo || mobileNo.trim() === "") {
       return res.status(400).json({
@@ -1369,8 +1700,11 @@ const getClientByMobile = async (req, res) => {
       });
     }
 
-    // Find the most recent project for this client
-    const client = await ProjectModel.findOne({ mobileNo })
+    // Find the most recent project for this client (scoped to tenant)
+    const client = await ProjectModel.findOne({
+      mobileNo,
+      ...(tenantId ? { tenantId } : {}),
+    })
       .sort({ createdAt: -1 })
       .select(
         "ClientName mobileNo whatsappNo email gender country state city address",
@@ -1385,7 +1719,10 @@ const getClientByMobile = async (req, res) => {
     }
 
     // Count total projects for this client
-    const projectCount = await ProjectModel.countDocuments({ mobileNo });
+    const projectCount = await ProjectModel.countDocuments({
+      mobileNo,
+      ...(tenantId ? { tenantId } : {}),
+    });
 
     return res.status(200).json({
       success: true,
@@ -1424,4 +1761,6 @@ export {
   getBudgetTimeline,
   searchClients,
   getClientByMobile,
+  lookupPortalProject,
+  regeneratePortalLink,
 };

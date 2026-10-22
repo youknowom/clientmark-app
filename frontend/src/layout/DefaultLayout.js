@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useSelector } from 'react-redux'
 import { AppContent, AppSidebar, AppFooter, AppHeader } from '../components/index'
 import BottomSidebar from '../views/sidebarpages/BottomSidebar'
 import DemoBanner from '../components/DemoBanner'
@@ -11,12 +12,13 @@ import { useLocation } from 'react-router-dom'
 
 const DefaultLayout = () => {
   const location = useLocation()
+  const sidebarShow = useSelector((state) => state.sidebarShow)
   const [isMobile, setIsMobile] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
     toast.dismiss() // Dismiss all toasts on route change
-  }, [location.pathname]) // Runs whenever the route changes
+  }, [location.pathname])
 
   // Check if workspace needs onboarding questionnaire
   useEffect(() => {
@@ -38,23 +40,27 @@ const DefaultLayout = () => {
   // Detect mobile view based on window width
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth <= 767) // Define mobile as <= 767px
+      setIsMobile(window.innerWidth <= 767)
     }
 
-    handleResize() // Check initially
-    window.addEventListener('resize', handleResize) // Add resize listener
-    return () => window.removeEventListener('resize', handleResize) // Clean up listener
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
   }, [])
 
   return (
-    <div>
+    <div className="cm-app-shell">
+      {/* Modern Sidebar */}
       <AppSidebar />
-      <div className="wrapper d-flex flex-column min-vh-100">
+
+      {/* Main App Content Shell */}
+      <div className={`cm-main-wrapper ${!sidebarShow ? 'cm-sidebar-collapsed' : ''}`}>
         <DemoBanner />
         <AppHeader />
-        <div className="body flex-grow-1 pb-4">
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           <AppContent />
-        </div>
+        </main>
+        <AppFooter />
         {isMobile && <BottomSidebar />}
       </div>
 

@@ -1,77 +1,69 @@
 import React, { useContext } from 'react'
 import { AuthContext } from './AuthContext'
-import { CNavItem } from '@coreui/react'
 import {
-  FiHome,
-  FiInbox,
-  FiFolder,
-  FiUsers,
-  FiBarChart2,
-  FiSettings,
-  FiCreditCard,
-} from 'react-icons/fi'
+  LayoutDashboard,
+  UserCheck,
+  FolderKanban,
+  Users2,
+  BarChart3,
+  CreditCard,
+  Settings2,
+} from 'lucide-react'
 import { hasPermission } from './helpers/hasPermission'
 
-// Clean, consistent SaaS navigation icons (Feather family)
-const fullNavItems = [
+// Clean, consistent, tree-shakeable Lucide navigation icons
+export const fullNavItems = [
   {
-    component: CNavItem,
     name: 'Home',
     to: '/dashboard',
-    icon: <FiHome className="nav-icon" />,
+    icon: <LayoutDashboard size={19} className="nav-icon" />,
     permission: 'view:dashboard-master',
   },
   {
-    component: CNavItem,
     name: 'Leads',
     to: '/lead-master',
-    icon: <FiInbox className="nav-icon" />,
+    icon: <UserCheck size={19} className="nav-icon" />,
     permission: 'view:lead-master',
   },
   {
-    component: CNavItem,
     name: 'Projects',
     to: '/project-master',
-    icon: <FiFolder className="nav-icon" />,
+    icon: <FolderKanban size={19} className="nav-icon" />,
     permission: 'view:project-master',
   },
   {
-    component: CNavItem,
     name: 'Users',
     to: '/user-master',
-    icon: <FiUsers className="nav-icon" />,
+    icon: <Users2 size={19} className="nav-icon" />,
     permission: 'view:user-master',
   },
   {
-    component: CNavItem,
     name: 'Reports',
     to: '/report-master',
-    icon: <FiBarChart2 className="nav-icon" />,
+    icon: <BarChart3 size={19} className="nav-icon" />,
     permission: 'view:report-master',
   },
   {
-    component: CNavItem,
     name: 'Billing',
     to: '/billing',
-    icon: <FiCreditCard className="nav-icon" />,
+    icon: <CreditCard size={19} className="nav-icon" />,
   },
   {
-    component: CNavItem,
     name: 'Settings',
     to: '/setting-master',
-    icon: <FiSettings className="nav-icon" />,
+    icon: <Settings2 size={19} className="nav-icon" />,
     permission: 'view:setting-master',
   },
 ]
 
 // Permission-based filtering
-const filterNavItems = (items, user) =>
+export const filterNavItems = (items, user) =>
   items.filter((item) => {
     if (!item.permission) return true
     return hasPermission(user, item.permission)
   })
 
-const useNavItems = () => {
+export const useNavItems = () => {
   const { userData } = useContext(AuthContext)
   return filterNavItems(fullNavItems, userData)
 }

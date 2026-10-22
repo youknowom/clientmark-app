@@ -10,7 +10,7 @@ import { ThemeProvider } from './views/sidebarpages/ThemeContext'
 import { Analytics } from '@vercel/analytics/react'
 
 // Lazy load pages
-const Landing = React.lazy(() => import('./views/sidebarpages/LandingPage'))
+const Landing = React.lazy(() => import('./views/landing/LandingPage'))
 const Register = React.lazy(() => import('./views/sidebarpages/RegisterPage'))
 const Login = React.lazy(() => import('./views/sidebarpages/LoginPage'))
 const DefaultLayout = React.lazy(() => import('./layout/DefaultLayout'))
@@ -18,6 +18,8 @@ const ProjectPreview = React.lazy(() => import('./views/sidebarpages/ProjectPrev
 const NotFound = React.lazy(() => import('./views/sidebarpages/NotFound'))
 const ForgotPass = React.lazy(() => import('./views/sidebarpages/ForgotPass'))
 
+import './styles/globals.css'
+import './styles/base.css'
 import './scss/style.scss'
 
 // Loading fallback — minimal, branded

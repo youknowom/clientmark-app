@@ -5,9 +5,10 @@ import { BASE_URL } from "../api/axiosClient";
 const SOCKET_URL = BASE_URL;
 
 export const socket = io(SOCKET_URL, {
-  transports: ["websocket"], // ensures stable connection
+  transports: ["websocket"],
   reconnection: true,
-  reconnectionAttempts: 5,
+  reconnectionAttempts: 10,
   reconnectionDelay: 1000,
-  autoConnect: true,
+  reconnectionDelayMax: 5000,
+  autoConnect: false, // Never connect before valid token is available
 });

@@ -2,7 +2,8 @@ import SoftwareSettingModel from "../models/softwareSettingModel.js";
 import ThemeModel from "../models/themeModel.js";
 import TenantModel from "../models/tenantModel.js";
 import { deleteOldFile, processFile } from "../services/fileUploadService.js";
-import bcrypt from "bcrypt";
+import { emitToTenant } from "../services/realtime.js";
+import { encryptCredential, maskSecret, isMaskedValue } from "../services/crypto.js";
 
 // ── Update Main Theme (Tenant Scoped) ─────────────────────────────────────────
 const updateMainTheme = async (req, res) => {
@@ -41,42 +42,74 @@ const updateMainTheme = async (req, res) => {
   }
 };
 
-// ── Get Theme (Tenant Scoped) ──────────────────────────────────────────────────
+// ── Get Theme (Tenant Scoped or Slug Resolved) ──────────────────────────────
 const getMainTheme = async (req, res) => {
   try {
-    const tenantId = req.tenantId || req.user?.tenantId || req.query?.tenantId;
+    let resolvedTenantId = req.tenantId || req.user?.tenantId;
 
-    if (!tenantId) {
+    // If not authenticated, resolve strictly from query slug (never from query tenantId)
+    if (!resolvedTenantId && req.query?.slug) {
+      const tenant = await TenantModel.findOne({ slug: req.query.slug.toString().trim() })
+        .select("_id")
+        .lean();
+      if (tenant) {
+        resolvedTenantId = tenant._id;
+      }
+    }
+
+    const defaultTheme = {
+      primaryColor: "#111827",
+      secondaryColor: "#E05E3A",
+      backgroundColor: "#FBFBF9",
+      textColor: "#111827",
+    };
+
+    if (!resolvedTenantId) {
       return res.status(200).json({
         message: "Default theme.",
         success: true,
-        data: null,
+        data: { mainTheme: defaultTheme },
       });
     }
 
-    const mainTheme = await ThemeModel.findOne(
-      { tenantId },
-      { mainTheme: 1, createdAt: 1, updatedAt: 1 }
-    );
+    const themeDoc = await ThemeModel.findOne({ tenantId: resolvedTenantId }).lean();
+    const whitelistedTheme = themeDoc?.mainTheme
+      ? {
+          primaryColor: themeDoc.mainTheme.primaryColor || defaultTheme.primaryColor,
+          secondaryColor: themeDoc.mainTheme.secondaryColor || defaultTheme.secondaryColor,
+          backgroundColor: themeDoc.mainTheme.backgroundColor || defaultTheme.backgroundColor,
+          textColor: themeDoc.mainTheme.textColor || defaultTheme.textColor,
+        }
+      : defaultTheme;
 
     return res.status(200).json({
       message: "Successfully get theme.",
       success: true,
-      data: mainTheme,
+      data: { mainTheme: whitelistedTheme },
     });
   } catch (error) {
     return res.status(500).json({ message: error.message, success: false });
   }
 };
 
-// ── Get Site Setting (Tenant Scoped) ──────────────────────────────────────────
+// ── Get Site Setting (Tenant Scoped or Slug Resolved) ───────────────────────
 const getSiteSetting = async (req, res) => {
   try {
-    const tenantId = req.tenantId || req.user?.tenantId || req.query?.tenantId;
+    let resolvedTenantId = req.tenantId || req.user?.tenantId;
+    let tenantDoc = null;
 
-    // 1. If unauthenticated / no tenant context (e.g. public landing page):
-    // Always return clean default Clientmark branding — NEVER another tenant's custom logo!
-    if (!tenantId) {
+    // If not authenticated, resolve strictly from query slug (never from query tenantId)
+    if (!resolvedTenantId && req.query?.slug) {
+      tenantDoc = await TenantModel.findOne({ slug: req.query.slug.toString().trim() })
+        .select("_id companyName settings")
+        .lean();
+      if (tenantDoc) {
+        resolvedTenantId = tenantDoc._id;
+      }
+    }
+
+    // Default Clientmark branding if unauthenticated and no matching slug
+    if (!resolvedTenantId) {
       return res.status(200).json({
         message: "Default site setting.",
         success: true,
@@ -88,34 +121,65 @@ const getSiteSetting = async (req, res) => {
       });
     }
 
-    // 2. Fetch setting for THIS tenant only
-    let siteSettingDtl = await SoftwareSettingModel.findOne({ tenantId }).select("-password");
+    // If request is from authenticated staff, return full settings with secrets safely masked
+    if (req.user && resolvedTenantId) {
+      const siteSettingDtl = await SoftwareSettingModel.findOne({ tenantId: resolvedTenantId }).lean();
+      const maskedSmtp = maskSecret(siteSettingDtl?.password);
+      const maskedGemini = maskSecret(siteSettingDtl?.geminiApiKey);
 
-    // 3. Fallback: If no SoftwareSetting record exists yet, check TenantModel profile
-    if (!siteSettingDtl) {
-      const tenant = await TenantModel.findById(tenantId);
-      if (tenant) {
-        siteSettingDtl = {
-          tenantId: tenant._id,
-          projectName: tenant.settings?.projectName || tenant.companyName || "Clientmark",
-          mainLogo: tenant.settings?.logo || null,
-          favicon: tenant.settings?.favicon || null,
-          email: tenant.email || "",
-          phone: tenant.phone || "",
-        };
-      } else {
-        siteSettingDtl = {
-          projectName: "Clientmark",
-          mainLogo: null,
-          favicon: null,
-        };
+      if (!tenantDoc) {
+        tenantDoc = await TenantModel.findById(resolvedTenantId).select("companyName settings").lean();
       }
+
+      return res.status(200).json({
+        message: "Successfully get site setting.",
+        success: true,
+        data: {
+          projectName: siteSettingDtl?.projectName || tenantDoc?.settings?.projectName || tenantDoc?.companyName || "Clientmark",
+          mainLogo: siteSettingDtl?.mainLogo || tenantDoc?.settings?.logo || null,
+          favicon: siteSettingDtl?.favicon || tenantDoc?.settings?.favicon || null,
+          logoWidth: siteSettingDtl?.logoWidth || 150,
+          logoHeight: siteSettingDtl?.logoHeight || 50,
+          email: siteSettingDtl?.email || "",
+          host: siteSettingDtl?.host || "",
+          phone: siteSettingDtl?.phone || "",
+          companyWhatsapp: siteSettingDtl?.companyWhatsapp || "",
+          smtpPassword: maskedSmtp.masked,
+          hasSmtpPassword: maskedSmtp.hasValue,
+          smtpNeedsReentry: maskedSmtp.needsReentry || Boolean(siteSettingDtl?.smtpNeedsReentry),
+          geminiApiKey: maskedGemini.masked,
+          hasGeminiApiKey: maskedGemini.hasValue,
+        },
+      });
+    }
+
+    // Public callers: whitelist ONLY public branding fields (no SMTP, host, phone, or secrets)
+    const siteSettingDtl = await SoftwareSettingModel.findOne({ tenantId: resolvedTenantId })
+      .select("projectName mainLogo favicon")
+      .lean();
+
+    let whitelistedData;
+    if (siteSettingDtl) {
+      whitelistedData = {
+        projectName: siteSettingDtl.projectName || "Clientmark",
+        mainLogo: siteSettingDtl.mainLogo || null,
+        favicon: siteSettingDtl.favicon || null,
+      };
+    } else {
+      if (!tenantDoc) {
+        tenantDoc = await TenantModel.findById(resolvedTenantId).select("companyName settings").lean();
+      }
+      whitelistedData = {
+        projectName: tenantDoc?.settings?.projectName || tenantDoc?.companyName || "Clientmark",
+        mainLogo: tenantDoc?.settings?.logo || null,
+        favicon: tenantDoc?.settings?.favicon || null,
+      };
     }
 
     return res.status(200).json({
       message: "Successfully get site setting.",
       success: true,
-      data: siteSettingDtl,
+      data: whitelistedData,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message, success: false });
@@ -136,6 +200,7 @@ const updateSiteSetting = async (req, res) => {
       projectName,
       email,
       password,
+      geminiApiKey,
       host,
       phone,
       companyWhatsapp,
@@ -197,8 +262,19 @@ const updateSiteSetting = async (req, res) => {
       companyWhatsapp: companyWhatsapp || "",
     };
 
-    if (password && password?.trim() !== "") {
-      updatedData.password = await bcrypt.hash(password, 10);
+    // Encrypt SMTP password at rest (remove bcrypt); masked input preserves existing
+    if (password && !isMaskedValue(password) && password.trim() !== "") {
+      updatedData.password = encryptCredential(password.trim());
+      updatedData.smtpNeedsReentry = false;
+    } else if (oldSiteSetting?.password) {
+      updatedData.password = oldSiteSetting.password;
+    }
+
+    // Encrypt Gemini API key at rest; masked input preserves existing
+    if (geminiApiKey && !isMaskedValue(geminiApiKey) && geminiApiKey.trim() !== "") {
+      updatedData.geminiApiKey = encryptCredential(geminiApiKey.trim());
+    } else if (oldSiteSetting?.geminiApiKey) {
+      updatedData.geminiApiKey = oldSiteSetting.geminiApiKey;
     }
 
     // Upsert tenant's software setting record
@@ -225,10 +301,7 @@ const updateSiteSetting = async (req, res) => {
       deleteOldFile(oldSiteSetting.favicon);
     }
 
-    const io = req.app.get("io");
-    if (io) {
-      io.emit("updateSiteSetting", { tenantId: tenantId.toString() });
-    }
+    emitToTenant(tenantId, "site-setting:updated", {});
 
     return res
       .status(200)

@@ -4,24 +4,37 @@ import BranchModel from "../models/branchModel.js";
 import ProjectModel from "../models/projectModel.js";
 import SubscriptionModel from "../models/subscriptionModel.js";
 import PlanModel from "../models/planModel.js";
+import TenantModel from "../models/tenantModel.js";
 
 /**
  * Helper: Get the active plan limits for a tenant
  */
-const getTenantLimits = async (tenantId) => {
+export const getTenantLimits = async (tenantId) => {
+  if (!tenantId) return null;
+
   const subscription = await SubscriptionModel.findOne({
     tenantId,
-    status: { $in: ["trial", "active"] },
+    status: { $in: ["trial", "active", "past_due"] },
   })
     .sort({ createdAt: -1 })
     .populate("planId")
     .lean();
 
-  if (!subscription || !subscription.planId) {
-    return null;
+  if (subscription && subscription.planId && subscription.planId.limits) {
+    return subscription.planId.limits;
   }
 
-  return subscription.planId.limits;
+  // Fallback to tenant plan or demo sandbox
+  const tenant = await TenantModel.findById(tenantId).populate("planId").lean();
+  if (tenant?.planId?.limits) {
+    return tenant.planId.limits;
+  }
+
+  if (tenant?.isDemo) {
+    return { maxUsers: 50, maxLeads: 500, maxProjects: 50, maxBranches: 10 };
+  }
+
+  return { maxUsers: 3, maxLeads: 100, maxBranches: 1, maxProjects: 5 };
 };
 
 /**

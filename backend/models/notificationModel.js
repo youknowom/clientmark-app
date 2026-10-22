@@ -38,8 +38,34 @@ const NotificationSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    jobName: {
+      type: String,
+      default: null,
+      index: true,
+    },
+
+    idempotencyKey: {
+      type: String,
+      default: null,
+    },
+
+    dedupKey: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true },
+);
+
+// Idempotency: prevent duplicate scheduled notifications per user+job+day
+NotificationSchema.index(
+  { idempotencyKey: 1 },
+  { unique: true, partialFilterExpression: { idempotencyKey: { $type: "string" } } }
+);
+NotificationSchema.index(
+  { dedupKey: 1 },
+  { unique: true, partialFilterExpression: { dedupKey: { $type: "string" } } }
 );
 
 const NotificationModel = mongoose.model("notifications", NotificationSchema);

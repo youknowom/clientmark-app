@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { SUBSCRIPTION_STATUS } from "../constants/billingStatuses.js";
 
 const PaymentHistorySchema = new mongoose.Schema(
   {
@@ -76,6 +77,30 @@ const SubscriptionSchema = new mongoose.Schema(
       index: true,
     },
 
+    dodoCustomerId: {
+      type: String,
+      default: "",
+      index: true,
+    },
+
+    dodoSubscriptionId: {
+      type: String,
+      default: "",
+      index: true,
+    },
+
+    dodoPaymentId: {
+      type: String,
+      default: "",
+      index: true,
+    },
+
+    billingProvider: {
+      type: String,
+      enum: ["dodo", "stripe", "razorpay"],
+      default: "dodo",
+    },
+
     amount: {
       type: Number,
       default: 0,
@@ -88,8 +113,8 @@ const SubscriptionSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["trial", "active", "past_due", "cancelled", "expired"],
-      default: "trial",
+      enum: Object.values(SUBSCRIPTION_STATUS),
+      default: SUBSCRIPTION_STATUS.TRIAL,
     },
 
     cancelAtPeriodEnd: {
@@ -123,6 +148,11 @@ const SubscriptionSchema = new mongoose.Schema(
     },
 
     trialEndsAt: {
+      type: Date,
+      default: null,
+    },
+
+    gracePeriodStartedAt: {
       type: Date,
       default: null,
     },

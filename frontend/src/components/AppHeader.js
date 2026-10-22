@@ -1,39 +1,35 @@
-import React, { useRef, useState, useContext, useEffect } from 'react'
+import React, { useState, useContext } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-import { CContainer, CHeader, CHeaderToggler } from '@coreui/react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import Cookies from 'js-cookie'
-import { HiArrowUturnLeft } from 'react-icons/hi2'
-import { FiLogOut, FiUser, FiChevronDown, FiCreditCard } from 'react-icons/fi'
+import {
+  Menu as MenuIcon,
+  ArrowLeft,
+  User,
+  CreditCard,
+  LogOut,
+  ChevronDown,
+  Plus,
+  Compass,
+} from 'lucide-react'
 import { AuthContext } from '../AuthContext'
 import NotificationPanel from '../views/sidebarpages/NotificationsPanel'
-import { useSocket } from '../SocketContext'
 import SetupGuide from './SetupGuide'
 import OnboardingWizard from './OnboardingWizard'
-import '../views/sidebarCSS/setupGuide.css'
+import { Menu, MenuItem, MenuSeparator } from './ui/Menu'
+import { ThemeToggle } from './ui/ThemeToggle'
+import { Button } from './ui/Button'
+import { cn } from '../lib/utils'
 
-// ─── Sidebar toggle icon ───────────────────────────────────────────────────────
-const MenuIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <line x1="3" y1="6" x2="21" y2="6" />
-    <line x1="3" y1="12" x2="21" y2="12" />
-    <line x1="3" y1="18" x2="21" y2="18" />
-  </svg>
-)
-
-const AppHeader = () => {
+export const AppHeader = () => {
   const navigate = useNavigate()
-  const socket = useSocket()
   const location = useLocation()
   const { userData } = useContext(AuthContext)
-  const headerRef = useRef()
   const dispatch = useDispatch()
   const sidebarShow = useSelector((state) => state.sidebarShow)
-  const [isMobile, setIsMobile] = useState(false)
-  const [dropdownOpen, setDropdownOpen] = useState(false)
+
   const [showSetupDrawer, setShowSetupDrawer] = useState(false)
   const [showWizard, setShowWizard] = useState(false)
-  const dropdownRef = useRef()
 
   const handleLogout = () => {
     Cookies.remove('token')
@@ -41,279 +37,149 @@ const AppHeader = () => {
     navigate('/login')
   }
 
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 767)
-    handleResize()
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    const onClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setDropdownOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', onClickOutside)
-    return () => document.removeEventListener('mousedown', onClickOutside)
-  }, [])
-
-  // Close dropdown on route change
-  useEffect(() => {
-    setDropdownOpen(false)
-  }, [location.pathname])
+  const userInitial = userData?.fullName?.charAt(0)?.toUpperCase() || 'U'
+  const userRole = userData?.roleId?.roleName || 'Team Member'
 
   return (
-    <CHeader
-      position="sticky"
-      className="mb-0 p-0"
-      ref={headerRef}
-      style={{
-        backgroundColor: '#FFFFFF',
-        borderBottom: '1px solid #E8E8E5',
-        boxShadow: 'none',
-        zIndex: 1030,
-      }}
-    >
-      <CContainer className="px-3 d-flex justify-content-between align-items-center" fluid style={{ height: '56px' }}>
-        {/* ── Left side ───────────────────────────────────────────────────── */}
-        <div className="d-flex align-items-center gap-2">
-          {/* Sidebar toggle */}
+    <>
+      <header
+        className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-border/80 bg-card/80 backdrop-blur-md px-4 sm:px-6 transition-colors"
+        role="banner"
+      >
+        {/* ── Left Actions ──────────────────────────────────────────────── */}
+        <div className="flex items-center gap-2.5">
+          {/* Sidebar Toggle Button */}
           <button
+            type="button"
             onClick={() => dispatch({ type: 'set', sidebarShow: !sidebarShow })}
-            aria-label="Toggle sidebar"
-            style={{
-              background: 'none',
-              border: '1px solid #E8E8E5',
-              borderRadius: '7px',
-              width: '34px',
-              height: '34px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: '#6B7280',
-              transition: 'border-color 0.15s, color 0.15s',
-              flexShrink: 0,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#1A1F36'
-              e.currentTarget.style.color = '#1A1F36'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#E8E8E5'
-              e.currentTarget.style.color = '#6B7280'
-            }}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shadow-xs"
+            aria-label="Toggle Navigation Sidebar"
           >
-            <MenuIcon />
+            <MenuIcon size={18} />
           </button>
 
-          {/* Back button — shown on non-dashboard pages */}
+          {/* Back Button (shown on sub-pages) */}
           {location.pathname !== '/dashboard' && (
             <button
+              type="button"
               onClick={() => navigate(-1)}
-              aria-label="Go back"
-              style={{
-                background: 'none',
-                border: '1px solid #E8E8E5',
-                borderRadius: '7px',
-                width: '34px',
-                height: '34px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: '#6B7280',
-                transition: 'border-color 0.15s, color 0.15s',
-                flexShrink: 0,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#1A1F36'
-                e.currentTarget.style.color = '#1A1F36'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#E8E8E5'
-                e.currentTarget.style.color = '#6B7280'
-              }}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shadow-xs"
+              aria-label="Go Back"
+              title="Go Back"
             >
-              <HiArrowUturnLeft size={15} />
+              <ArrowLeft size={16} />
             </button>
           )}
         </div>
 
-        {/* ── Right side ──────────────────────────────────────────────────── */}
-        <div className="d-flex align-items-center gap-2">
+        {/* ── Right Actions ─────────────────────────────────────────────── */}
+        <div className="flex items-center gap-3">
+          {/* Quick Action: New Lead */}
+          <Link to="/add-lead" className="hidden md:inline-flex no-underline">
+            <Button size="sm" pill leftIcon={<Plus size={14} />}>
+              New Lead
+            </Button>
+          </Link>
+
           {/* HubSpot-style Setup Guide Button */}
           <button
-            className="hubspot-header-badge-btn"
+            type="button"
             onClick={() => setShowSetupDrawer(true)}
             title="Open Setup Guide"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/80 bg-background hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors shadow-xs cursor-pointer"
           >
-            <span className="hubspot-header-badge-dot" />
-            <span className="d-none d-sm-inline">Setup Guide</span>
+            <Compass size={14} className="text-primary" />
+            <span className="hidden sm:inline">Setup Guide</span>
           </button>
 
-          {/* Notifications */}
+          {/* Real-Time Notifications Panel */}
           <NotificationPanel />
 
-          {/* Profile dropdown */}
-          <div ref={dropdownRef} style={{ position: 'relative' }}>
-            <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              aria-expanded={dropdownOpen}
-              aria-haspopup="true"
-              aria-label="User menu"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: dropdownOpen ? '#F5F5F3' : 'none',
-                border: '1px solid',
-                borderColor: dropdownOpen ? '#D0D0CC' : '#E8E8E5',
-                borderRadius: '8px',
-                padding: '5px 10px 5px 8px',
-                cursor: 'pointer',
-                transition: 'background 0.15s, border-color 0.15s',
-                height: '34px',
-              }}
-              onMouseEnter={(e) => {
-                if (!dropdownOpen) e.currentTarget.style.background = '#F8F8F6'
-              }}
-              onMouseLeave={(e) => {
-                if (!dropdownOpen) e.currentTarget.style.background = 'none'
-              }}
-            >
-              {/* Avatar */}
-              <div style={{
-                width: '22px', height: '22px',
-                borderRadius: '50%',
-                background: 'var(--primary-color, #1A1F36)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#FFFFFF', fontSize: '10px', fontWeight: '700',
-                flexShrink: 0,
-              }}>
-                {userData?.fullName?.charAt(0)?.toUpperCase() || '?'}
-              </div>
+          {/* Theme Toggle (Light / Dark) */}
+          <ThemeToggle size="sm" />
 
-              {!isMobile && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#0F0F0F', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+          {/* User Profile Menu */}
+          <Menu
+            align="end"
+            trigger={
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 py-1 pl-1.5 pr-2.5 rounded-full border border-border/80 bg-background hover:bg-muted/80 text-foreground transition-colors cursor-pointer shadow-xs focus:outline-none"
+                aria-label="User profile menu"
+              >
+                {/* User Avatar Circle */}
+                <div className="h-7 w-7 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center flex-shrink-0 shadow-xs">
+                  {userInitial}
+                </div>
+
+                <div className="hidden sm:flex flex-col items-start leading-tight">
+                  <span className="text-xs font-semibold text-foreground whitespace-nowrap">
                     {userData?.fullName || 'User'}
                   </span>
-                  <span style={{ fontSize: '11px', color: '#9CA3AF', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
-                    {userData?.roleId?.roleName || ''}
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                    {userRole}
                   </span>
                 </div>
-              )}
 
-              <FiChevronDown
-                size={12}
-                style={{
-                  color: '#9CA3AF',
-                  transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.2s ease',
-                  flexShrink: 0,
-                }}
-              />
-            </button>
-
-            {/* Dropdown menu */}
-            {dropdownOpen && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 6px)',
-                  right: 0,
-                  minWidth: '180px',
-                  background: '#FFFFFF',
-                  border: '1px solid #E8E8E5',
-                  borderRadius: '10px',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
-                  padding: '4px',
-                  zIndex: 9999,
-                }}
-                role="menu"
-              >
-                <button
-                  role="menuitem"
-                  onClick={() => { navigate('/user-profile'); setDropdownOpen(false) }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '9px',
-                    width: '100%', padding: '8px 10px',
-                    background: 'none', border: 'none', borderRadius: '7px',
-                    cursor: 'pointer', fontSize: '13.5px', color: '#374151',
-                    fontFamily: 'inherit', fontWeight: '500',
-                    transition: 'background 0.12s',
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#F5F5F3'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                >
-                  <FiUser size={14} style={{ color: '#9CA3AF' }} />
-                  Update Profile
-                </button>
-
-                <button
-                  role="menuitem"
-                  onClick={() => { navigate('/billing'); setDropdownOpen(false) }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '9px',
-                    width: '100%', padding: '8px 10px',
-                    background: 'none', border: 'none', borderRadius: '7px',
-                    cursor: 'pointer', fontSize: '13.5px', color: '#374151',
-                    fontFamily: 'inherit', fontWeight: '500',
-                    transition: 'background 0.12s',
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#F5F5F3'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                >
-                  <FiCreditCard size={14} style={{ color: '#9CA3AF' }} />
-                  Billing & Plans
-                </button>
-
-                <div style={{ height: '1px', background: '#F0F0ED', margin: '4px 0' }} />
-
-                <button
-                  role="menuitem"
-                  onClick={handleLogout}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '9px',
-                    width: '100%', padding: '8px 10px',
-                    background: 'none', border: 'none', borderRadius: '7px',
-                    cursor: 'pointer', fontSize: '13.5px', color: '#DC2626',
-                    fontFamily: 'inherit', fontWeight: '500',
-                    transition: 'background 0.12s',
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#FEF2F2'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                >
-                  <FiLogOut size={14} />
-                  Sign out
-                </button>
+                <ChevronDown size={13} className="text-muted-foreground ml-0.5" />
+              </button>
+            }
+          >
+            {/* Header info inside dropdown */}
+            <div className="px-3 py-2 border-b border-border/50">
+              <div className="text-xs font-bold text-foreground">
+                {userData?.fullName || 'My Account'}
               </div>
-            )}
-          </div>
-        </div>
-      </CContainer>
+              <div className="text-[11px] text-muted-foreground truncate">
+                {userData?.email || ''}
+              </div>
+            </div>
 
-      {/* HubSpot-style Slide-out Setup Guide Drawer */}
+            <MenuItem
+              icon={<User size={14} className="text-muted-foreground" />}
+              onClick={() => navigate('/user-profile')}
+            >
+              Update Profile
+            </MenuItem>
+
+            <MenuItem
+              icon={<CreditCard size={14} className="text-muted-foreground" />}
+              onClick={() => navigate('/billing')}
+            >
+              Billing & Subscriptions
+            </MenuItem>
+
+            <MenuSeparator />
+
+            <MenuItem
+              danger
+              icon={<LogOut size={14} />}
+              onClick={handleLogout}
+            >
+              Sign out
+            </MenuItem>
+          </Menu>
+        </div>
+      </header>
+
+      {/* Setup Guide Drawer */}
       <SetupGuide
-        mode="drawer"
         isOpen={showSetupDrawer}
         onClose={() => setShowSetupDrawer(false)}
-        onLaunchWizard={() => {
+        onOpenWizard={() => {
           setShowSetupDrawer(false)
           setShowWizard(true)
         }}
       />
 
+      {/* Onboarding Wizard Modal */}
       <OnboardingWizard
         isOpen={showWizard}
         onClose={() => setShowWizard(false)}
         onComplete={() => setShowWizard(false)}
       />
-    </CHeader>
+    </>
   )
 }
 
-export default AppHeader
+export default React.memo(AppHeader)

@@ -1,62 +1,53 @@
 import React, { useContext, useEffect } from 'react'
-import { Col, Container, Row } from 'react-bootstrap'
+import { PhoneCall, Award, TrendingUp, FolderCheck, MessageSquare } from 'lucide-react'
 import { Helmet } from 'react-helmet'
-import { MdOutlineLeaderboard } from 'react-icons/md'
-import { TbStatusChange } from 'react-icons/tb'
-import { RiProjectorLine } from "react-icons/ri";
-
-const PageHeader = React.lazy(() => import('../../components/mycomponent/PageHeader'))
-const PageMenus = React.lazy(() => import('../../components/mycomponent/PageMenus'))
-
 import { AuthContext } from '../../AuthContext'
 import { hasPermission } from '../../helpers/hasPermission'
-import { HiOutlineClipboardDocumentList } from 'react-icons/hi2'
 import { clearListState } from '../../helpers/listStateStorage'
-import { FaWhatsapp } from 'react-icons/fa'
+import PageHeader from '../../components/mycomponent/PageHeader'
+import PageMenus from '../../components/mycomponent/PageMenus'
 
 function ReportMaster() {
   const { userData } = useContext(AuthContext)
   const pageHeaderData = {
-    // imgPath: userImg,
     title: 'Report Master',
-    disc: 'Lead Management including Registration, Listing, and Reporting',
-    className: 'p-2',
+    disc: 'Executive and Operational Analytics: Telecaller Metrics, BDE Velocity, Pipeline Conversions, and Delivery Status',
   }
 
   const menus = [
     {
-      icon: <HiOutlineClipboardDocumentList size={30} className="text-success" />,
+      icon: <PhoneCall size={24} color="var(--cm-brand-500)" />,
       label: 'Telecaller Lead Report',
       link: '/telecaller-lead-report',
-      bg: 'rgba(212, 237, 218, 0.6)',
+      bg: 'var(--cm-brand-50)',
       permission: 'view:telecaller-lead-report',
     },
     {
-      icon: <MdOutlineLeaderboard size={30} className="text-info" />,
-      label: 'BDE Lead Report',
+      icon: <Award size={24} color="var(--cm-indigo-600, #4F46E5)" />,
+      label: 'BDE Performance Report',
       link: '/bde-lead-report',
-      bg: 'rgba(212, 237, 218, 0.6)',
+      bg: 'rgba(99, 102, 241, 0.1)',
       permission: 'view:bde-lead-report',
     },
     {
-      icon: <TbStatusChange size={30} className="text-info" />,
-      label: 'Lead Status Report',
+      icon: <TrendingUp size={24} color="var(--cm-success-600)" />,
+      label: 'Lead Conversion Report',
       link: '/lead-status-report',
-      bg: 'rgba(212, 237, 218, 0.6)',
+      bg: 'var(--cm-success-50)',
       permission: 'view:lead-status-report',
     },
     {
-      icon: <RiProjectorLine size={30} className="text-success" />,
-      label: 'Project Status Report',
+      icon: <FolderCheck size={24} color="var(--cm-cyan-500, #06B6D4)" />,
+      label: 'Project Delivery Report',
       link: '/project-status-report',
-      bg: 'rgba(212, 237, 218, 0.6)',
+      bg: 'rgba(6, 182, 212, 0.1)',
       permission: 'view:project-status-report',
     },
     {
-      icon: <FaWhatsapp size={30} className="text-success" />,
+      icon: <MessageSquare size={24} color="#16A34A" />,
       label: 'WhatsApp Chat Logs',
       link: '/whatsapp-chat-record',
-      bg: 'rgba(207, 226, 243, 0.6)',
+      bg: 'rgba(22, 163, 74, 0.1)',
       permission: 'view:whatsapp-chat-record',
     },
   ]
@@ -71,22 +62,13 @@ function ReportMaster() {
   }, [])
 
   return (
-    <Container className="p-0 pb-4 container-lg mt-2">
+    <div>
       <Helmet>
         <title>Reports — Clientmark</title>
       </Helmet>
-      <Row>
-        <Col>
-          <PageHeader pageHeaderData={pageHeaderData} />
-        </Col>
-      </Row>
-      <Row>
-        <Col>
-          {/* <h6 className="mt-2">Menus</h6> */}
-          <PageMenus menus={filterMenus} />
-        </Col>
-      </Row>
-    </Container>
+      <PageHeader pageHeaderData={pageHeaderData} />
+      <PageMenus menus={filterMenus} />
+    </div>
   )
 }
 

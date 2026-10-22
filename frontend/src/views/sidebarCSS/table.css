@@ -3,16 +3,16 @@
   position: relative;
 }
 
-/* Scroll container for table */
+/* Scroll container for table (Clientmark Studio Surface) */
 .table-scroll-container {
   position: relative;
   overflow-x: auto;
   overflow-y: visible;
   max-width: 100%;
-  border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background-color: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  border-radius: var(--radius, 12px);
+  border: 1px solid hsl(var(--border));
+  background-color: hsl(var(--card));
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
 }
 
 /* Table row styles */
@@ -21,6 +21,7 @@
   font-family: inherit;
   border-collapse: separate !important;
   border-spacing: 0 !important;
+  color: hsl(var(--foreground)) !important;
 }
 
 .user-table tbody tr {
@@ -29,51 +30,51 @@
 
 /* Hover effect on rows */
 .user-table tbody tr:hover {
-  background-color: #f9fafb !important;
+  background-color: hsl(var(--muted) / 0.5) !important;
 }
 
 /* Center align the content */
 .user-table td,
 .user-table th {
-  font-size: 12.5px;
-  padding: 8px 12px;
+  font-size: 13px;
+  padding: 10px 14px;
   vertical-align: middle;
   text-align: left;
   white-space: nowrap;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid hsl(var(--border) / 0.6);
 }
 
 .user-table th {
   position: sticky;
   top: 0;
-  background-color: #f8fafc !important;
-  color: #475569 !important;
+  background-color: hsl(var(--muted) / 0.5) !important;
+  color: hsl(var(--muted-foreground)) !important;
   font-weight: 600;
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid hsl(var(--border)) !important;
   z-index: 2;
 }
 
 .user-table th.sticky-action-col {
   position: sticky;
   right: 0;
-  background-color: #f8fafc !important;
-  box-shadow: -2px 0 6px rgba(0, 0, 0, 0.03);
+  background-color: var(--cm-bg-subtle, #12151D) !important;
+  box-shadow: -2px 0 6px rgba(0, 0, 0, 0.4);
   z-index: 3;
 }
 
 .user-table td.sticky-action-col {
   position: sticky;
   right: 0;
-  background-color: #ffffff;
-  box-shadow: -2px 0 6px rgba(0, 0, 0, 0.02);
+  background-color: var(--cm-bg-card, #0D0F14);
+  box-shadow: -2px 0 6px rgba(0, 0, 0, 0.3);
   z-index: 1;
 }
 
 .user-table tbody tr:hover td.sticky-action-col {
-  background-color: #f9fafb;
+  background-color: var(--cm-bg-hover, rgba(255, 255, 255, 0.04)) !important;
 }
 
 /* Modern Action Buttons */
@@ -87,105 +88,117 @@
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  padding: 5px 7px;
+  padding: 5px 8px;
   border-radius: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   margin-right: 4px;
   transition: all 0.15s ease;
   cursor: pointer;
 }
 
 .editSpan {
-  background-color: #f3f4f6;
-  color: #374151;
+  background-color: #1A1F2C;
+  color: #CBD5E1;
 }
 
 .editSpan:hover {
-  background-color: #e5e7eb;
-  color: #111827;
-  border-color: rgba(0, 0, 0, 0.12);
+  background-color: #242B3D;
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .assign {
-  background-color: #eff6ff;
-  color: #2563eb;
-  border-color: #dbeafe;
+  background-color: rgba(99, 102, 241, 0.12);
+  color: #818CF8;
+  border-color: rgba(99, 102, 241, 0.25);
 }
 
 .assign:hover {
-  background-color: #dbeafe;
-  color: #1d4ed8;
+  background-color: rgba(99, 102, 241, 0.22);
+  color: #A5B4FC;
 }
 
 .zoiper {
-  background-color: #fffbeb;
-  color: #d97706;
-  border-color: #fef3c7;
+  background-color: rgba(245, 158, 11, 0.12);
+  color: #FBBF24;
+  border-color: rgba(245, 158, 11, 0.25);
 }
 
 .zoiper:hover {
-  background-color: #fef3c7;
-  color: #b45309;
+  background-color: rgba(245, 158, 11, 0.22);
+  color: #FDE68A;
 }
 
 .deleteicon {
-  background-color: #fef2f2;
-  color: #dc2626;
-  border-color: #fee2e2;
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #F87171;
+  border-color: rgba(239, 68, 68, 0.25);
 }
 
 .deleteicon:hover {
-  background-color: #fee2e2;
-  color: #b91c1c;
+  background-color: rgba(239, 68, 68, 0.22);
+  color: #FCA5A5;
 }
 
 .upload-icon {
-  background-color: #f0fdf4;
-  color: #16a34a;
-  border-color: #dcfce7;
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #34D399;
+  border-color: rgba(16, 185, 129, 0.25);
 }
 
 .upload-icon:hover {
-  background-color: #dcfce7;
-  color: #15803d;
+  background-color: rgba(16, 185, 129, 0.22);
+  color: #6EE7B7;
 }
 
 .green {
-  background-color: #10b981;
-  color: #ffffff;
+  background-color: #10B981;
+  color: #FFFFFF;
   border: none;
 }
 
 .green:hover {
   background-color: #059669;
-  color: #ffffff;
+  color: #FFFFFF;
 }
 
 /* Pagination container */
 .pagination-controls {
-  text-align: center;
-  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
 }
 
 /* Pagination button styling */
 .pagination-controls button {
-  width: 80px;
-  padding: 3px 4px;
-  margin: 0 5px;
-  font-size: 12px;
-  background-color: var(--primary-color) !important;
-  color: #ffffff !important;
-  border: none;
-  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  background-color: #12151D !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.2s ease;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+  background-color: #1E2230 !important;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.pagination-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* Styling for the page info text */
 .pagination-controls span {
-  margin: 0 10px;
+  font-family: var(--cm-font-mono, monospace);
   font-size: 12px;
-  color: #333;
+  color: #8D8D96;
 }
 
 .custom-checkbox.red .form-check-input:checked {
@@ -431,17 +444,16 @@
   }
 }
 
-/* staus and priority buttons stlying */
+/* status and priority buttons styling */
 .badge-pro {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 8px; /* smaller height */
+  padding: 3px 9px; /* smaller height */
   font-size: 11px;
-  font-weight: 500;
-  border-radius: 6px; /* modern rounded */
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  /* box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); */
+  font-weight: 600;
+  border-radius: 9999px; /* modern rounded pill */
+  border: 1px solid rgba(255, 255, 255, 0.12);
   min-width: 70px;
   text-align: center;
   line-height: 1.2;

@@ -22,7 +22,7 @@ import {
   FaFlag,
   FaUsers,
 } from 'react-icons/fa'
-import { MdCall, MdVerified } from 'react-icons/md'
+import { MdCall } from 'react-icons/md'
 import '../sidebarCSS/comStyle.css'
 
 const OTP_SESSION_KEY = (slug) => `project_otp_verified_${slug}`
@@ -30,7 +30,7 @@ const OTP_EXPIRY_HOURS = 1
 
 // ─── OTP Modal ────────────────────────────────────────────────────────────────
 const OtpModal = ({ mobile, slug, onVerified }) => {
-  const [otp, setOtp] = useState(['', '', '', ''])
+  const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [otpError, setOtpError] = useState('')
   const [otpSent, setOtpSent] = useState(false)
   const [sending, setSending] = useState(false)
@@ -40,7 +40,7 @@ const OtpModal = ({ mobile, slug, onVerified }) => {
   const inputRefs = useRef([])
   const timerRef = useRef(null)
 
-  const RESEND_SECONDS = 30
+  const RESEND_SECONDS = 60
 
   const startTimer = () => {
     setTimer(RESEND_SECONDS)
@@ -62,8 +62,9 @@ const OtpModal = ({ mobile, slug, onVerified }) => {
 
   const handleSendOtp = async () => {
     setSending(true)
+    setOtpError('')
     try {
-      await apiClient.post(`/project/send-whatsapp-otp`, { slug, mobileNo: mobile })
+      await apiClient.post(`/project/send-whatsapp-otp`, { identifier: slug })
       toast.success('Verification code sent to your WhatsApp.')
       setOtpSent(true)
       startTimer()
@@ -77,27 +78,24 @@ const OtpModal = ({ mobile, slug, onVerified }) => {
 
   const handleResend = async () => {
     if (!canResend) return
-    setOtp(['', '', '', ''])
+    setOtp(['', '', '', '', '', ''])
     setOtpError('')
     await handleSendOtp()
   }
 
   const verifyOtp = async (otpValue) => {
     setVerifying(true)
+    setOtpError('')
     try {
-      await apiClient.post(`/project/verify-whatsapp-otp`, {
-        slug,
+      const res = await apiClient.post(`/project/verify-whatsapp-otp`, {
+        identifier: slug,
         otp: otpValue,
-        mobileNo: mobile,
       })
-      // Save to localStorage with expiry
-      const expiry = Date.now() + OTP_EXPIRY_HOURS * 60 * 60 * 1000
-      localStorage.setItem(OTP_SESSION_KEY(slug), JSON.stringify({ verified: true, expiry }))
       toast.success('Access verified.')
-      onVerified()
+      onVerified(res.data.portalToken)
     } catch (err) {
-      setOtpError(err?.response?.data?.message || 'Invalid OTP. Please try again.')
-      setOtp(['', '', '', ''])
+      setOtpError(err?.response?.data?.message || 'Invalid or expired OTP. Please try again.')
+      setOtp(['', '', '', '', '', ''])
       setTimeout(() => inputRefs.current[0]?.focus(), 100)
     } finally {
       setVerifying(false)
@@ -111,14 +109,14 @@ const OtpModal = ({ mobile, slug, onVerified }) => {
     setOtp(newOtp)
     setOtpError('')
 
-    if (value && index < 3) {
+    if (value && index < 5) {
       inputRefs.current[index + 1]?.focus()
     }
 
-    // Auto-submit on last digit
-    if (value && index === 3) {
+    // Auto-submit on 6th digit
+    if (value && index === 5) {
       const full = newOtp.join('')
-      if (full.length === 4) verifyOtp(full)
+      if (full.length === 6) verifyOtp(full)
     }
   }
 
@@ -129,12 +127,12 @@ const OtpModal = ({ mobile, slug, onVerified }) => {
   }
 
   const handlePaste = (e) => {
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4)
-    if (pasted.length === 4) {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    if (pasted.length === 6) {
       const arr = pasted.split('')
       setOtp(arr)
       setOtpError('')
-      inputRefs.current[3]?.focus()
+      inputRefs.current[5]?.focus()
       verifyOtp(pasted)
     }
     e.preventDefault()
@@ -230,12 +228,12 @@ const OtpModal = ({ mobile, slug, onVerified }) => {
           ) : (
             <>
               <p className="text-center text-muted mb-3" style={{ fontSize: '13px' }}>
-                Enter the 4-digit OTP sent to{' '}
+                Enter the 6-digit verification code sent to{' '}
                 <strong style={{ color: '#0d6efd' }}>{MobileNumber}</strong>
               </p>
 
-              {/* OTP Boxes */}
-              <div className="d-flex justify-content-center gap-3 mb-2">
+              {/* OTP Boxes (6 digits) */}
+              <div className="d-flex justify-content-center gap-2 mb-2">
                 {otp.map((digit, i) => (
                   <input
                     key={i}
@@ -249,12 +247,12 @@ const OtpModal = ({ mobile, slug, onVerified }) => {
                     onPaste={i === 0 ? handlePaste : undefined}
                     disabled={verifying}
                     style={{
-                      width: '60px',
-                      height: '60px',
-                      fontSize: '26px',
+                      width: '46px',
+                      height: '52px',
+                      fontSize: '22px',
                       textAlign: 'center',
                       border: otpError ? '2px solid #dc3545' : '2px solid #dee2e6',
-                      borderRadius: '12px',
+                      borderRadius: '10px',
                       outline: 'none',
                       fontWeight: 'bold',
                       transition: 'all 0.2s',
@@ -419,25 +417,52 @@ const ProjectPreview = () => {
     }
   })
 
-  // OTP gate
-  const [showOtp, setShowOtp] = useState(false)
+  // OTP gate & Portal Token
   const [accessGranted, setAccessGranted] = useState(false)
+  const [publicData, setPublicData] = useState(null)
+  const [portalToken, setPortalToken] = useState(() => {
+    try {
+      return sessionStorage.getItem(`portal_token_${slug}`) || null
+    } catch {
+      return null
+    }
+  })
 
   // Check if logged-in user (admin/dev) — skip OTP
   const isLoggedIn = !!(token && userData?._id)
 
-  // Check localStorage session
-  const checkLocalSession = () => {
+  const fetchFullProject = async (activeToken) => {
     try {
-      if (token) return true
-      const raw = localStorage.getItem(OTP_SESSION_KEY(slug))
-      if (!raw) return false
-      const { verified, expiry } = JSON.parse(raw)
-      if (verified && expiry && Date.now() < expiry) return true
-      localStorage.removeItem(OTP_SESSION_KEY(slug)) // expired
-      return false
-    } catch {
-      return false
+      setIsLoading(true)
+      const headers = {}
+      if (activeToken) {
+        headers['x-portal-token'] = activeToken
+      }
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
+      const [projRes, timeRes] = await Promise.all([
+        apiClient.get(`/project/get-project-by-slug`, {
+          params: { slug },
+          headers,
+        }),
+        apiClient.get(`/project/get-timeline-by-slug`, {
+          params: { slug },
+          headers,
+        }).catch(() => ({ data: { data: [] } })),
+      ])
+
+      if (projRes?.data?.data) {
+        setProject(projRes.data.data)
+      }
+      const timeData = Array.isArray(timeRes?.data?.data) ? timeRes.data.data : []
+      setPosts(timeData.map(mapTimelinePost))
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to fetch project details.')
+      setAccessGranted(false)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -448,80 +473,54 @@ const ProjectPreview = () => {
       return
     }
 
-    if (isLoggedIn || checkLocalSession()) {
-      setAccessGranted(true)
-    } else {
-      setShowOtp(true)
-    }
-
-    getProjectDetails()
-    getProjectTimeline()
-
-    // Fetch site settings (logo, company contact)
+    // Step 1: Lookup public portal project details (no confidential data leaked)
     apiClient
-      .get('/software-setting/get-site-setting')
+      .get(`/project/lookup-portal`, { params: { identifier: slug } })
       .then((res) => {
         const d = res?.data?.data
-        if (d)
-          setSite({
-            mainLogo: d.mainLogo || '',
-            projectName: d.projectName || '',
-            phone: d.phone || '',
-            companyWhatsapp: d.companyWhatsapp || '',
-          })
-      })
-      .catch(() => {})
-
-    // Fetch theme
-    apiClient
-      .get('/software-setting/get-main-theme')
-      .then((res) => {
-        const t = res?.data?.data?.mainTheme
-        if (t) {
-          const updated = {
-            primaryColor: t.primaryColor || defaultTheme.primaryColor,
-            secondaryColor: t.secondaryColor || defaultTheme.secondaryColor,
-            backgroundColor: t.backgroundColor || defaultTheme.backgroundColor,
-            textColor: t.textColor || defaultTheme.textColor,
+        if (d) {
+          setPublicData(d)
+          if (d.tenant) {
+            setSite((prev) => ({
+              ...prev,
+              projectName: d.tenant.companyName || prev.projectName,
+              mainLogo: d.tenant.logo || prev.mainLogo,
+            }))
+            if (d.tenant.primaryColor) {
+              setTheme((prev) => ({ ...prev, primaryColor: d.tenant.primaryColor }))
+            }
           }
-          setTheme(updated)
+
+          // Check if already authorized
+          const storedToken = sessionStorage.getItem(`portal_token_${slug}`)
+          if (isLoggedIn || storedToken) {
+            setAccessGranted(true)
+            fetchFullProject(storedToken || token)
+          } else {
+            setAccessGranted(false)
+            setIsLoading(false)
+          }
         }
       })
-      .catch(() => {})
-  }, [slug])
-
-  const getProjectDetails = async () => {
-    try {
-      setIsLoading(true)
-      const response = await apiClient.get(`/project/get-project-by-slug`, {
-        params: { slug },
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      .catch((err) => {
+        setIsLoading(false)
+        toast.error(err?.response?.data?.message || 'Project not found or invalid link.')
       })
-      setProject(response.data.data)
-    } catch (error) {
-      toast.error(error?.response?.data?.message || 'Failed to fetch project details.')
-      navigate(-1)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  }, [slug])
 
   const mapTimelinePost = (item) => {
     const createdAt = item?.createdAt ? new Date(item.createdAt) : null
     const updatedAt = item?.updatedAt ? new Date(item.updatedAt) : null
     const edited = updatedAt && createdAt && updatedAt > createdAt
-    const roleName = item?.addById?.roleId?.roleName || ''
-    const isAdmin = roleName.toLowerCase().includes('admin')
+    const authorName = item?.author?.fullName || 'Developer'
+    const rawAttachments = Array.isArray(item?.attachments) ? item.attachments : []
     return {
       id: item?._id,
       module: item?.moduleName || '',
       phase: item?.phase || '',
-      isAdmin,
-      developer: { name: item?.addById?.fullName || item?.addById?.name || 'Developer' },
-      content: item?.description || '',
-      images: Array.isArray(item?.attachements)
-        ? item.attachements.map((img) => (img?.startsWith('http') ? img : `${BASE_URL}${img}`))
-        : [],
+      developer: { name: authorName },
+      description: item?.description || '',
+      images: rawAttachments.map((img) => (img?.startsWith('http') ? img : `${BASE_URL}${img}`)),
       createdAt,
       updatedAt,
       edited,
@@ -578,22 +577,23 @@ const ProjectPreview = () => {
     )
   }
 
-  if (!project) return <div>No project data found.</div>
-
   // Only render preview content if access is granted
   if (!accessGranted) {
-    // Show OTP modal only
     return (
       <OtpModal
-        mobile={project?.mobileNo || ''}
+        mobile={publicData?.maskedPhone || ''}
         slug={slug}
-        onVerified={() => {
+        onVerified={(receivedToken) => {
+          sessionStorage.setItem(`portal_token_${slug}`, receivedToken)
+          setPortalToken(receivedToken)
           setAccessGranted(true)
-          setShowOtp(false)
+          fetchFullProject(receivedToken)
         }}
       />
     )
   }
+
+  if (!project) return <div>No project data found.</div>
 
   const filteredPosts = selectedPhase
     ? posts.filter((p) => p.phase?.trim() === selectedPhase?.trim())
@@ -996,13 +996,13 @@ const ProjectPreview = () => {
                 </div>
               )}
 
-              {project.ProjectDescription && (
+              {project.description && (
                 <div className="inv-field">
                   <div className="inv-field-label">Description</div>
                   <div
                     style={{ fontSize: 13.5, color: '#334155', lineHeight: 1.7, marginTop: 4 }}
                     dangerouslySetInnerHTML={{
-                      __html: DOMPurify.sanitize(project.ProjectDescription),
+                      __html: DOMPurify.sanitize(project.description),
                     }}
                   />
                 </div>
@@ -1187,7 +1187,7 @@ const ProjectPreview = () => {
                             )}
                           </td>
                           <td style={{ color: '#64748b' }}>
-                            {phase.PhaseDescription || phase.description || '—'}
+                            {phase.description || '—'}
                           </td>
                           <td>
                             <span style={{ fontWeight: 600 }}>
@@ -1287,7 +1287,6 @@ const ProjectPreview = () => {
                         }}
                       >
                         {post.developer.name}
-                        {post.isAdmin && <MdVerified size={14} color="#2563eb" title="Admin" />}
                       </span>
                       {post.phase && (
                         <span
@@ -1325,7 +1324,7 @@ const ProjectPreview = () => {
                     <div className="inv-timeline-card-body">
                       <div
                         style={{ lineHeight: 1.7 }}
-                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.description) }}
                       />
                       {post.images.length > 0 && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>

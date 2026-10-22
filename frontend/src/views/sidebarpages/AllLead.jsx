@@ -9,9 +9,8 @@ import {
   Table,
   Row,
   Col,
-  Dropdown,
-  Collapse,
-} from 'react-bootstrap'
+} from '../../components/ui'
+import { Dropdown, Collapse } from 'react-bootstrap'
 
 import {
   FaFileExcel,
@@ -84,7 +83,7 @@ function AllLead() {
   const LIST_KEY = 'ALL_LEAD'
   const saved = getListState(LIST_KEY)
 
-  const dbStatus = location?.state?.filter || ''
+  const incomingFilter = location?.state?.filter
 
   const [isLoading, setIsLoading] = useState('')
   const [data, setData] = useState([])
@@ -92,12 +91,23 @@ function AllLead() {
   const [formData, setFormData] = useState({})
 
   const [filter, setFilter] = useState(() => {
-    if (dbStatus) {
+    if (incomingFilter) {
+      if (typeof incomingFilter === 'object') {
+        return {
+          search: '',
+          fromDate: '',
+          toDate: '',
+          leadStatus: incomingFilter.leadStatus || '',
+          callStatus: incomingFilter.callStatus || '',
+          leadStage: incomingFilter.leadStage || '',
+          ...incomingFilter,
+        }
+      }
       return {
         search: '',
         fromDate: '',
         toDate: '',
-        leadStatus: dbStatus,
+        leadStatus: incomingFilter,
         callStatus: '',
         leadStage: '',
       }
@@ -444,11 +454,10 @@ function AllLead() {
     if (!socket) return
 
     const events = [
-      'create-lead',
-      'many-admin-to-telecaller',
-      'many-telecaller-to-bde',
-      'many-bde-to-admin',
-      'single-telecaller-to-bde',
+      'lead:created',
+      'lead:updated',
+      'lead:deleted',
+      'lead:transferred',
     ]
 
     events.forEach((event) => socket.on(event, getLeads))
@@ -1106,6 +1115,20 @@ function AllLead() {
         setConfirmState={setConfirmState}
         formData={formData}
         setFormData={setFormData}
+        onNextLead={() => {
+          const currentLeadIndex = data.findIndex(
+            (l) => (l._id || l.id) === (formData?._id || formData?.id),
+          )
+          if (currentLeadIndex >= 0 && currentLeadIndex < data.length - 1) {
+            setFormData(data[currentLeadIndex + 1])
+          }
+        }}
+        hasNextLead={(() => {
+          const currentLeadIndex = data.findIndex(
+            (l) => (l._id || l.id) === (formData?._id || formData?.id),
+          )
+          return currentLeadIndex >= 0 && currentLeadIndex < data.length - 1
+        })()}
       />
       <ConfirmationModal
         show={confirmState.show}

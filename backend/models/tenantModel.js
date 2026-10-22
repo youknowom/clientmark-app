@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { TENANT_STATUS } from "../constants/billingStatuses.js";
 
 const TenantSchema = new mongoose.Schema(
   {
@@ -35,8 +36,8 @@ const TenantSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["Active", "Suspended", "Cancelled"],
-      default: "Active",
+      enum: Object.values(TENANT_STATUS),
+      default: TENANT_STATUS.ACTIVE,
     },
 
     planId: {
@@ -60,6 +61,11 @@ const TenantSchema = new mongoose.Schema(
       default: null,
     },
 
+    gracePeriodStartedAt: {
+      type: Date,
+      default: null,
+    },
+
     isTrialActive: {
       type: Boolean,
       default: true,
@@ -68,6 +74,11 @@ const TenantSchema = new mongoose.Schema(
     isDemo: {
       type: Boolean,
       default: false,
+    },
+
+    lastActiveAt: {
+      type: Date,
+      default: null,
     },
 
     settings: {

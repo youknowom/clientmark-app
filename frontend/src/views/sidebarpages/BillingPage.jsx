@@ -1,5 +1,8 @@
-import React, { useState, useEffect, useContext } from 'react'
-import { Container, Row, Col, Card, Button, ProgressBar, Badge, Modal, Spinner } from 'react-bootstrap'
+import React, { useState, useEffect, useContext, useRef } from 'react'
+import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
+import { Container, Row, Col, Card, Button, Badge, Modal, Spinner } from '../../components/ui'
+import { ProgressBar } from 'react-bootstrap'
 import { Helmet } from 'react-helmet'
 import {
   FiCheck,
@@ -22,9 +25,14 @@ import EmptyState from '../../components/mycomponent/EmptyState'
 import '../sidebarCSS/comStyle.css'
 import '../sidebarCSS/table.css'
 
+gsap.registerPlugin(useGSAP)
+
 const BillingPage = () => {
   const { userData } = useContext(AuthContext)
-  const isAdmin = userData?.roleId?.roleName === 'Admin'
+  const canManageBilling =
+    userData?.roleId?.roleName === 'Admin' ||
+    (userData?.roleId?.permissions || []).includes('manage:billing')
+  const isAdmin = canManageBilling
 
   const [loading, setLoading] = useState(true)
   const [plans, setPlans] = useState([])
@@ -34,6 +42,35 @@ const BillingPage = () => {
   const [processingPlanId, setProcessingPlanId] = useState(null)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [cancelling, setCancelling] = useState(false)
+  const [openingPortal, setOpeningPortal] = useState(false)
+  const billingRef = useRef(null)
+
+  // GSAP Choreographed Entrance for Plan Cards using official useGSAP hook
+  useGSAP(
+    () => {
+      if (loading) return
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      if (prefersReduced) return
+
+      gsap.fromTo(
+        '.billing-plan-card',
+        { y: 16, autoAlpha: 0 },
+        {
+          y: 0,
+          autoAlpha: 1,
+          duration: 0.38,
+          stagger: 0.06,
+          ease: 'power2.out',
+          clearProps: 'transform',
+        },
+      )
+    },
+    {
+      scope: billingRef,
+      dependencies: [loading, billingCycle],
+      revertOnUpdate: true,
+    },
+  )
 
   // Fetch billing state
   const fetchData = async () => {
@@ -59,41 +96,75 @@ const BillingPage = () => {
     fetchData()
   }, [])
 
-  // Listen for Stripe Checkout Return Redirects
+  // Open Billing Customer Portal (Dodo or Stripe)
+  const handleOpenCustomerPortal = async () => {
+    if (!canManageBilling) {
+      toast.error('Only workspace administrators can access the billing portal.')
+      return
+    }
+
+    try {
+      setOpeningPortal(true)
+      toast.loading('Opening Billing Customer Portal...', { id: 'portal-load' })
+      const isStripe = mySubscription?.billingProvider === 'stripe' || Boolean(mySubscription?.stripeCustomerId)
+      const endpoint = isStripe
+        ? '/subscription/stripe/create-portal-session'
+        : '/subscription/dodo/create-portal-session'
+
+      const res = await apiClient.post(endpoint)
+      toast.dismiss('portal-load')
+      if (res.data?.success && res.data?.url) {
+        window.location.href = res.data.url
+      } else {
+        toast.error(res.data?.message || 'Failed to open billing portal.')
+      }
+    } catch (err) {
+      toast.dismiss('portal-load')
+      toast.error(err?.response?.data?.message || 'Failed to access Customer Portal.')
+    } finally {
+      setOpeningPortal(false)
+    }
+  }
+
+  // Listen for Checkout Return Redirects (Dodo or Stripe)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const sessionId = params.get('session_id')
     const status = params.get('status')
+    const provider = params.get('provider') || (sessionId?.startsWith('cs_') ? 'stripe' : 'dodo')
 
-    if (status === 'success' && sessionId) {
+    if ((status === 'success' || sessionId) && sessionId) {
       const verifySession = async () => {
         try {
-          toast.loading('Activating your subscription...', { id: 'stripe-verify' })
-          const res = await apiClient.get(`/subscription/stripe/verify-session?sessionId=${sessionId}`)
-          toast.dismiss('stripe-verify')
+          toast.loading('Activating your subscription...', { id: 'billing-verify' })
+          const endpoint = provider === 'stripe'
+            ? `/subscription/stripe/verify-session?sessionId=${sessionId}`
+            : `/subscription/dodo/verify-session?sessionId=${sessionId}`
+
+          const res = await apiClient.get(endpoint)
+          toast.dismiss('billing-verify')
           if (res.data?.success) {
-            toast.success('Subscription activated successfully via Stripe!')
-            // Clean URL query parameters
+            toast.success(`Subscription activated successfully via ${provider === 'stripe' ? 'Stripe' : 'Dodo Payments'}!`)
             window.history.replaceState({}, document.title, window.location.pathname)
             fetchData()
           } else {
             toast.error(res.data?.message || 'Verification could not complete.')
           }
         } catch (err) {
-          toast.dismiss('stripe-verify')
+          toast.dismiss('billing-verify')
           toast.error(err?.response?.data?.message || 'Subscription activation encountered an issue.')
         }
       }
       verifySession()
     } else if (status === 'cancelled') {
-      toast('Stripe checkout was cancelled.', { icon: 'ℹ️' })
+      toast('Checkout was cancelled.', { icon: 'ℹ️' })
       window.history.replaceState({}, document.title, window.location.pathname)
     }
   }, [])
 
-  // Handle Plan Upgrade / Checkout via Stripe
+  // Handle Plan Upgrade / Checkout via Dodo Payments (Primary) or Stripe
   const handleSelectPlan = async (plan) => {
-    if (!isAdmin) {
+    if (!canManageBilling) {
       toast.error('Only workspace administrators can manage billing.')
       return
     }
@@ -105,14 +176,56 @@ const BillingPage = () => {
       return
     }
 
+    // If tenant already has an active Stripe subscription, use Stripe change-plan API
+    const hasActiveStripeSub =
+      mySubscription?.status === 'active' &&
+      mySubscription?.billingProvider === 'stripe' &&
+      Boolean(mySubscription?.stripeSubscriptionId)
+
+    if (hasActiveStripeSub) {
+      try {
+        setProcessingPlanId(plan._id)
+        toast.loading(`Updating subscription to ${plan.planName}...`, { id: 'plan-update' })
+        const res = await apiClient.post('/subscription/stripe/change-plan', {
+          planId: plan._id,
+          billingCycle,
+        })
+        toast.dismiss('plan-update')
+
+        if (res.data?.success) {
+          if (res.data.usePortal && res.data.url) {
+            toast.loading('Redirecting to Stripe Customer Portal...', { id: 'portal-redirect' })
+            window.location.href = res.data.url
+            return
+          }
+          toast.success(res.data.message || `Successfully changed plan to ${plan.planName}!`)
+          await fetchData()
+          return
+        } else {
+          toast.error(res.data?.message || 'Failed to update plan.')
+          return
+        }
+      } catch (err) {
+        toast.dismiss('plan-update')
+        const msg = err?.response?.data?.message
+        toast.error(msg || 'Plan change failed. Opening customer portal...')
+        handleOpenCustomerPortal()
+        return
+      } finally {
+        setProcessingPlanId(null)
+      }
+    }
+
+    // Primary Flow: Create Dodo Payments Checkout Session
     try {
       setProcessingPlanId(plan._id)
+      toast.loading(`Initializing checkout for ${plan.planName}...`, { id: 'dodo-checkout-init' })
 
-      // 1. Create Stripe Checkout Session on backend
-      const res = await apiClient.post('/subscription/stripe/create-checkout-session', {
+      const res = await apiClient.post('/subscription/dodo/create-checkout-session', {
         planId: plan._id,
         billingCycle,
       })
+      toast.dismiss('dodo-checkout-init')
 
       if (!res.data?.success) {
         toast.error(res.data?.message || 'Failed to initialize checkout.')
@@ -126,16 +239,17 @@ const BillingPage = () => {
         return
       }
 
-      // 2. Redirect to Stripe Hosted Checkout
+      // Redirect to Dodo Payments Hosted Checkout
       if (res.data.url) {
-        toast.loading('Redirecting to secure Stripe Checkout...', { id: 'stripe-redirect' })
+        toast.loading('Redirecting to Dodo Payments checkout...', { id: 'dodo-redirect' })
         window.location.href = res.data.url
         return
       }
 
       toast.error('Unable to retrieve checkout session URL.')
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to start Stripe checkout.')
+      toast.dismiss('dodo-checkout-init')
+      toast.error(err?.response?.data?.message || 'Failed to start Dodo Payments checkout.')
     } finally {
       setProcessingPlanId(null)
     }
@@ -176,7 +290,7 @@ const BillingPage = () => {
   const isCancelledAtPeriodEnd = mySubscription?.cancelAtPeriodEnd || usageData?.cancelAtPeriodEnd
 
   return (
-    <Container className="p-0 pb-5 container-lg mt-3">
+    <Container className="p-0 pb-5 container-lg mt-3" ref={billingRef}>
       <Helmet>
         <title>Subscription & Billing — Clientmark</title>
       </Helmet>
@@ -285,16 +399,39 @@ const BillingPage = () => {
                 )}
               </div>
 
-              {isAdmin && status === 'active' && !isCancelledAtPeriodEnd && (
-                <div className="pt-2 border-top">
+              {isAdmin && (
+                <div className="pt-3 border-top d-flex flex-column gap-2">
                   <Button
-                    variant="link"
-                    className="p-0 text-danger"
-                    style={{ fontSize: '12.5px', textDecoration: 'none' }}
-                    onClick={() => setShowCancelModal(true)}
+                    variant="outline-dark"
+                    size="sm"
+                    disabled={openingPortal}
+                    onClick={handleOpenCustomerPortal}
+                    style={{
+                      borderRadius: '8px',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                    }}
                   >
-                    Cancel Subscription
+                    <FiCreditCard size={14} />
+                    {openingPortal ? 'Loading Portal...' : 'Manage Invoices & Cards (Stripe Portal)'}
                   </Button>
+
+                  {status === 'active' && !isCancelledAtPeriodEnd && (
+                    <div className="d-flex justify-content-between align-items-center mt-1">
+                      <Button
+                        variant="link"
+                        className="p-0 text-danger"
+                        style={{ fontSize: '12px', textDecoration: 'none' }}
+                        onClick={() => setShowCancelModal(true)}
+                      >
+                        Cancel Subscription
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </Card.Body>
@@ -560,6 +697,7 @@ const BillingPage = () => {
           return (
             <Col lg={3} md={6} xs={12} key={plan._id}>
               <Card
+                className="billing-plan-card"
                 style={{
                   border: isPopular ? '2px solid #111827' : '1px solid rgba(0,0,0,0.08)',
                   borderRadius: '12px',
@@ -717,7 +855,7 @@ const BillingPage = () => {
                     </td>
                     <td>
                       <span style={{ textTransform: 'uppercase', fontSize: '11px', color: '#4B5563' }}>
-                        {item.method || 'Razorpay'}
+                        {item.method || 'stripe'}
                       </span>
                     </td>
                     <td>

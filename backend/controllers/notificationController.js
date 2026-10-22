@@ -4,30 +4,33 @@ import NotificationModel from "../models/notificationModel.js";
 const getNotification = async (req, res) => {
   try {
     const loginUserId = req.user._id;
+    const tenantId = req.tenantId || req.user?.tenantId;
     let { page = 1, limit = 10 } = req.query;
 
     page = parseInt(page, 10);
     limit = parseInt(limit, 10);
 
-    // Auto-cleanup: Delete old motivational and reminder notifications from DB
+    // Auto-cleanup: Delete old motivational and reminder notifications for this user within this tenant
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
     await NotificationModel.deleteMany({
       userId: loginUserId,
+      tenantId,
       notificationType: { $in: ["motivational", "reminder"] },
       createdAt: { $lt: startOfToday },
     });
 
     //get notification
-    const notifications = await NotificationModel.find({ userId: loginUserId })
+    const notifications = await NotificationModel.find({ userId: loginUserId, tenantId })
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
-    //get coutn
+    //get count
     const count = await NotificationModel.countDocuments({
       userId: loginUserId,
+      tenantId,
       isRead: false,
     });
 
@@ -47,6 +50,8 @@ const getNotification = async (req, res) => {
 const markSingleRead = async (req, res) => {
   try {
     const { notificationId } = req.body;
+    const loginUserId = req.user._id;
+    const tenantId = req.tenantId || req.user?.tenantId;
 
     if (!notificationId) {
       return res
@@ -55,7 +60,11 @@ const markSingleRead = async (req, res) => {
     }
 
     const isUpdate = await NotificationModel.updateOne(
-      { _id: notificationId },
+      {
+        _id: notificationId,
+        userId: loginUserId,
+        tenantId,
+      },
       {
         $set: {
           isRead: true,

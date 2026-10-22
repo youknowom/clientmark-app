@@ -1,0 +1,196 @@
+/**
+ * Clientmark Design Tokens — Dark Cyber-Editorial System
+ * Deep obsidian blacks, subtle radial gradients, frosted glassmorphism, 
+ * hairline borders (rgba(255,255,255,0.08)), luminous amber-gold accents,
+ * geometric high-contrast typography and craft-driven micro-interactions.
+ */
+
+:root {
+  /* ─── Default Surface: Obsidian Deep (0x050608 / 0x0A0D14) ─── */
+  --cm-bg-canvas: #060709;
+  --cm-bg-card: #0D0F14;
+  --cm-bg-subtle: #12151D;
+  --cm-bg-muted: #181C26;
+  --cm-bg-hover: #1E2330;
+  --cm-bg-active: #262D3D;
+
+  /* ─── Hairline Luminous Borders ─── */
+  --cm-border-subtle: rgba(255, 255, 255, 0.06);
+  --cm-border-default: rgba(255, 255, 255, 0.10);
+  --cm-border-strong: rgba(255, 255, 255, 0.18);
+  --cm-border-focus: var(--cm-brand-500);
+
+  /* ─── High-Contrast Craft Typography ─── */
+  --cm-text-primary: #F8FAFC;
+  --cm-text-secondary: #94A3B8;
+  --cm-text-muted: #64748B;
+  --cm-text-disabled: #475569;
+  --cm-text-inverted: #060709;
+
+  /* ─── Brand Primary Accent (Luminous Cyber Gold / Amber-Orange) ─── */
+  --cm-brand-50:  rgba(245, 158, 11, 0.08);
+  --cm-brand-100: rgba(245, 158, 11, 0.14);
+  --cm-brand-200: rgba(245, 158, 11, 0.25);
+  --cm-brand-300: #FBBF24;
+  --cm-brand-400: #F59E0B;
+  --cm-brand-500: #E05E3A; /* Core energetic orange-amber */
+  --cm-brand-600: #D97706;
+  --cm-brand-700: #B45309;
+  --cm-brand-800: #92400E;
+  --cm-brand-900: #78350F;
+  --cm-brand-alpha-10: rgba(224, 94, 58, 0.12);
+  --cm-brand-alpha-20: rgba(224, 94, 58, 0.22);
+  --cm-brand-glow: 0 0 35px rgba(224, 94, 58, 0.28);
+  --cm-cyber-glow: 0 0 40px rgba(99, 102, 241, 0.20);
+
+  /* ─── Accents ─── */
+  --cm-indigo-500: #6366F1;
+  --cm-indigo-600: #4F46E5;
+  --cm-violet-500: #8B5CF6;
+  --cm-cyan-500:   #06B6D4;
+  --cm-emerald-500: #10B981;
+
+  /* ─── Semantic Feedback Tokens ─── */
+  --cm-success-50:  rgba(16, 185, 129, 0.12);
+  --cm-success-100: rgba(16, 185, 129, 0.20);
+  --cm-success-500: #10B981;
+  --cm-success-600: #059669;
+
+  --cm-warning-50:  rgba(245, 158, 11, 0.12);
+  --cm-warning-100: rgba(245, 158, 11, 0.20);
+  --cm-warning-500: #F59E0B;
+  --cm-warning-600: #D97706;
+
+  --cm-danger-50:   rgba(239, 68, 68, 0.12);
+  --cm-danger-100:  rgba(239, 68, 68, 0.20);
+  --cm-danger-500:  #EF4444;
+  --cm-danger-600:  #DC2626;
+
+  --cm-info-50:     rgba(59, 130, 246, 0.12);
+  --cm-info-100:    rgba(59, 130, 246, 0.20);
+  --cm-info-500:    #3B82F6;
+  --cm-info-600:    #2563EB;
+
+  /* ─── Layered Elevation & Dark Glows ─── */
+  --cm-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --cm-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --cm-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.6);
+  --cm-shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.7);
+  --cm-shadow-xl: 0 24px 60px rgba(0, 0, 0, 0.85);
+  --cm-shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 24px -4px rgba(0, 0, 0, 0.7);
+  --cm-shadow-card-hover: 0 0 0 1px rgba(224, 94, 58, 0.3), 0 12px 36px -4px rgba(224, 94, 58, 0.15);
+
+  /* ─── Glassmorphism ─── */
+  --cm-glass-bg: rgba(13, 15, 20, 0.78);
+  --cm-glass-border: rgba(255, 255, 255, 0.08);
+  --cm-glass-blur: blur(16px);
+
+  /* ─── Radius Scales (Sleek Geometric Precision) ─── */
+  --cm-radius-xs: 4px;
+  --cm-radius-sm: 6px;
+  --cm-radius-md: 10px;
+  --cm-radius-lg: 14px;
+  --cm-radius-xl: 20px;
+  --cm-radius-2xl: 28px;
+  --cm-radius-full: 9999px;
+
+  /* ─── Spacing Scale (4px Base Grid) ─── */
+  --cm-space-0: 0px;
+  --cm-space-1: 4px;
+  --cm-space-2: 8px;
+  --cm-space-3: 12px;
+  --cm-space-4: 16px;
+  --cm-space-5: 20px;
+  --cm-space-6: 24px;
+  --cm-space-8: 32px;
+  --cm-space-10: 40px;
+  --cm-space-12: 48px;
+  --cm-space-16: 64px;
+  --cm-space-20: 80px;
+
+  /* ─── Typography Scales (Clientmark System) ─── */
+  --cm-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --cm-font-heading: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --cm-font-brand: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  --cm-font-serif: 'Instrument Serif', Georgia, serif;
+  --cm-font-mono: 'Source Code Pro', 'JetBrains Mono', SFMono-Regular, monospace;
+
+  --cm-text-xs: 11px;
+  --cm-text-sm: 13px;
+  --cm-text-base: 14px;
+  --cm-text-md: 15px;
+  --cm-text-lg: 17px;
+  --cm-text-xl: 20px;
+  --cm-text-2xl: 24px;
+  --cm-text-3xl: 32px;
+  --cm-text-4xl: 42px;
+  --cm-text-5xl: 56px;
+  --cm-text-6xl: 72px;
+
+  --cm-weight-normal: 400;
+  --cm-weight-medium: 500;
+  --cm-weight-semibold: 600;
+  --cm-weight-bold: 700;
+  --cm-weight-extrabold: 800;
+
+  --cm-leading-tight: 1.1;
+  --cm-leading-snug: 1.25;
+  --cm-leading-normal: 1.5;
+  --cm-leading-relaxed: 1.65;
+
+  /* ─── Z-Index Scale ─── */
+  --cm-z-base: 0;
+  --cm-z-dock: 10;
+  --cm-z-sticky: 20;
+  --cm-z-header: 30;
+  --cm-z-sidebar: 40;
+  --cm-z-popover: 50;
+  --cm-z-modal-backdrop: 60;
+  --cm-z-modal: 70;
+  --cm-z-toast: 80;
+  --cm-z-tooltip: 90;
+
+  /* ─── Animation Tokens ─── */
+  --cm-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --cm-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --cm-ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --cm-duration-fast: 150ms;
+  --cm-duration-normal: 250ms;
+  --cm-duration-slow: 400ms;
+}
+
+/* ─── Optional Light Theme Mode ─── */
+[data-theme="light"] {
+  --cm-bg-canvas: #FAF9F6;
+  --cm-bg-card: #FFFFFF;
+  --cm-bg-subtle: #F4F2EC;
+  --cm-bg-muted: #EAE6DD;
+  --cm-bg-hover: #ECECE7;
+  --cm-bg-active: #E2E2DC;
+
+  --cm-border-subtle: #F0F0ED;
+  --cm-border-default: #E5E5E0;
+  --cm-border-strong: #D1D1CB;
+
+  --cm-text-primary: #121316;
+  --cm-text-secondary: #525660;
+  --cm-text-muted: #7E838F;
+  --cm-text-disabled: #A6ABB5;
+  --cm-text-inverted: #FFFFFF;
+
+  --cm-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --cm-shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.06);
+  --cm-shadow-md: 0 6px 12px -2px rgba(15, 23, 42, 0.08);
+  --cm-shadow-lg: 0 14px 28px -4px rgba(15, 23, 42, 0.10);
+  --cm-shadow-xl: 0 24px 48px -12px rgba(15, 23, 42, 0.14);
+  --cm-shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.04);
+
+  --cm-glass-bg: rgba(255, 255, 255, 0.85);
+  --cm-glass-border: rgba(0, 0, 0, 0.06);
+}
+
+/* ─── Ambient Glow Grid Texture (Clientmark Studio Style) ─── */
+.cm-ambient-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 32px 32px;
+}

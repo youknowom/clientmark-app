@@ -1,84 +1,67 @@
 import React, { useContext } from 'react'
-import { Col, Container, Row } from 'react-bootstrap'
-import { CgWebsite } from 'react-icons/cg'
-import { IoColorPaletteOutline } from 'react-icons/io5'
-import { FaWhatsapp, FaUserShield } from 'react-icons/fa6'
-import { FiCreditCard } from 'react-icons/fi'
-
+import { CreditCard, Palette, Globe, MessageSquare, ShieldCheck } from 'lucide-react'
 import { Helmet } from 'react-helmet'
-
-const PageHeader = React.lazy(() => import('../../components/mycomponent/PageHeader'))
-const PageMenus = React.lazy(() => import('../../components/mycomponent/PageMenus'))
-
 import { AuthContext } from '../../AuthContext'
 import { hasPermission } from '../../helpers/hasPermission'
-import '../sidebarCSS/comStyle.css'
+import PageHeader from '../../components/mycomponent/PageHeader'
+import PageMenus from '../../components/mycomponent/PageMenus'
 
 function SettingMaster() {
   const { userData } = useContext(AuthContext)
   const pageHeaderData = {
     title: 'Setting Master',
-    disc: 'User Management including Registration, Listing, and Reporting',
-    className: 'p-2',
+    disc: 'Workspace Preferences, White-Label Branding, WhatsApp Credentials, and Billing',
   }
 
   const menus = [
     {
-      icon: <FiCreditCard size={30} className="text-primary" />,
+      icon: <CreditCard size={24} color="var(--cm-brand-500)" />,
       label: 'Subscription & Billing',
       link: '/billing',
-      bg: 'rgba(238, 242, 255, 0.8)',
+      bg: 'var(--cm-brand-50)',
     },
     {
-      icon: <IoColorPaletteOutline size={30} className="text-success" />,
-      label: 'Theme Setting',
+      icon: <Palette size={24} color="var(--cm-indigo-600, #4F46E5)" />,
+      label: 'Theme & Brand Colors',
       link: '/theme-setting',
-      bg: 'rgba(212, 237, 218, 0.6)',
+      bg: 'rgba(99, 102, 241, 0.1)',
       permission: 'view:theme-setting',
     },
-
     {
-      icon: <CgWebsite size={30} className="text-success" />,
-      label: 'Site Setting',
+      icon: <Globe size={24} color="var(--cm-cyan-500, #06B6D4)" />,
+      label: 'Site & Domain Config',
       link: '/site-setting',
-      bg: 'rgba(207, 226, 243, 0.6)',
+      bg: 'rgba(6, 182, 212, 0.1)',
       permission: 'view:site-setting',
     },
     {
-      icon: <FaWhatsapp size={30} className="text-success" />,
-      label: 'WhatsApp Setting',
+      icon: <MessageSquare size={24} color="#16A34A" />,
+      label: 'WhatsApp Integration',
       link: '/whatsapp-setting',
-      bg: 'rgba(207, 226, 243, 0.6)',
+      bg: 'rgba(22, 163, 74, 0.1)',
       permission: 'view:whatsapp-setting',
     },
     {
-      icon: <FaUserShield size={30} className="text-success" />,
-      label: 'Role & Permission',
+      icon: <ShieldCheck size={24} color="var(--cm-warning-600)" />,
+      label: 'Roles & Permissions',
       link: '/all-role',
-      bg: 'rgba(220, 220, 255, 0.6)',
+      bg: 'var(--cm-warning-50)',
       permission: 'view:role',
     },
   ]
 
-  const filterMenus = menus.filter((menu) => !menu.permission || hasPermission(userData, menu.permission))
+  const filterMenus = menus.filter(
+    (menu) => !menu.permission || hasPermission(userData, menu.permission)
+  )
 
   return (
-    <Container className="p-0 pb-4 container-lg mt-2">
+    <div>
       <Helmet>
         <title>Settings — Clientmark</title>
       </Helmet>
-      <Row>
-        <Col>
-          <PageHeader pageHeaderData={pageHeaderData} />
-        </Col>
-      </Row>
-      <Row>
-        <Col>
-          {/* <h6 className="mt-2">Menus</h6> */}
-          <PageMenus menus={filterMenus} />
-        </Col>
-      </Row>
-    </Container>
+      <PageHeader pageHeaderData={pageHeaderData} />
+      <PageMenus menus={filterMenus} />
+    </div>
   )
 }
 

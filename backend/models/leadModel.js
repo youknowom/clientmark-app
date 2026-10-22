@@ -90,6 +90,17 @@ const LeadSchema = new mongoose.Schema(
       default: "NEW",
     },
 
+    followUpDate: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+
+    leadSource: {
+      type: String,
+      default: "Direct",
+    },
+
     currentIndex: {
       type: Number,
       index: true,

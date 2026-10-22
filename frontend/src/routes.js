@@ -100,7 +100,7 @@ const routes = [
     permission: 'view:project-master',
   },
   {
-    path: '/project-preview/:projectId',
+    path: '/project-preview/:portalKey',
     name: 'Project Preview',
     element: ProjectPreview,
     // No permission required for preview, or set as needed

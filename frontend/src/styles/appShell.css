@@ -1,0 +1,198 @@
+/**
+ * Clientmark App Shell & Navigation Styles
+ * High-performance, responsive layout replacing CoreUI and Bootstrap containers.
+ */
+
+/* ─── App Shell Layout ─── */
+.cm-app-shell {
+  min-height: 100vh;
+  display: flex;
+  background-color: var(--cm-bg-canvas);
+  color: var(--cm-text-primary);
+  font-family: var(--cm-font-sans);
+}
+
+/* ─── Sidebar ─── */
+.cm-sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(9, 10, 15, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: calc(var(--cm-z-sidebar) - 1);
+  display: none;
+}
+
+@media (max-width: 991px) {
+  .cm-sidebar-overlay.active {
+    display: block;
+  }
+}
+
+.cm-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 250px;
+  background-color: var(--cm-bg-card);
+  border-right: 1px solid var(--cm-border-subtle);
+  display: flex;
+  flex-direction: column;
+  z-index: var(--cm-z-sidebar);
+  transition: transform var(--cm-duration-normal) var(--cm-ease-out),
+              width var(--cm-duration-normal) var(--cm-ease-out);
+}
+
+@media (max-width: 991px) {
+  .cm-sidebar {
+    transform: translateX(-100%);
+  }
+  .cm-sidebar.cm-sidebar-open {
+    transform: translateX(0);
+    box-shadow: var(--cm-shadow-xl);
+  }
+}
+
+.cm-sidebar-header {
+  height: 56px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--cm-border-subtle);
+  background-color: var(--cm-bg-card);
+  flex-shrink: 0;
+}
+
+.cm-sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cm-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: var(--cm-radius-md);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--cm-text-secondary);
+  text-decoration: none;
+  transition: all var(--cm-duration-fast) var(--cm-ease-out);
+  position: relative;
+  user-select: none;
+}
+
+.cm-sidebar-link:hover {
+  background-color: var(--cm-bg-hover);
+  color: var(--cm-text-primary);
+}
+
+.cm-sidebar-link.active {
+  background-color: var(--cm-brand-50);
+  color: var(--cm-brand-600);
+  font-weight: 600;
+}
+
+.cm-sidebar-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 var(--cm-radius-xs) var(--cm-radius-xs) 0;
+  background-color: var(--cm-brand-500);
+}
+
+.cm-sidebar-link .nav-icon {
+  flex-shrink: 0;
+  color: inherit;
+  transition: transform var(--cm-duration-fast) var(--cm-ease-spring);
+}
+
+.cm-sidebar-link:hover .nav-icon {
+  transform: scale(1.08);
+}
+
+/* ─── Main Content Wrapper ─── */
+.cm-main-wrapper {
+  flex: 1;
+  margin-left: 250px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--cm-bg-canvas);
+  transition: margin-left var(--cm-duration-normal) var(--cm-ease-out);
+}
+
+@media (max-width: 991px) {
+  .cm-main-wrapper {
+    margin-left: 0 !important;
+  }
+}
+
+.cm-main-wrapper.cm-sidebar-collapsed {
+  margin-left: 0;
+}
+
+/* ─── App Header ─── */
+.cm-app-header {
+  position: sticky;
+  top: 0;
+  height: 56px;
+  z-index: var(--cm-z-header);
+  background-color: var(--cm-glass-bg);
+  backdrop-filter: var(--cm-glass-blur);
+  -webkit-backdrop-filter: var(--cm-glass-blur);
+  border-bottom: 1px solid var(--cm-border-subtle);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ─── App Content Container ─── */
+.cm-app-content-container {
+  flex: 1;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 24px 24px 48px;
+}
+
+@media (max-width: 768px) {
+  .cm-app-content-container {
+    padding: 16px 14px 60px;
+  }
+}
+
+/* ─── Breadcrumb Component ─── */
+.cm-breadcrumb-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  font-size: var(--cm-text-xs);
+  color: var(--cm-text-muted);
+}
+
+.cm-breadcrumb-item a {
+  color: var(--cm-text-secondary);
+  transition: color var(--cm-duration-fast) var(--cm-ease-out);
+}
+
+.cm-breadcrumb-item a:hover {
+  color: var(--cm-brand-500);
+}
+
+.cm-breadcrumb-item.active {
+  color: var(--cm-text-primary);
+  font-weight: 600;
+}

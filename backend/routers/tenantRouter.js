@@ -14,8 +14,10 @@ const tenantRouter = express.Router();
 tenantRouter.post("/register", registerTenant);
 tenantRouter.post("/demo-login", getDemoSession);
 
-// Protected — tenant management
-tenantRouter.get("/my-tenant", authUser, tenantMiddleware, getMyTenant);
-tenantRouter.put("/update", authUser, tenantMiddleware, updateTenant);
+// ── Protected Routes (Strictly Tenant Isolated) ──
+tenantRouter.use(authUser, tenantMiddleware);
+
+tenantRouter.get("/my-tenant", getMyTenant);
+tenantRouter.put("/update", updateTenant);
 
 export default tenantRouter;

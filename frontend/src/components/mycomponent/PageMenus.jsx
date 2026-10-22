@@ -1,48 +1,54 @@
-
-import { Card, Col, Row } from 'react-bootstrap'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Card } from '../ui/Card'
 
 function PageMenus({ menus }) {
-  const navigate = useNavigate();
-  return (
-    <Row className="g-3 ">
-      {menus.map((item, index) => (
-        <Col key={index} xs={6} sm={6} md={4} lg={3}>
-          <Card className="d-flex flex-row align-items-center p-2 shadow border-0 rounded h-100 " style={{cursor:'pointer'}}
-          onClick={()=> navigate(item.link)}
-          >
-            <div
-              className="d-flex align-items-center p-2 justify-content-center rounded"
-              style={{
-                width: 50,
-                height: 50,
-                backgroundColor: item.bg,
-              }}
-            >
-              {item.icon}
-            </div>
-            <div className="ms-3 small fw-semibold">{item.label}</div>
-          </Card>
-        </Col>
-      ))}
-    </Row>
+  const navigate = useNavigate()
 
-    // <Row className="g-3">
-    //   {menus.map((menu, index) => (
-    //     <Col key={index} xs={6} sm={4} md={3}>
-    //       <Card
-    //         onClick={() => window.location.href = menu.link}
-    //         style={{ backgroundColor: menu.bg, cursor: 'pointer' }}
-    //         className="shadow-sm border-0 h-100"
-    //       >
-    //         <Card.Body className="text-center d-flex flex-column align-items-center justify-content-center p-3">
-    //           <div className="mb-2">{menu.icon}</div>
-    //           <div className="fw-semibold small text-center">{menu.label}</div>
-    //         </Card.Body>
-    //       </Card>
-    //     </Col>
-    //   ))}
-    // </Row>
+  if (!menus || !menus.length) return null
+
+  return (
+    <div className="cm-grid cm-grid-cols-4 cm-gap-4">
+      {menus.map((item, index) => (
+        <Card
+          key={index}
+          interactive
+          onClick={() => navigate(item.link)}
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: '12px 16px',
+            gap: '12px',
+          }}
+        >
+          <div
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: 'var(--cm-radius-md)',
+              backgroundColor: item.bg || 'var(--cm-brand-50)',
+              color: 'var(--cm-brand-500)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            {item.icon}
+          </div>
+          <div
+            style={{
+              fontSize: '13px',
+              fontWeight: 600,
+              color: 'var(--cm-text-primary)',
+            }}
+          >
+            {item.label}
+          </div>
+        </Card>
+      ))}
+    </div>
   )
 }
 

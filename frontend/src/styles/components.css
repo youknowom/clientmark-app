@@ -1,0 +1,288 @@
+/**
+ * Clientmark Component Styles for Base UI Primitives
+ * Styled completely with CSS custom properties. Zero Bootstrap dependencies.
+ */
+
+/* ─── Dialog / Modal Primitives ─── */
+.cm-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(9, 10, 15, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: var(--cm-z-modal-backdrop);
+  animation: cm-fade-in 180ms var(--cm-ease-out) forwards;
+}
+
+.cm-dialog-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90vw;
+  max-width: 540px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background-color: var(--cm-bg-card);
+  border: 1px solid var(--cm-border-default);
+  border-radius: var(--cm-radius-xl);
+  box-shadow: var(--cm-shadow-xl);
+  padding: var(--cm-space-6);
+  z-index: var(--cm-z-modal);
+  animation: cm-scale-up 220ms var(--cm-ease-spring) forwards;
+}
+
+.cm-dialog-popup-lg {
+  max-width: 780px;
+}
+
+.cm-dialog-popup-xl {
+  max-width: 960px;
+}
+
+.cm-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--cm-space-4);
+  padding-bottom: var(--cm-space-3);
+  border-bottom: 1px solid var(--cm-border-subtle);
+}
+
+.cm-dialog-title {
+  font-family: var(--cm-font-heading);
+  font-size: var(--cm-text-xl);
+  font-weight: var(--cm-weight-bold);
+  color: var(--cm-text-primary);
+  margin: 0;
+}
+
+.cm-dialog-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--cm-radius-md);
+  border: none;
+  background: transparent;
+  color: var(--cm-text-muted);
+  cursor: pointer;
+  transition: all var(--cm-duration-fast) var(--cm-ease-out);
+}
+
+.cm-dialog-close:hover {
+  background-color: var(--cm-bg-hover);
+  color: var(--cm-text-primary);
+}
+
+/* ─── Menu / Dropdown Primitives ─── */
+.cm-menu-popup {
+  background-color: var(--cm-bg-card);
+  border: 1px solid var(--cm-border-default);
+  border-radius: var(--cm-radius-lg);
+  box-shadow: var(--cm-shadow-lg);
+  padding: 6px;
+  min-width: 200px;
+  z-index: var(--cm-z-popover);
+  animation: cm-slide-down 160ms var(--cm-ease-out) forwards;
+  outline: none;
+}
+
+.cm-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--cm-space-2);
+  width: 100%;
+  padding: 8px 12px;
+  font-size: var(--cm-text-sm);
+  font-weight: var(--cm-weight-medium);
+  color: var(--cm-text-primary);
+  border-radius: var(--cm-radius-md);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  text-align: left;
+  user-select: none;
+  outline: none;
+  transition: background-color var(--cm-duration-fast) var(--cm-ease-out);
+}
+
+.cm-menu-item:hover,
+.cm-menu-item[data-highlighted] {
+  background-color: var(--cm-bg-hover);
+}
+
+.cm-menu-item-danger {
+  color: var(--cm-danger-600);
+}
+
+.cm-menu-item-danger:hover,
+.cm-menu-item-danger[data-highlighted] {
+  background-color: var(--cm-danger-50);
+}
+
+.cm-menu-separator {
+  height: 1px;
+  background-color: var(--cm-border-subtle);
+  margin: 4px 0;
+}
+
+/* ─── Tooltip Primitives ─── */
+.cm-tooltip-popup {
+  background-color: var(--cm-slate-900);
+  color: #FFFFFF;
+  font-family: var(--cm-font-sans);
+  font-size: var(--cm-text-xs);
+  font-weight: var(--cm-weight-medium);
+  padding: 5px 10px;
+  border-radius: var(--cm-radius-sm);
+  box-shadow: var(--cm-shadow-md);
+  z-index: var(--cm-z-tooltip);
+  pointer-events: none;
+  animation: cm-fade-in 140ms var(--cm-ease-out) forwards;
+}
+
+/* ─── Tabs Primitives ─── */
+.cm-tabs-list {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--cm-bg-subtle);
+  padding: 4px;
+  border-radius: var(--cm-radius-lg);
+  border: 1px solid var(--cm-border-subtle);
+}
+
+.cm-tab-trigger {
+  padding: 7px 16px;
+  font-family: var(--cm-font-sans);
+  font-size: var(--cm-text-sm);
+  font-weight: var(--cm-weight-semibold);
+  color: var(--cm-text-secondary);
+  border-radius: var(--cm-radius-md);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  transition: all var(--cm-duration-fast) var(--cm-ease-out);
+}
+
+.cm-tab-trigger:hover {
+  color: var(--cm-text-primary);
+}
+
+.cm-tab-trigger[data-selected],
+.cm-tab-trigger[data-state="active"] {
+  background-color: var(--cm-bg-card);
+  color: var(--cm-text-primary);
+  box-shadow: var(--cm-shadow-xs);
+}
+
+.cm-tab-panel {
+  padding-top: var(--cm-space-4);
+  outline: none;
+}
+
+/* ─── Switch Primitives ─── */
+.cm-switch-root {
+  display: inline-flex;
+  align-items: center;
+  width: 42px;
+  height: 24px;
+  padding: 2px;
+  border-radius: var(--cm-radius-full);
+  background-color: var(--cm-border-strong);
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: background-color var(--cm-duration-normal) var(--cm-ease-out);
+  position: relative;
+}
+
+.cm-switch-root[data-checked],
+.cm-switch-root[data-state="checked"] {
+  background-color: var(--cm-brand-500);
+}
+
+.cm-switch-thumb {
+  display: block;
+  width: 20px;
+  height: 20px;
+  background-color: #FFFFFF;
+  border-radius: var(--cm-radius-full);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform var(--cm-duration-normal) var(--cm-ease-spring);
+  transform: translateX(0);
+}
+
+.cm-switch-root[data-checked] .cm-switch-thumb,
+.cm-switch-root[data-state="checked"] .cm-switch-thumb {
+  transform: translateX(18px);
+}
+
+/* ─── Accordion Primitives ─── */
+.cm-accordion-item {
+  border-bottom: 1px solid var(--cm-border-subtle);
+}
+
+.cm-accordion-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--cm-space-4) 0;
+  font-family: var(--cm-font-heading);
+  font-size: var(--cm-text-base);
+  font-weight: var(--cm-weight-semibold);
+  color: var(--cm-text-primary);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--cm-duration-fast) var(--cm-ease-out);
+}
+
+.cm-accordion-trigger:hover {
+  color: var(--cm-brand-500);
+}
+
+.cm-accordion-panel {
+  padding-bottom: var(--cm-space-4);
+  color: var(--cm-text-secondary);
+  font-size: var(--cm-text-sm);
+  line-height: var(--cm-leading-relaxed);
+}
+
+/* ─── Keyframe Animations ─── */
+@keyframes cm-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cm-scale-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes cm-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cm-spin {
+  to { transform: rotate(360deg); }
+}

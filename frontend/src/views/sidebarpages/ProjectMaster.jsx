@@ -1,39 +1,32 @@
 import React, { useContext, useEffect } from 'react'
-import { Col, Container, Row } from 'react-bootstrap'
-import { FiFilePlus } from 'react-icons/fi'
+import { FolderPlus, FolderKanban } from 'lucide-react'
 import { Helmet } from 'react-helmet'
-
-const PageHeader = React.lazy(() => import('../../components/mycomponent/PageHeader'))
-const PageMenus = React.lazy(() => import('../../components/mycomponent/PageMenus'))
-
 import { AuthContext } from '../../AuthContext'
 import { hasPermission } from '../../helpers/hasPermission'
-import { HiOutlineClipboardDocumentList } from 'react-icons/hi2'
 import { clearListState } from '../../helpers/listStateStorage'
-// import '../sidebarCSS/comStyle.css'
+import PageHeader from '../../components/mycomponent/PageHeader'
+import PageMenus from '../../components/mycomponent/PageMenus'
 
 function ProjectMaster() {
   const { userData } = useContext(AuthContext)
   const pageHeaderData = {
-    // imgPath: userImg,
     title: 'Project Master',
-    disc: 'Project Management including Registration, Listing, and Reporting',
-    className: 'p-2',
+    disc: 'Project Delivery Management including Milestones, Tasks, Timelines, and Client Handover Portals',
   }
 
   const menus = [
     {
-      icon: <FiFilePlus size={30} className="text-success" />,
+      icon: <FolderPlus size={24} color="var(--cm-brand-500)" />,
       label: 'Add Project',
       link: '/add-project',
-      bg: 'rgba(212, 237, 218, 0.6)',
+      bg: 'var(--cm-brand-50)',
       permission: 'add:project',
     },
     {
-      icon: <HiOutlineClipboardDocumentList size={30} className="text-success" />,
-      label: 'All Project',
+      icon: <FolderKanban size={24} color="var(--cm-indigo-600, #4F46E5)" />,
+      label: 'All Projects',
       link: '/all-project',
-      bg: 'rgba(212, 237, 218, 0.6)',
+      bg: 'rgba(99, 102, 241, 0.1)',
       permission: 'view:project',
     },
   ]
@@ -45,22 +38,13 @@ function ProjectMaster() {
   }, [])
 
   return (
-    <Container className="p-0 pb-4 container-lg mt-2">
+    <div>
       <Helmet>
         <title>Project Management — Clientmark</title>
       </Helmet>
-      <Row>
-        <Col>
-          <PageHeader pageHeaderData={pageHeaderData} />
-        </Col>
-      </Row>
-      <Row>
-        <Col>
-          {/* <h6 className="mt-2">Menus</h6> */}
-          <PageMenus menus={filterMenus} />
-        </Col>
-      </Row>
-    </Container>
+      <PageHeader pageHeaderData={pageHeaderData} />
+      <PageMenus menus={filterMenus} />
+    </div>
   )
 }
 

@@ -14,10 +14,27 @@ import NotificationModel from "../models/notificationModel.js";
 import WhatsappTemplateModel from "../models/whatsappTemplateModel.js";
 import WhatsappChatModel from "../models/whatsappChatModel.js";
 import { sendWATextServ } from "../services/whatsappService.js";
+import { emitToTenant } from "../services/realtime.js";
+import { getTenantLimits } from "../middlewares/usageLimitMiddleware.js";
 
 // Create a Lead
 const createLead = async (req, res) => {
   try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+
+    // Race-safe recount limit check
+    const limits = await getTenantLimits(tenantId);
+    if (limits && limits.maxLeads !== -1) {
+      const currentLeads = await LeadModel.countDocuments({ tenantId });
+      if (currentLeads >= limits.maxLeads) {
+        return res.status(403).json({
+          message: `You've reached the maximum of ${limits.maxLeads} leads on your current plan. Please upgrade to add more leads.`,
+          success: false,
+          limitReached: true,
+        });
+      }
+    }
+
     //login user id
     const userId = req.user._id;
     const {
@@ -33,6 +50,12 @@ const createLead = async (req, res) => {
       businessName,
       serviceRequirement,
       remark,
+      callStatus,
+      leadStatus,
+      leadStage,
+      leadSource,
+      followUpDate,
+      allowDuplicate,
     } = req.body;
 
     if (!fullName?.trim()) {
@@ -51,6 +74,23 @@ const createLead = async (req, res) => {
       });
     }
 
+    // Check for duplicate lead within the same tenant unless explicitly bypassed
+    if (!allowDuplicate) {
+      const existingDuplicate = await LeadModel.findOne({
+        tenantId,
+        mobileNo: mobile,
+      }).select("leadNo fullName mobileNo leadStatus leadStage createdAt");
+
+      if (existingDuplicate) {
+        return res.status(409).json({
+          success: false,
+          isDuplicate: true,
+          message: `A lead with mobile number ${mobile} already exists (${existingDuplicate.leadNo} - ${existingDuplicate.fullName}).`,
+          existingLead: existingDuplicate,
+        });
+      }
+    }
+
     //find that user name
     const userDtl = await UserModel.findOne({ _id: userId, status: "Active" });
     if (!userDtl) {
@@ -59,8 +99,6 @@ const createLead = async (req, res) => {
         success: false,
       });
     }
-
-    const tenantId = req.user?.tenantId || req.tenantId;
 
     //find last index number
     const lastRecord = await LeadModel.findOne(
@@ -77,8 +115,8 @@ const createLead = async (req, res) => {
     const newLead = new LeadModel({
       tenantId,
       leadNo,
-      fullName,
-      mobileNo,
+      fullName: fullName.trim(),
+      mobileNo: mobile,
       whatsappNo,
       email,
       gender,
@@ -88,9 +126,11 @@ const createLead = async (req, res) => {
       address,
       businessName,
       serviceRequirement,
-      leadStage: "NEW",
-      callStatus: "PENDING",
-      leadStatus: "NEW",
+      leadStage: leadStage || "NEW",
+      callStatus: callStatus || "PENDING",
+      leadStatus: leadStatus || "NEW",
+      leadSource: leadSource || "Direct",
+      followUpDate: followUpDate ? new Date(followUpDate) : null,
       remark,
       currentIndex,
       addById: userDtl ? userDtl._id : null,
@@ -98,12 +138,12 @@ const createLead = async (req, res) => {
 
     await newLead.save();
 
-    const io = req.app.get("io");
-    io.emit("create-lead");
+    emitToTenant(tenantId, "lead:created", { leadId: newLead._id });
 
     return res.status(201).json({
       success: true,
       message: "Successfully add lead.",
+      lead: newLead,
     });
   } catch (error) {
     return res.status(500).json({
@@ -228,7 +268,8 @@ const getLeads = async (req, res) => {
 // Get a single lead by ID
 const getLeadById = async (req, res) => {
   try {
-    const lead = await LeadModel.findById(req.params.id);
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const lead = await LeadModel.findOne({ _id: req.params.id, tenantId });
     if (!lead) {
       return res
         .status(404)
@@ -263,7 +304,7 @@ const updateLead = async (req, res) => {
       remark,
     } = req.body;
 
-    let leadId = req.body._id;
+    let leadId = req.body._id || req.body.leadId;
 
     if (!fullName?.trim()) {
       return res.status(400).json({
@@ -285,39 +326,50 @@ const updateLead = async (req, res) => {
     const userDtl = await UserModel.findOne({ _id: userId, status: "Active" });
     if (!userDtl) {
       return res.status(400).json({
-        message: "You have no permission to uodate lead.",
+        message: "You have no permission to update lead.",
         success: false,
       });
+    }
+
+    const tenantId = req.user?.tenantId || req.tenantId;
+
+    const updateFields = {
+      fullName: fullName.trim(),
+      mobileNo: mobile,
+      whatsappNo,
+      email,
+      gender,
+      country,
+      state,
+      city,
+      address,
+      businessName,
+      serviceRequirement,
+      remark,
+      updateById: userDtl ? userDtl._id : null,
+    };
+
+    if (req.body.callStatus) updateFields.callStatus = req.body.callStatus;
+    if (req.body.leadStatus) updateFields.leadStatus = req.body.leadStatus;
+    if (req.body.leadStage) updateFields.leadStage = req.body.leadStage;
+    if (req.body.leadSource) updateFields.leadSource = req.body.leadSource;
+    if (req.body.followUpDate !== undefined) {
+      updateFields.followUpDate = req.body.followUpDate ? new Date(req.body.followUpDate) : null;
     }
 
     const isUpdate = await LeadModel.updateOne(
-      { _id: leadId },
-      {
-        fullName,
-        mobileNo,
-        whatsappNo,
-        email,
-        gender,
-        country,
-        state,
-        city,
-        address,
-        businessName,
-        serviceRequirement,
-        remark,
-        updateById: userDtl ? userDtl._id : null,
-      },
+      { _id: leadId, tenantId },
+      updateFields,
     );
 
-    if (isUpdate.modifiedCount === 0) {
+    if (isUpdate.matchedCount === 0) {
       return res.status(400).json({
         success: false,
-        message: "Failed to update lead",
+        message: "Failed to update lead: lead not found or not authorized.",
       });
     }
 
-    const io = req.app.get("io");
-    io.emit("update-lead");
+    emitToTenant(tenantId, "lead:updated", { leadId });
 
     return res.status(200).json({
       success: true,
@@ -334,15 +386,15 @@ const updateLead = async (req, res) => {
 // Delete a lead by ID
 const deleteLead = async (req, res) => {
   try {
-    const deletedLead = await LeadModel.findByIdAndDelete(req.params.id);
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const deletedLead = await LeadModel.findOneAndDelete({ _id: req.params.id, tenantId });
     if (!deletedLead) {
       return res
         .status(404)
         .json({ message: "Lead not found", success: false });
     }
 
-    const io = req.app.get("io");
-    io.emit("delete-lead");
+    emitToTenant(tenantId, "lead:deleted", { leadId: req.params.id });
 
     return res
       .status(200)
@@ -362,9 +414,12 @@ const deleteManyLead = async (req, res) => {
         .json({ message: "No leads selected", success: false });
     }
 
-    //find deletable leads
+    const tenantId = req.user?.tenantId || req.tenantId;
+
+    //find deletable leads (scoped to tenant)
     const deletableLeads = await LeadModel.find({
       _id: { $in: selectedLead },
+      tenantId,
       leadStage: "NEW",
     }).select("_id");
 
@@ -372,14 +427,16 @@ const deleteManyLead = async (req, res) => {
 
     const deleteResult = await LeadModel.deleteMany({
       _id: { $in: deletableIds },
+      tenantId,
     });
 
     const failedIds = selectedLead.filter(
       (id) => !deletableIds.includes(id.toString()),
     );
 
-    const io = req.app.get("io");
-    if (deleteResult.deletedCount > 0) io.emit("delete-lead");
+    if (deleteResult.deletedCount > 0) {
+      emitToTenant(tenantId, "lead:deleted", { leadIds: deletableIds });
+    }
 
     return res.status(200).json({
       message: `${deleteResult.deletedCount} lead(s) deleted successfully`,
@@ -414,8 +471,9 @@ const importLead = async (req, res) => {
         .json({ message: "Please provide excel file.", success: false });
     }
 
-    //find last index number
-    const lastRecord = await LeadModel.findOne().sort({ currentIndex: -1 });
+    //find last index number (scoped to this tenant)
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const lastRecord = await LeadModel.findOne(tenantId ? { tenantId } : {}).sort({ currentIndex: -1 });
     let currentIndex = lastRecord ? lastRecord.currentIndex || 0 : 0;
 
     //current year
@@ -451,10 +509,10 @@ const importLead = async (req, res) => {
         remark,
       ] = row.values.slice(1);
 
-      if (email.text) {
+      if (email && email.text) {
         email = email.text;
       } else {
-        email = email;
+        email = email ? String(email) : "";
       }
 
       leads.push({
@@ -480,9 +538,27 @@ const importLead = async (req, res) => {
     });
 
     if (!leads.length) {
+      if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
       return res
         .status(400)
         .json({ message: "No valid data found", success: false });
+    }
+
+    // Bulk Import Limit Check (DECIDED): check if currentLeads + valid rows > plan limit
+    const limits = await getTenantLimits(tenantId);
+    if (limits && limits.maxLeads !== -1) {
+      const currentLeads = await LeadModel.countDocuments({ tenantId });
+      if (currentLeads + leads.length > limits.maxLeads) {
+        if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        return res.status(400).json({
+          success: false,
+          limitReached: true,
+          message: `Bulk import rejected: total leads would exceed your plan limit. Current leads: ${currentLeads}, new rows in file: ${leads.length}, plan limit: ${limits.maxLeads}. Please upgrade your plan or reduce the import batch.`,
+          currentLeads,
+          rows: leads.length,
+          limit: limits.maxLeads,
+        });
+      }
     }
 
     let insertedCount = 0;
@@ -505,8 +581,10 @@ const importLead = async (req, res) => {
       }
     } catch (error) {}
 
-    const io = req.app.get("io");
-    if (insertedCount > 0) io.emit("create-lead");
+    if (insertedCount > 0) {
+      const tenantId = req.user?.tenantId || req.tenantId;
+      emitToTenant(tenantId, "lead:created", { count: insertedCount });
+    }
 
     return res.status(201).json({
       message: `Successfully imported ${insertedCount} leads.`,
@@ -617,7 +695,7 @@ const exportLead = async (req, res) => {
         serviceRequirement: item.serviceRequirement || "-",
         remark: item.remark || "-",
         createdAt: formatDateTime(item.createdAt),
-        addById: item.addById.fullName || "-",
+        addById: item.addById?.fullName || "-",
       });
     });
 
@@ -687,7 +765,7 @@ const downSample = async (req, res) => {
 };
 
 //common function for - assign lead to telecaller by Admin
-const adminToTelecaller = async (leadIds, assignToId, assignById) => {
+const adminToTelecaller = async (leadIds, assignToId, assignById, tenantId) => {
   try {
     const results = [];
     const updateOps = [];
@@ -695,10 +773,10 @@ const adminToTelecaller = async (leadIds, assignToId, assignById) => {
     // convert ids to ObjectId
     const objectIds = leadIds.map((item) => new mongoose.Types.ObjectId(item));
 
-    // fetch leads + telecaller
+    // fetch leads + telecaller scoped to tenant
     const [leads, telecaller] = await Promise.all([
-      LeadModel.find({ _id: { $in: objectIds } }),
-      UserModel.findOne({ _id: assignToId, status: "Active" }),
+      LeadModel.find({ _id: { $in: objectIds }, ...(tenantId ? { tenantId } : {}) }),
+      UserModel.findOne({ _id: assignToId, ...(tenantId ? { tenantId } : {}), status: "Active" }),
     ]);
 
     if (!telecaller) {
@@ -737,7 +815,7 @@ const adminToTelecaller = async (leadIds, assignToId, assignById) => {
       // prepare bulk update
       updateOps.push({
         updateOne: {
-          filter: { _id: id },
+          filter: { _id: id, ...(tenantId ? { tenantId } : {}) },
           update: {
             $set: {
               assignedToTelecaller: assignToId,
@@ -770,6 +848,7 @@ const adminToTelecaller = async (leadIds, assignToId, assignById) => {
 
     //create history
     const histories = successLeadIds.map((id) => ({
+      tenantId: tenantId ? new mongoose.Types.ObjectId(tenantId) : undefined,
       leadId: new mongoose.Types.ObjectId(id),
       assignToId: new mongoose.Types.ObjectId(assignToId),
       assignById: new mongoose.Types.ObjectId(assignById),
@@ -777,6 +856,7 @@ const adminToTelecaller = async (leadIds, assignToId, assignById) => {
 
     //create notifications
     const notifications = successLeadIds.map((id) => ({
+      tenantId: tenantId ? new mongoose.Types.ObjectId(tenantId) : undefined,
       userId: assignToId,
       notificationType: "lead",
       title: "Lead Assign",
@@ -803,6 +883,7 @@ const adminToTelecaller = async (leadIds, assignToId, assignById) => {
 const manyAdminToTelecaller = async (req, res) => {
   try {
     const assignById = req.user._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
     const { leadIds, assignToId } = req.body;
     if (!Array.isArray(leadIds) || leadIds.length === 0) {
       return res
@@ -816,7 +897,7 @@ const manyAdminToTelecaller = async (req, res) => {
         .json({ message: "No telecaller selected.", success: false });
     }
 
-    const result = await adminToTelecaller(leadIds, assignToId, assignById);
+    const result = await adminToTelecaller(leadIds, assignToId, assignById, tenantId);
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Assignment");
@@ -841,8 +922,7 @@ const manyAdminToTelecaller = async (req, res) => {
       result.filter((r) => r.status === "Success").length
     } lead(s) Assigned, ${result.filter((r) => r.status === "Failed").length} lead(s) Failed`;
 
-    const io = req.app.get("io");
-    io.emit("many-admin-to-telecaller");
+    emitToTenant(tenantId, "lead:transferred", { type: "admin-to-telecaller" });
 
     // ===== Send File as Response =====
     res.setHeader(
@@ -869,6 +949,7 @@ const manyTelecallerToBde = async (req, res) => {
   try {
     const { leadIds, callStatus } = req.body;
     const loginUserId = req.user._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     if (!Array.isArray(leadIds) || leadIds.length === 0) {
       return res
@@ -891,6 +972,7 @@ const manyTelecallerToBde = async (req, res) => {
     // find only leads that will be updated
     const leadsDetail = await LeadModel.find({
       _id: { $in: objectIds },
+      ...(tenantId ? { tenantId } : {}),
     }).lean();
 
     //create map for quick lookup
@@ -928,7 +1010,7 @@ const manyTelecallerToBde = async (req, res) => {
       //prepare bulk update
       updateOpt.push({
         updateOne: {
-          filter: { _id: lead._id },
+          filter: { _id: lead._id, ...(tenantId ? { tenantId } : {}) },
           update: {
             $set: {
               leadStage: "SALES",
@@ -963,6 +1045,7 @@ const manyTelecallerToBde = async (req, res) => {
 
     //create history record
     const histories = successLeadIds.map((item) => ({
+      tenantId: tenantId ? new mongoose.Types.ObjectId(tenantId) : undefined,
       leadId: new mongoose.Types.ObjectId(item._id),
       assignToId: item.assignToId
         ? new mongoose.Types.ObjectId(item.assignToId)
@@ -972,6 +1055,7 @@ const manyTelecallerToBde = async (req, res) => {
 
     //create notification record
     const notifications = successLeadIds.map((item) => ({
+      tenantId: tenantId ? new mongoose.Types.ObjectId(tenantId) : undefined,
       userId: item.assignToId,
       notificationType: "lead",
       title: "Lead Completed",
@@ -1007,8 +1091,7 @@ const manyTelecallerToBde = async (req, res) => {
       });
     });
 
-    const io = req.app.get("io");
-    io.emit("many-telecaller-to-bde");
+    emitToTenant(tenantId, "lead:transferred", { type: "telecaller-to-bde" });
 
     // ===== Send File as Response =====
     res.setHeader(
@@ -1034,9 +1117,13 @@ const manyTelecallerToBde = async (req, res) => {
 const getLeadProgess = async (req, res) => {
   try {
     const { leadId } = req.query;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     //find lead details
-    const leadDetails = await LeadModel.findOne({ _id: leadId })
+    const leadDetails = await LeadModel.findOne({
+      _id: leadId,
+      ...(tenantId ? { tenantId } : {}),
+    })
       .populate("assignedToBDE")
       .populate("assignedToTelecaller");
 
@@ -1047,7 +1134,10 @@ const getLeadProgess = async (req, res) => {
     }
 
     //find lead progress
-    const leadProgress = await LeadHistoryModel.find({ leadId: leadId })
+    const leadProgress = await LeadHistoryModel.find({
+      leadId: leadId,
+      ...(tenantId ? { tenantId } : {}),
+    })
       .sort({ createdAt: 1 })
       .populate("assignToId")
       .populate("assignById");
@@ -1067,6 +1157,7 @@ const getLeadProgess = async (req, res) => {
 const manyBdeToAdmin = async (req, res) => {
   try {
     const assignById = req.user._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
     const { leadIds, leadStatus } = req.body;
 
     if (!Array.isArray(leadIds) || leadIds.length === 0) {
@@ -1081,9 +1172,15 @@ const manyBdeToAdmin = async (req, res) => {
         .json({ message: "Select lead status.", success: false });
     }
 
-    //find admin detials
-    const adminRole = await RoleModel.findOne({ roleName: "Admin" });
-    const adminDetail = await UserModel.findOne({ roleId: adminRole._id });
+    //find admin details scoped to tenant
+    const adminRole = await RoleModel.findOne({
+      roleName: "Admin",
+      ...(tenantId ? { tenantId } : {}),
+    });
+    const adminDetail = await UserModel.findOne({
+      roleId: adminRole?._id,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (!adminDetail) {
       return res
         .status(400)
@@ -1100,6 +1197,7 @@ const manyBdeToAdmin = async (req, res) => {
     // find only leads that will be updated
     const leadsDetail = await LeadModel.find({
       _id: { $in: objectIds },
+      ...(tenantId ? { tenantId } : {}),
     }).lean();
 
     //create map for quick lookup
@@ -1136,7 +1234,7 @@ const manyBdeToAdmin = async (req, res) => {
       //prepare bulk update
       updateOpt.push({
         updateOne: {
-          filter: { _id: lead._id },
+          filter: { _id: lead._id, ...(tenantId ? { tenantId } : {}) },
           update: {
             $set: {
               leadStage: "CLOSED",
@@ -1166,6 +1264,7 @@ const manyBdeToAdmin = async (req, res) => {
       .map((item) => item._id);
 
     const histories = successLeadIds.map((id) => ({
+      tenantId: tenantId ? new mongoose.Types.ObjectId(tenantId) : undefined,
       leadId: new mongoose.Types.ObjectId(id),
       assignToId: new mongoose.Types.ObjectId(assignToId),
       assignById: new mongoose.Types.ObjectId(assignById),
@@ -1177,6 +1276,7 @@ const manyBdeToAdmin = async (req, res) => {
 
     //create notification
     const notifications = successLeadIds.map((id) => ({
+      tenantId: tenantId ? new mongoose.Types.ObjectId(tenantId) : undefined,
       userId: assignToId,
       notificationType: "lead",
       title: "Lead Closed",
@@ -1209,8 +1309,7 @@ const manyBdeToAdmin = async (req, res) => {
       });
     });
 
-    const io = req.app.get("io");
-    io.emit("many-bde-to-admin");
+    emitToTenant(tenantId, "lead:transferred", { type: "bde-to-admin" });
 
     // ===== Send File as Response =====
     res.setHeader(
@@ -1233,6 +1332,7 @@ const singleTelecallerToBde = async (req, res) => {
   try {
     const { callStatus, leadId } = req.body;
     const loginUserId = req.user._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     if (!leadId) {
       return res
@@ -1246,8 +1346,11 @@ const singleTelecallerToBde = async (req, res) => {
         .json({ message: "Select call status.", success: false });
     }
 
-    //find lead
-    const leadDetail = await LeadModel.findOne({ _id: leadId });
+    //find lead scoped to tenant
+    const leadDetail = await LeadModel.findOne({
+      _id: leadId,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (!leadDetail) {
       return res
         .status(400)
@@ -1262,9 +1365,9 @@ const singleTelecallerToBde = async (req, res) => {
       });
     }
 
-    //update lead
+    //update lead scoped to tenant
     const isUpdate = await LeadModel.updateOne(
-      { _id: leadId },
+      { _id: leadId, ...(tenantId ? { tenantId } : {}) },
       {
         $set: {
           leadStage: "SALES",
@@ -1281,12 +1384,12 @@ const singleTelecallerToBde = async (req, res) => {
         .json({ message: "Failed to assign lead.", success: false });
     }
 
-    const io = req.app.get("io");
-    io.emit("single-telecaller-to-bde");
+    emitToTenant(tenantId, "lead:transferred", { type: "telecaller-to-bde", leadId });
 
     //create history
     try {
       await LeadHistoryModel.create({
+        tenantId: tenantId ? new mongoose.Types.ObjectId(tenantId) : undefined,
         leadId: new mongoose.Types.ObjectId(leadId),
         assignToId: new mongoose.Types.ObjectId(leadDetail.assignedToBDE),
         assignById: new mongoose.Types.ObjectId(loginUserId),
@@ -1295,6 +1398,7 @@ const singleTelecallerToBde = async (req, res) => {
 
     try {
       await NotificationModel.create({
+        tenantId: tenantId ? new mongoose.Types.ObjectId(tenantId) : undefined,
         userId: leadDetail.assignedToBDE,
         notificationType: "lead",
         title: "Lead Assign",
@@ -1318,9 +1422,13 @@ const getTelecallerLeadReport = async (req, res) => {
     const loginUser = req.user;
     const loginUserRole = loginUser.roleId.roleName;
     const loginUserId = loginUser._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
     const { branchId, fromDate, toDate, search } = req.query;
 
     let userFilter = {};
+    if (tenantId) {
+      userFilter.tenantId = tenantId;
+    }
 
     //apply filter base on role
     if (loginUserRole === "TeleCaller") {
@@ -1340,6 +1448,7 @@ const getTelecallerLeadReport = async (req, res) => {
     // find telecaller role id
     const telecallerRole = await RoleModel.findOne({
       roleName: "TeleCaller",
+      ...(tenantId ? { tenantId } : {}),
     }).select("_id");
 
     if (!telecallerRole) {
@@ -1374,9 +1483,11 @@ const getTelecallerLeadReport = async (req, res) => {
     }
 
     // Aggregate leads
+    const leadTenantFilter = tenantId ? { tenantId: new mongoose.Types.ObjectId(tenantId) } : {};
     const leadStats = await LeadModel.aggregate([
       {
         $match: {
+          ...leadTenantFilter,
           ...leadDateFilter,
         },
       },
@@ -1404,7 +1515,7 @@ const getTelecallerLeadReport = async (req, res) => {
       statsMap[item._id?.toString()] = item;
     });
 
-    // merge telecaller + stats
+    //merge telecaller and stats
     const result = telecallers.map((user) => {
       const stats = statsMap[user._id.toString()] || {
         total: 0,
@@ -1439,10 +1550,14 @@ const exportTelecallerLeadReport = async (req, res) => {
     const loginUser = req.user;
     const loginUserRole = loginUser.roleId.roleName;
     const loginUserId = loginUser._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     const { branchId, fromDate, toDate, search } = req.query;
 
     let userFilter = {};
+    if (tenantId) {
+      userFilter.tenantId = tenantId;
+    }
 
     //apply filter base on role
     if (loginUserRole === "TeleCaller") {
@@ -1462,6 +1577,7 @@ const exportTelecallerLeadReport = async (req, res) => {
     // find telecaller role id
     const telecallerRole = await RoleModel.findOne({
       roleName: "TeleCaller",
+      ...(tenantId ? { tenantId } : {}),
     }).select("_id");
 
     if (!telecallerRole) {
@@ -1496,9 +1612,11 @@ const exportTelecallerLeadReport = async (req, res) => {
     }
 
     //aggregate leads
+    const leadTenantFilter = tenantId ? { tenantId: new mongoose.Types.ObjectId(tenantId) } : {};
     const leadStats = await LeadModel.aggregate([
       {
         $match: {
+          ...leadTenantFilter,
           ...leadDateFilter,
         },
       },
@@ -1585,9 +1703,13 @@ const getBdeLeadReport = async (req, res) => {
     const loginUser = req.user;
     const loginUserId = loginUser._id;
     const loginUserRole = loginUser.roleId.roleName;
+    const tenantId = req.user?.tenantId || req.tenantId;
     const { branchId, fromDate, toDate, search } = req.query;
 
     let userFilter = {};
+    if (tenantId) {
+      userFilter.tenantId = tenantId;
+    }
 
     if (branchId) {
       userFilter.branchId = branchId;
@@ -1602,7 +1724,10 @@ const getBdeLeadReport = async (req, res) => {
     }
 
     //first find id of role 'BDE'
-    const bdeRole = await RoleModel.findOne({ roleName: "BDE" }).select("_id");
+    const bdeRole = await RoleModel.findOne({
+      roleName: "BDE",
+      ...(tenantId ? { tenantId } : {}),
+    }).select("_id");
     if (!bdeRole) {
       return res
         .status(400)
@@ -1636,9 +1761,11 @@ const getBdeLeadReport = async (req, res) => {
     }
 
     //aggregate lead
+    const leadTenantFilter = tenantId ? { tenantId: new mongoose.Types.ObjectId(tenantId) } : {};
     const leadStats = await LeadModel.aggregate([
       {
         $match: {
+          ...leadTenantFilter,
           ...leadDateFilter,
         },
       },
@@ -1705,9 +1832,13 @@ const exportBdeLeadReport = async (req, res) => {
     const loginUser = req.user;
     const loginUserId = loginUser._id;
     const loginUserRole = loginUser.roleId.roleName;
+    const tenantId = req.user?.tenantId || req.tenantId;
     const { branchId, fromDate, toDate, search } = req.query;
 
     let userFilter = {};
+    if (tenantId) {
+      userFilter.tenantId = tenantId;
+    }
 
     if (branchId) {
       userFilter.branchId = branchId;
@@ -1722,7 +1853,10 @@ const exportBdeLeadReport = async (req, res) => {
     }
 
     //first find id of role 'BDE'
-    const bdeRole = await RoleModel.findOne({ roleName: "BDE" }).select("_id");
+    const bdeRole = await RoleModel.findOne({
+      roleName: "BDE",
+      ...(tenantId ? { tenantId } : {}),
+    }).select("_id");
     if (!bdeRole) {
       return res
         .status(400)
@@ -1756,9 +1890,11 @@ const exportBdeLeadReport = async (req, res) => {
     }
 
     //aggregate lead
+    const leadTenantFilter = tenantId ? { tenantId: new mongoose.Types.ObjectId(tenantId) } : {};
     const leadStats = await LeadModel.aggregate([
       {
         $match: {
+          ...leadTenantFilter,
           ...leadDateFilter,
         },
       },
@@ -1849,6 +1985,7 @@ const getLeadStatusReport = async (req, res) => {
     const loginUser = req.user;
     const loginUserRole = loginUser.roleId.roleName;
     const loginUserId = loginUser._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     if (loginUserRole === "Developer") {
       return res.status(403).json({
@@ -1860,6 +1997,9 @@ const getLeadStatusReport = async (req, res) => {
     const { fromDate, toDate } = req.query;
 
     let filter = {};
+    if (tenantId) {
+      filter.tenantId = new mongoose.Types.ObjectId(tenantId);
+    }
     if (fromDate && toDate) {
       filter.createdAt = {};
       if (fromDate) {
@@ -1986,6 +2126,7 @@ const exportLeadStatusReport = async (req, res) => {
     const loginUser = req.user;
     const loginUserRole = loginUser.roleId.roleName;
     const loginUserId = loginUser._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
     if (loginUserRole === "Developer") {
       return res.status(403).json({
@@ -1997,6 +2138,9 @@ const exportLeadStatusReport = async (req, res) => {
     const { fromDate, toDate } = req.query;
 
     let filter = {};
+    if (tenantId) {
+      filter.tenantId = new mongoose.Types.ObjectId(tenantId);
+    }
     if (fromDate && toDate) {
       filter.createdAt = {};
       if (fromDate) {
@@ -2154,12 +2298,14 @@ const addWhatsappTemplate = async (req, res) => {
   try {
     const { templateName, templateText } = req.body;
     const createdBy = req.user._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
     if (!templateName || !templateText) {
       return res
         .status(400)
         .json({ success: false, message: "Name and text required" });
     }
     const template = new WhatsappTemplateModel({
+      tenantId,
       templateName,
       templateText,
       createdBy,
@@ -2175,12 +2321,16 @@ const addWhatsappTemplate = async (req, res) => {
 const deleteWhatsappTemplate = async (req, res) => {
   try {
     const { id } = req.params;
+    const tenantId = req.user?.tenantId || req.tenantId;
     if (!id) {
       return res
         .status(400)
         .json({ success: false, message: "Template ID required" });
     }
-    const deleted = await WhatsappTemplateModel.findByIdAndDelete(id);
+    const deleted = await WhatsappTemplateModel.findOneAndDelete({
+      _id: id,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (!deleted) {
       return res
         .status(404)
@@ -2191,10 +2341,12 @@ const deleteWhatsappTemplate = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-// Get all templates (shared across all users)
+// Get all templates (scoped to tenant)
 const getWhatsappTemplates = async (req, res) => {
   try {
-    const templates = await WhatsappTemplateModel.find({}).sort({
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const filter = tenantId ? { tenantId } : {};
+    const templates = await WhatsappTemplateModel.find(filter).sort({
       createdAt: -1,
     });
     res.json({ success: true, data: templates });
@@ -2208,12 +2360,16 @@ const sendWhatsappToLead = async (req, res) => {
   try {
     const { leadId, message } = req.body;
     const sentBy = req.user._id;
+    const tenantId = req.user?.tenantId || req.tenantId;
     if (!leadId || !message) {
       return res
         .status(400)
         .json({ success: false, message: "Lead ID and message are required" });
     }
-    const lead = await LeadModel.findById(leadId);
+    const lead = await LeadModel.findOne({
+      _id: leadId,
+      tenantId,
+    });
     if (!lead) {
       return res
         .status(404)
@@ -2226,7 +2382,7 @@ const sendWhatsappToLead = async (req, res) => {
         message: "Lead does not have a WhatsApp or mobile number",
       });
     }
-    const result = await sendWATextServ(whatsappNo, message);
+    const result = await sendWATextServ(whatsappNo, message, tenantId);
     if (!result.success) {
       return res.status(400).json({
         success: false,
@@ -2236,6 +2392,7 @@ const sendWhatsappToLead = async (req, res) => {
     // Save chat record after successful send
     try {
       await WhatsappChatModel.create({
+        tenantId,
         leadId: lead._id,
         leadName: lead.fullName || "",
         whatsappNo: whatsappNo,
@@ -2258,10 +2415,14 @@ const sendWhatsappToLead = async (req, res) => {
 const getWhatsappChats = async (req, res) => {
   try {
     let { page = 1, limit = 20, search, fromDate, toDate } = req.query;
+    const tenantId = req.user?.tenantId || req.tenantId;
     page = Math.max(1, parseInt(page, 10) || 1);
     limit = Math.max(1, parseInt(limit, 10) || 20);
 
     const filter = {};
+    if (tenantId) {
+      filter.tenantId = tenantId;
+    }
 
     if (search && search.trim()) {
       const regex = new RegExp(search.trim(), "i");
@@ -2313,12 +2474,16 @@ const getWhatsappChats = async (req, res) => {
 const deleteWhatsappChat = async (req, res) => {
   try {
     const { id } = req.params;
+    const tenantId = req.user?.tenantId || req.tenantId;
     if (!id) {
       return res
         .status(400)
         .json({ success: false, message: "Chat ID required" });
     }
-    const deleted = await WhatsappChatModel.findByIdAndDelete(id);
+    const deleted = await WhatsappChatModel.findOneAndDelete({
+      _id: id,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (!deleted) {
       return res
         .status(404)
@@ -2330,10 +2495,12 @@ const deleteWhatsappChat = async (req, res) => {
   }
 };
 
-// Delete all WhatsApp chat records
+// Delete all WhatsApp chat records (scoped to tenant)
 const deleteAllWhatsappChats = async (req, res) => {
   try {
-    const result = await WhatsappChatModel.deleteMany({});
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const filter = tenantId ? { tenantId } : {};
+    const result = await WhatsappChatModel.deleteMany(filter);
     res.json({
       success: true,
       message: `Deleted ${result.deletedCount} chat records.`,
@@ -2342,6 +2509,58 @@ const deleteAllWhatsappChats = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+// Check for duplicate lead by mobileNo or email
+const checkDuplicateLead = async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId || req.tenantId;
+    const { mobileNo, email, excludeLeadId } = req.query;
+
+    if (!mobileNo && !email) {
+      return res.status(400).json({
+        success: false,
+        message: "mobileNo or email query parameter is required",
+      });
+    }
+
+    const conditions = [];
+    if (mobileNo && String(mobileNo).trim()) {
+      conditions.push({ mobileNo: String(mobileNo).trim() });
+    }
+    if (email && String(email).trim()) {
+      conditions.push({ email: String(email).trim().toLowerCase() });
+    }
+
+    if (!conditions.length) {
+      return res.status(200).json({ success: true, exists: false });
+    }
+
+    const query = { tenantId, $or: conditions };
+    if (excludeLeadId) {
+      query._id = { $ne: excludeLeadId };
+    }
+
+    const duplicate = await LeadModel.findOne(query)
+      .select("leadNo fullName mobileNo email leadStatus leadStage createdAt")
+      .populate("assignedToTelecaller", "fullName")
+      .populate("assignedToBDE", "fullName");
+
+    if (duplicate) {
+      return res.status(200).json({
+        success: true,
+        exists: true,
+        lead: duplicate,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      exists: false,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export {
   createLead,
   getLeads,
@@ -2370,4 +2589,5 @@ export {
   deleteWhatsappTemplate,
   deleteWhatsappChat,
   deleteAllWhatsappChats,
+  checkDuplicateLead,
 };

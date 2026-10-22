@@ -22,21 +22,98 @@ const __dirname = getDirname(import.meta.url);
 
 const app = express();
 
-//security headers
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+// Configure Express trust proxy via env (TRUST_PROXY)
+if (process.env.TRUST_PROXY) {
+  const tp = process.env.TRUST_PROXY.trim().toLowerCase();
+  if (tp === "true") app.set("trust proxy", true);
+  else if (tp === "false") app.set("trust proxy", false);
+  else if (!isNaN(Number(tp))) app.set("trust proxy", Number(tp));
+  else app.set("trust proxy", process.env.TRUST_PROXY.trim());
+}
+
+// Security headers with CSP in report-only mode (logs violations without blocking)
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: {
+      reportOnly: true,
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "'unsafe-eval'",
+          "https://checkout.razorpay.com",
+          "https://js.stripe.com",
+        ],
+        connectSrc: [
+          "'self'",
+          "https://api.razorpay.com",
+          "https://api.stripe.com",
+          "ws:",
+          "wss:",
+        ],
+        frameSrc: [
+          "'self'",
+          "https://api.razorpay.com",
+          "https://js.stripe.com",
+        ],
+        imgSrc: ["'self'", "data:", "blob:", "https:"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+        reportUri: ["/csp-report"],
+      },
+    },
+  })
+);
+
+const defaultOrigins = [
+  "https://clientmark.app",
+  "https://www.clientmark.app",
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://localhost:3002",
+  "http://localhost:5173",
+  "http://localhost:8080",
+  "http://localhost:8081",
+];
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
+  : defaultOrigins;
+
+if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL.trim())) {
+  allowedOrigins.push(process.env.FRONTEND_URL.trim());
+}
+if (process.env.DOMAIN_URL && !allowedOrigins.includes(process.env.DOMAIN_URL.trim())) {
+  allowedOrigins.push(process.env.DOMAIN_URL.trim());
+}
+
+export const corsOriginChecker = (origin, callback) => {
+  // Allow requests with no origin (like mobile apps, curl, or server-to-server calls)
+  if (!origin) return callback(null, true);
+  if (allowedOrigins.includes(origin)) {
+    return callback(null, true);
+  }
+  // Allow any localhost / 127.0.0.1 port in non-production environments
+  if (
+    process.env.NODE_ENV !== "production" &&
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+  ) {
+    return callback(null, true);
+  }
+  return callback(new Error("CORS policy does not allow access from this origin."));
+};
 
 //cors setup
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Dynamically reflect origin to allow clientmark.app, www.clientmark.app, and localhost with credentials
-      callback(null, true);
-    },
+    origin: corsOriginChecker,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-portal-token"],
   }),
 );
 
@@ -54,6 +131,7 @@ app.use(
 const generalLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
   max: 100,
+  skip: () => process.env.NODE_ENV === "test",
   message: { success: false, message: "Too many requests. Please slow down." },
 });
 app.use(generalLimiter);
@@ -62,6 +140,7 @@ app.use(generalLimiter);
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
+  skip: () => process.env.NODE_ENV === "test",
   message: {
     success: false,
     message: "Too many attempts. Please try again after 15 minutes.",
@@ -72,20 +151,48 @@ app.use("/tenant/register", authLimiter);
 app.use("/project/send-whatsapp-otp", authLimiter);
 app.use("/user/send-mail-otp", authLimiter);
 
-//static file serve
-app.use(
-  "/uploads/images",
-  express.static(path.join(__dirname, "..", "uploads/images")),
-);
-app.use(
-  "/uploads/pdfs",
-  express.static(path.join(__dirname, "..", "uploads/pdfs")),
-);
+import fileRouter from "../routers/fileRouter.js";
+
+// Legacy public static file serve (disabled by default for security)
+if (process.env.LEGACY_PUBLIC_UPLOADS === "true") {
+  app.use(
+    "/uploads/images",
+    express.static(path.join(__dirname, "..", "uploads/images")),
+  );
+  app.use(
+    "/uploads/pdfs",
+    express.static(path.join(__dirname, "..", "uploads/pdfs")),
+  );
+}
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+// Rate-limited CSP violation report listener
+const cspReportLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === "test",
+  message: { success: false, message: "Too many CSP violation reports." },
+});
+
+app.post(
+  "/csp-report",
+  cspReportLimiter,
+  express.json({ type: ["application/json", "application/csp-report"] }),
+  (req, res) => {
+    const report = req.body?.["csp-report"] || req.body;
+    console.warn("🛡️ [CSP Report-Only Violation]:", JSON.stringify(report, null, 2));
+    return res.status(204).end();
+  }
+);
+
+// Authenticated private file delivery
+app.use("/files", fileRouter);
 
 //routes setup
 app.use("/user", userRouter);

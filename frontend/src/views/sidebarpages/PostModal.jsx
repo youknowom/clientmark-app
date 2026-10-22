@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Modal, Form, Button, Row, Col } from 'react-bootstrap'
+import { Modal, Form, Button, Row, Col } from '../../components/ui'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 import { FaImage } from 'react-icons/fa'

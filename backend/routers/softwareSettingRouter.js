@@ -1,6 +1,7 @@
 import express from "express";
 import { upload } from "../services/fileUploadService.js";
 import { authUser, authAccess, optionalAuthUser } from "../middlewares/authMiddleware.js";
+import tenantMiddleware from "../middlewares/tenantMiddleware.js";
 import {
   updateMainTheme,
   getMainTheme,
@@ -10,26 +11,27 @@ import {
 
 const softwareSettingRouter = express.Router();
 
+// ── Public / Optional Auth Routes (Resolved by Slug or Token) ──
+softwareSettingRouter.get("/get-main-theme", optionalAuthUser, getMainTheme);
+softwareSettingRouter.get("/get-site-setting", optionalAuthUser, getSiteSetting);
+
+// ── Protected Routes (Strictly Tenant Isolated) ──
+softwareSettingRouter.use(authUser, tenantMiddleware);
+
 softwareSettingRouter.put(
   "/update-main-theme",
-  authUser,
   authAccess("update:theme-setting"),
   updateMainTheme,
-); //update main theme
-
-softwareSettingRouter.get("/get-main-theme", optionalAuthUser, getMainTheme); //get main theme
-
-softwareSettingRouter.get("/get-site-setting", optionalAuthUser, getSiteSetting); //get software setting logo, etc
+);
 
 softwareSettingRouter.post(
   "/update-site-setting",
-  authUser,
   authAccess("update:site-setting"),
   upload.fields([
     { name: "mainLogo", maxCount: 1 },
     { name: "favicon", maxCount: 1 },
   ]),
   updateSiteSetting,
-); //update site setting
+);
 
 export default softwareSettingRouter;

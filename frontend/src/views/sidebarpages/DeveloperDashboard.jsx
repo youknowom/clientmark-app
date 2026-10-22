@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Doughnut, Bar } from 'react-chartjs-2'
 import apiClient from '../../api/axiosClient'
-import { Container, Row, Col, Card, Table, Button } from 'react-bootstrap'
+import { Container, Row, Col, Card, Table, Button } from '../../components/ui'
 import { AiOutlineFileProtect } from 'react-icons/ai'
 import { MdOutlineComputer } from 'react-icons/md'
 import { BsCheckCircle } from 'react-icons/bs'
@@ -478,8 +478,7 @@ const DeveloperDashboard = () => {
 
   useEffect(() => {
     if (!socket) return
-    // 'update-project' is the event emitted by the backend on project changes
-    const events = ['create-project', 'update-leaderboard']
+    const events = ['project:created', 'project:updated', 'project:deleted', 'leaderboard:updated']
     const handler = () => getProjectDashboardData()
     events.forEach((event) => socket.on(event, handler))
     return () => events.forEach((event) => socket.off(event, handler))

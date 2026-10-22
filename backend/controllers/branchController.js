@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import BranchModel from "../models/branchModel.js";
 import UserModel from "../models/userModel.js";
+import { getTenantLimits } from "../middlewares/usageLimitMiddleware.js";
 
 //add branch
 const addBranch = async (req, res) => {
@@ -31,17 +32,21 @@ const addBranch = async (req, res) => {
         .json({ message: "This branch code already exist.", success: false });
     }
 
-    //check how many branches already added
-    const noOfAlreadyAdded = await BranchModel.countDocuments(
-      tenantId ? { tenantId } : {}
-    );
-    const branchLimit = process.env.BRANCH_LIMIT || 5;
+    // Race-safe recount limit check using plan limits (same pattern as createLead/createUser)
+    const limits = await getTenantLimits(tenantId);
+    const maxBranches = limits?.maxBranches ?? parseInt(process.env.BRANCH_LIMIT || "5", 10);
 
-    if (noOfAlreadyAdded >= branchLimit) {
-      return res.status(400).json({
-        message: `Branch limit exceed. Your limit is ${branchLimit}.`,
-        success: false,
-      });
+    if (maxBranches !== -1) {
+      const currentCount = await BranchModel.countDocuments(
+        tenantId ? { tenantId } : {}
+      );
+      if (currentCount >= maxBranches) {
+        return res.status(403).json({
+          message: `You've reached the maximum of ${maxBranches} branches on your current plan. Please upgrade to add more branches.`,
+          success: false,
+          limitReached: true,
+        });
+      }
     }
 
     const newBranch = await BranchModel.create({
@@ -189,9 +194,13 @@ const getBranches = async (req, res) => {
 const deleteBranch = async (req, res) => {
   try {
     let { branchId } = req.body;
+    const tenantId = req.user?.tenantId || req.tenantId;
 
-    //check thit banch have user or not
-    const userCount = await UserModel.countDocuments({ branchId: branchId });
+    //check this branch has users or not (scoped to tenant)
+    const userCount = await UserModel.countDocuments({
+      branchId: branchId,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (userCount > 0) {
       return res.status(400).json({
         message: `Can not delete. This branch have ${userCount} users.`,
@@ -199,7 +208,10 @@ const deleteBranch = async (req, res) => {
       });
     }
 
-    const isDelete = await BranchModel.deleteOne({ _id: branchId });
+    const isDelete = await BranchModel.deleteOne({
+      _id: branchId,
+      ...(tenantId ? { tenantId } : {}),
+    });
     if (isDelete.deletedCount === 0) {
       return res
         .status(400)

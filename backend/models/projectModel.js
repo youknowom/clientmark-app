@@ -167,7 +167,18 @@ const ProjectSchema = new mongoose.Schema(
     slug: {
       type: String,
       unique: true,
+      sparse: true,
       index: true,
+    },
+
+    portalKey: {
+      type: String,
+      trim: true,
+    },
+
+    portalVersion: {
+      type: Number,
+      default: 1,
     },
 
     createdBy: {
@@ -189,6 +200,12 @@ const ProjectSchema = new mongoose.Schema(
     },
   },
   { timestamps: true },
+);
+
+// Partial unique index for portalKey (supports legacy projects that do not yet have portalKey)
+ProjectSchema.index(
+  { portalKey: 1 },
+  { unique: true, partialFilterExpression: { portalKey: { $type: "string", $gt: "" } } }
 );
 
 const ProjectModel = mongoose.model("projects", ProjectSchema);
